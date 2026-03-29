@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -9,16 +10,16 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    print("✅ Firebase successfully initialized!");
+    print(" Firebase successfully initialized!");
   } catch (e) {
-    print("❌ Firebase initialization error: $e");
+    print(" Firebase initialization error: $e");
   }
 
-  runApp(const MyApp());
+  runApp(const FamilyWellCareApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+class FamilyWellCareApp extends StatelessWidget {
+  const FamilyWellCareApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -26,13 +27,12 @@ class MyApp extends StatelessWidget {
       title: 'Family Well Care Hospital',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A6B6B),
+        ),
         useMaterial3: true,
       ),
-      home: const Scaffold(
-        body: Center(
-          child: Text('App Started - Ready to Add Screens'),
-        ),
-      ),
+      home: const SplashScreen(),
     );
   }
 }
