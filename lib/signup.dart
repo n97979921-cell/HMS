@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hospital_management_app/login.dart';
-import 'login_screen.dart';
 import 'user_store.dart';
 
 class SignUpScreen extends StatefulWidget {
