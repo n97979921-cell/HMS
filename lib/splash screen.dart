@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import 'package:hospital_management_app/login.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -18,6 +18,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
@@ -46,7 +47,6 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // Navigation after 3 seconds
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.pushReplacement(
@@ -83,23 +83,23 @@ class _SplashScreenState extends State<SplashScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 30), // Top spacing
+                const SizedBox(height: 80),
 
-                // Logo - Bara size (250x250)
+                // Logo Image
                 FadeTransition(
                   opacity: _fadeAnim,
                   child: ScaleTransition(
                     scale: _scaleAnim,
                     child: Image.asset(
                       'assets/Logo.png',
-                      width: 250,
-                      height: 250,
+                      width: 180,
+                      height: 180,
                       fit: BoxFit.contain,
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 24), // spacing between logo and text
+                const SizedBox(height: 30),
 
                 // Hospital Name
                 Transform.translate(
@@ -110,7 +110,6 @@ class _SplashScreenState extends State<SplashScreen>
                       children: [
                         Text(
                           'FAMILY WELL',
-                          textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Color(0xFFB8DADA),
                             fontSize: 30,
@@ -120,7 +119,6 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         Text(
                           'CARE HOSPITAL',
-                          textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Color(0xFFB8DADA),
                             fontSize: 30,
@@ -133,17 +131,18 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
 
-                const Expanded(child: SizedBox()), 
+                const Expanded(child: SizedBox()),
+
+                // Bottom tagline
                 FadeTransition(
                   opacity: _fadeAnim,
                   child: const Padding(
-                    padding: EdgeInsets.only(bottom: 40), 
+                    padding: EdgeInsets.only(bottom: 48),
                     child: Text(
                       'CONNECT EVERY CORNER OF CARE',
-                      textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Color(0xFF7AADAD),
-                        fontSize: 14,
+                        fontSize: 12,
                         letterSpacing: 2.5,
                         fontWeight: FontWeight.w500,
                       ),
