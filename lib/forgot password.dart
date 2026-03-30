@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hospital_management_app/login.dart';
-import 'login_screen.dart';
-import 'user_store.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -29,7 +27,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     if (!mounted) return;
 
-    // Show same message for both found/not-found (security best practice)
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -59,12 +56,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ---- Logo (centered) ----
                 Center(child: _buildLogo()),
-
                 const SizedBox(height: 34),
-
-                // ---- Title ----
                 const Text(
                   'Forgot password?',
                   style: TextStyle(
@@ -73,9 +66,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 const SizedBox(height: 12),
-
                 const Text(
                   'Enter your Email address to receive\na password reset link',
                   style: TextStyle(
@@ -84,10 +75,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     height: 1.6,
                   ),
                 ),
-
                 const SizedBox(height: 55),
-
-                // ---- Email Field ----
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -135,10 +123,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
-                // ---- Send Reset Link Button ----
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -169,8 +154,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                   ),
                 ),
-
-                // ---- Success Banner ----
                 if (_linkSent) ...[
                   const SizedBox(height: 18),
                   Container(
@@ -179,7 +162,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       color: const Color(0xFF0D6B6B).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                          color: const Color(0xFF0D6B6B).withValues(alpha: 0.4),
+                        color: const Color(0xFF0D6B6B).withValues(alpha: 0.4),
+                      ),
                     ),
                     child: const Row(
                       children: [
@@ -197,18 +181,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                   ),
                 ],
-
                 const SizedBox(height: 70),
-
-                // ---- Back to Login ----
                 Center(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
                         'Remember your password? ',
-                        style:
-                            TextStyle(color: Colors.black87, fontSize: 14),
+                        style: TextStyle(color: Colors.black87, fontSize: 14),
                       ),
                       GestureDetector(
                         onTap: () => Navigator.pushReplacement(
@@ -228,7 +208,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 20),
               ],
             ),

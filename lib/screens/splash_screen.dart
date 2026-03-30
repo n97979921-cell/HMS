@@ -20,33 +20,33 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1600),
     );
 
     _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+        curve: const Interval(0.0, 0.65, curve: Curves.easeIn),
       ),
     );
 
-    _scaleAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
+    _scaleAnim = Tween<double>(begin: 0.65, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.7, curve: Curves.elasticOut),
+        curve: const Interval(0.0, 0.75, curve: Curves.elasticOut),
       ),
     );
 
-    _slideAnim = Tween<double>(begin: 30.0, end: 0.0).animate(
+    _slideAnim = Tween<double>(begin: 40.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
+        curve: const Interval(0.45, 1.0, curve: Curves.easeOut),
       ),
     );
 
     _controller.forward();
 
-    // Navigation after 3 seconds
+    // 3 seconds baad Login screen pe jaaye
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.pushReplacement(
@@ -56,7 +56,7 @@ class _SplashScreenState extends State<SplashScreen>
             transitionsBuilder: (_, animation, __, child) {
               return FadeTransition(opacity: animation, child: child);
             },
-            transitionDuration: const Duration(milliseconds: 500),
+            transitionDuration: const Duration(milliseconds: 600),
           ),
         );
       }
@@ -72,7 +72,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D6B6B),
+      backgroundColor: const Color(0xFF0A3D3D), // Dark Teal background (Image 2 jaisa)
       body: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
@@ -83,25 +83,25 @@ class _SplashScreenState extends State<SplashScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 30), // Top spacing
+                const SizedBox(height: 40),
 
-                // Logo - Bara size (250x250)
+                // Logo
                 FadeTransition(
                   opacity: _fadeAnim,
                   child: ScaleTransition(
                     scale: _scaleAnim,
                     child: Image.asset(
                       'assets/Logo.png',
-                      width: 250,
-                      height: 250,
+                      width: 260,
+                      height: 260,
                       fit: BoxFit.contain,
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 24), // spacing between logo and text
+                const SizedBox(height: 30),
 
-                // Hospital Name
+                // Hospital Name (Image 1 & 2 style)
                 Transform.translate(
                   offset: Offset(0, _slideAnim.value),
                   child: FadeTransition(
@@ -112,20 +112,20 @@ class _SplashScreenState extends State<SplashScreen>
                           'FAMILY WELL',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFFB8DADA),
-                            fontSize: 30,
+                            color: Colors.white,
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            letterSpacing: 4,
+                            letterSpacing: 3,
                           ),
                         ),
                         Text(
                           'CARE HOSPITAL',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Color(0xFFB8DADA),
-                            fontSize: 30,
+                            color: Colors.white,
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            letterSpacing: 4,
+                            letterSpacing: 3,
                           ),
                         ),
                       ],
@@ -133,18 +133,20 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
 
-                const Expanded(child: SizedBox()), 
+                const Expanded(child: SizedBox()),
+
+                // Tagline at bottom (thora uper rakha)
                 FadeTransition(
                   opacity: _fadeAnim,
                   child: const Padding(
-                    padding: EdgeInsets.only(bottom: 40), 
+                    padding: EdgeInsets.only(bottom: 50),
                     child: Text(
                       'CONNECT EVERY CORNER OF CARE',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Color(0xFF7AADAD),
-                        fontSize: 14,
-                        letterSpacing: 2.5,
+                        color: Color(0xFF9ED9D9), // Light teal color
+                        fontSize: 15,
+                        letterSpacing: 2.8,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
