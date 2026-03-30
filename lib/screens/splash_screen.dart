@@ -85,7 +85,7 @@ class _SplashScreenState extends State<SplashScreen>
               children: [
                 const SizedBox(height: 30), // Top spacing
 
-                // Logo - Bara size (250x250)
+                // Logo - THORA NECHE KAR (250x250)
                 FadeTransition(
                   opacity: _fadeAnim,
                   child: ScaleTransition(
@@ -99,9 +99,10 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
 
-                const SizedBox(height: 24), // spacing between logo and text
+                const SizedBox(
+                    height: 50), // LOGO KO NECHE KARNE KE LIYE SPACING BADHAO
 
-                // Hospital Name
+                // Hospital Name - SAME
                 Transform.translate(
                   offset: Offset(0, _slideAnim.value),
                   child: FadeTransition(
@@ -133,11 +134,11 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
 
-                const Expanded(child: SizedBox()), 
+                const Expanded(child: SizedBox()),
                 FadeTransition(
                   opacity: _fadeAnim,
                   child: const Padding(
-                    padding: EdgeInsets.only(bottom: 40), 
+                    padding: EdgeInsets.only(bottom: 40), // SAME
                     child: Text(
                       'CONNECT EVERY CORNER OF CARE',
                       textAlign: TextAlign.center,
