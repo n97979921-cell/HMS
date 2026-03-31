@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hospital_management_app/login_screen.dart';
 import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -46,7 +47,6 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // 3 seconds baad Login screen pe jaaye
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.pushReplacement(
@@ -72,7 +72,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A3D3D), // Dark Teal background (Image 2 jaisa)
+      backgroundColor: const Color(0xFF0A3D3D),
       body: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
@@ -83,25 +83,25 @@ class _SplashScreenState extends State<SplashScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: 5), // Top spacing kam ki
 
-                // Logo
+                // Logo - Bara size aur neeche shift
                 FadeTransition(
                   opacity: _fadeAnim,
                   child: ScaleTransition(
                     scale: _scaleAnim,
                     child: Image.asset(
                       'assets/Logo.png',
-                      width: 260,
-                      height: 260,
+                      width: 310,
+                      height: 310,
                       fit: BoxFit.contain,
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 30),
+                const SizedBox(height: 40), // Logo aur text ke beech zyada gap
 
-                // Hospital Name (Image 1 & 2 style)
+                // Hospital Name
                 Transform.translate(
                   offset: Offset(0, _slideAnim.value),
                   child: FadeTransition(
@@ -135,7 +135,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                 const Expanded(child: SizedBox()),
 
-                // Tagline at bottom (thora uper rakha)
+                // Tagline
                 FadeTransition(
                   opacity: _fadeAnim,
                   child: const Padding(
@@ -144,8 +144,8 @@ class _SplashScreenState extends State<SplashScreen>
                       'CONNECT EVERY CORNER OF CARE',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Color(0xFF9ED9D9), // Light teal color
-                        fontSize: 15,
+                        color: Color(0xFF9ED9D9),
+                        fontSize: 14,
                         letterSpacing: 2.8,
                         fontWeight: FontWeight.w500,
                       ),
