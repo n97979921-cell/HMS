@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
-import 'user_store.dart';
+import 'package:hospital_management_app/services/auth_service.dart';
+import 'screens/manage_users_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,6 +12,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final authService = AuthService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -30,25 +32,38 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    // Fake delay for better UX
-    await Future.delayed(const Duration(milliseconds: 800));
-
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-    final isValid = UserStore.validate(email, password);
+    // Backend call
+    Map<String, dynamic>? user = await authService.login(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
 
     setState(() => _isLoading = false);
     if (!mounted) return;
 
-    if (isValid) {
+    if (user != null) {
+      // Login success
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Login Successful! Welcome 👋'),
           backgroundColor: Color(0xFF1A6B6B),
         ),
       );
-      // TODO: Future mein Dashboard pe navigate karna hai
+      String role = user['role'] ?? '';
+      if (role == 'admin') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const ManageUsersScreen(),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dashboard coming soon!')),
+        );
+      }
     } else {
+      // Login failed
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Invalid email or password'),
@@ -134,7 +149,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: GestureDetector(
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const SignUpScreen()),
                         ),
                         child: Container(
                           height: 50,
@@ -239,7 +255,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 GestureDetector(
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                    MaterialPageRoute(
+                        builder: (_) => const ForgotPasswordScreen()),
                   ),
                   child: const Text(
                     'Forgot password?',
@@ -306,7 +323,8 @@ class _LoginScreenState extends State<LoginScreen> {
           borderRadius: BorderRadius.circular(30),
           borderSide: const BorderSide(color: Color(0xFF0D6B6B), width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 22),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 22),
       ),
     );
   }

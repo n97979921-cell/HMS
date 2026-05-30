@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
-import 'logo_painter.dart';
-import 'user_store.dart';
+import 'package:hospital_management_app/services/auth_service.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -13,6 +12,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final authService = AuthService();
   bool _isLoading = false;
   bool _linkSent = false;
 
@@ -26,23 +26,55 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 1000));
 
     final email = _emailController.text.trim();
-    UserStore.exists(email);
 
-    setState(() {
-      _isLoading = false;
-      _linkSent = true;
-    });
+    try {
+      // ✅ Call Firebase
+      bool success = await authService.forgotPassword(email);
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('If $email is registered, a reset link has been sent.'),
-        backgroundColor: const Color(0xFF0D6B6B),
-      ),
-    );
+      setState(() => _isLoading = false);
+
+      if (!mounted) return;
+
+      if (success) {
+        setState(() => _linkSent = true);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Reset link sent! Check your email.'),
+            backgroundColor: Color(0xFF0D6B6B),
+          ),
+        );
+
+        // Redirect after 3 sec
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+            );
+          }
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Email not registered'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -140,13 +172,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                     errorBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30),
-                      borderSide:
-                          const BorderSide(color: Colors.redAccent),
+                      borderSide: const BorderSide(color: Colors.redAccent),
                     ),
                     focusedErrorBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30),
-                      borderSide:
-                          const BorderSide(color: Colors.redAccent),
+                      borderSide: const BorderSide(color: Colors.redAccent),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                         vertical: 16, horizontal: 22),
@@ -193,8 +223,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0x1A0D6B6B),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: const Color(0x4D0D6B6B)),
+                      border: Border.all(color: const Color(0x4D0D6B6B)),
                     ),
                     child: const Row(
                       children: [
@@ -211,6 +240,40 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ],
                     ),
                   ),
+
+                  // ✅ RESEND BUTTON
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: _isLoading ? null : _sendResetLink,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                            color: Color(0xFF0D6B6B), width: 2),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                color: Color(0xFF0D6B6B),
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Text(
+                              'Resend Email',
+                              style: TextStyle(
+                                color: Color(0xFF0D6B6B),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
                 ],
 
                 const SizedBox(height: 70),
@@ -222,8 +285,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     children: [
                       const Text(
                         'Remember your password? ',
-                        style: TextStyle(
-                            color: Colors.black87, fontSize: 14),
+                        style: TextStyle(color: Colors.black87, fontSize: 14),
                       ),
                       GestureDetector(
                         onTap: () => Navigator.pushReplacement(

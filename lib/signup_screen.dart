@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:hospital_management_app/services/auth_service.dart';
 import 'login_screen.dart';
-import 'logo_painter.dart';
-import 'user_store.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,17 +14,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _cnicController = TextEditingController();
   final _ageController = TextEditingController();
   final _phoneController = TextEditingController();
   String? _selectedGender;
   bool _obscurePassword = true;
   bool _isLoading = false;
 
+  final authService = AuthService();
+
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _cnicController.dispose();
     _ageController.dispose();
     _phoneController.dispose();
     super.dispose();
@@ -34,39 +37,71 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void _register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 800));
-
+    // ✅ NEW: Get all values
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
+    final name = _nameController.text.trim();
+    final cnic = _cnicController.text.trim();
+    final phone = _phoneController.text.trim();
+    final age = int.parse(_ageController.text.trim());
+    final gender = _selectedGender!;
 
-    if (UserStore.exists(email)) {
+    setState(() => _isLoading = true);
+
+    try {
+      // ✅ NEW: Call Firebase
+      bool success = await authService.patientSignup(
+        email: email,
+        password: password,
+        name: name,
+        cnic: cnic,
+        phone: phone,
+        age: age,
+        gender: gender,
+      );
+
       setState(() => _isLoading = false);
       if (!mounted) return;
+
+      if (success) {
+        // ✅ SUCCESS
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Account created! Check your email to verify.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // ✅ Redirect to login after 2 seconds
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+            );
+          }
+        });
+      } else {
+        // ❌ FAILED
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Registration failed. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Email already registered. Please login.'),
-          backgroundColor: Colors.orangeAccent,
+        SnackBar(
+          content: Text('❌ Error: $e'),
+          backgroundColor: Colors.red,
         ),
       );
-      return;
     }
-
-    UserStore.addUser(email, password);
-    setState(() => _isLoading = false);
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Account created! Please login.'),
-        backgroundColor: Color(0xFF0D6B6B),
-      ),
-    );
-
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
   }
 
   @override
@@ -83,11 +118,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 const SizedBox(height: 8),
 
                 // ── Logo ──────────────────────────────────────────────────
-              Image.asset(
-                 'assets/Logo.png',
-                 width: 88,
-                 height: 92,
-                 fit: BoxFit.contain,
+                Image.asset(
+                  'assets/Logo.png',
+                  width: 88,
+                  height: 92,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 10),
                 const Text(
@@ -143,8 +178,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
-                              color:
-                                  const Color(0xFF0D6B6B).withOpacity(0.35),
+                              color: const Color(0xFF0D6B6B)
+                                  .withValues(alpha: 0.35),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             )
@@ -226,12 +261,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   return null;
                 }),
                 const SizedBox(height: 11),
+                // CNIC
+                _field(_cnicController, 'CNIC', Icons.card_membership,
+                    keyboardType: TextInputType.number, validator: (v) {
+                  if (v == null || v.isEmpty) {
+                    return 'CNIC required';
+                  }
+                  if (v.length < 13) {
+                    return 'CNIC must be at least 13 characters';
+                  }
+                  if (!RegExp(r'^\d{5}-\d{7}-\d$').hasMatch(v)) {
+                    return 'Invalid CNIC format (12345-6789012-3)';
+                  }
+                  return null;
+                }),
+                const SizedBox(height: 11),
 
                 // Gender dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedGender,
-                  validator: (v) =>
-                      v == null ? 'Please select gender' : null,
+                  initialValue: _selectedGender,
+                  validator: (v) => v == null ? 'Please select gender' : null,
                   decoration: InputDecoration(
                     hintText: 'Gender',
                     hintStyle:
@@ -255,25 +304,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     errorBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30),
-                      borderSide:
-                          const BorderSide(color: Colors.redAccent),
+                      borderSide: const BorderSide(color: Colors.redAccent),
                     ),
                     focusedErrorBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30),
-                      borderSide:
-                          const BorderSide(color: Colors.redAccent),
+                      borderSide: const BorderSide(color: Colors.redAccent),
                     ),
                     contentPadding: const EdgeInsets.symmetric(
                         vertical: 16, horizontal: 22),
                   ),
                   items: const [
                     DropdownMenuItem(value: 'Male', child: Text('Male')),
-                    DropdownMenuItem(
-                        value: 'Female', child: Text('Female')),
+                    DropdownMenuItem(value: 'Female', child: Text('Female')),
                     DropdownMenuItem(value: 'Other', child: Text('Other')),
                   ],
-                  onChanged: (v) =>
-                      setState(() => _selectedGender = v),
+                  onChanged: (v) => setState(() => _selectedGender = v),
                 ),
                 const SizedBox(height: 26),
 
@@ -315,14 +360,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   children: [
                     const Text(
                       'Already have an account? ',
-                      style:
-                          TextStyle(color: Colors.black87, fontSize: 14),
+                      style: TextStyle(color: Colors.black87, fontSize: 14),
                     ),
                     GestureDetector(
                       onTap: () => Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(
-                            builder: (_) => const LoginScreen()),
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
                       ),
                       child: const Text(
                         'Login',
@@ -376,8 +419,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
-          borderSide:
-              const BorderSide(color: Color(0xFF0D6B6B), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFF0D6B6B), width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
