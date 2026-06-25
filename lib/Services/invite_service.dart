@@ -15,6 +15,8 @@ class InviteService {
     required String role,
     required String specialization,
     required String phone,
+    String departmentId = '',
+    String license = '',
   }) async {
     try {
       String inviteCode = 'INVITE-${DateTime.now().millisecondsSinceEpoch}';
@@ -26,6 +28,8 @@ class InviteService {
         'role': role,
         'specialization': specialization,
         'phone': phone,
+        'departmentId': departmentId,
+        'license': license,
         'used': false,
         'createdAt': DateTime.now(),
         'expiresAt': DateTime.now().add(Duration(days: 7)),

@@ -4,12 +4,14 @@ import 'package:hospital_management_app/firebase_options.dart';
 import 'package:hospital_management_app/splash_screen.dart';
 import 'package:hospital_management_app/screens/invite_signup_screen.dart';
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   runApp(MyApp());
 }
 

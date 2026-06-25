@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../Services/invite_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class InviteFormScreen extends StatefulWidget {
   final String role;
@@ -23,6 +24,27 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
 
   bool _isLoading = false;
   bool get _isDoctor => widget.role == 'doctor';
+
+  List<Map<String, dynamic>> _departments = [];
+  String? _selectedDepartmentId;
+  String? _selectedDepartmentName;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isDoctor) _loadDepartments();
+  }
+
+  Future<void> _loadDepartments() async {
+    final snap = await FirebaseFirestore.instance
+        .collection('departments')
+        .orderBy('createdAt')
+        .get();
+    setState(() {
+      _departments =
+          snap.docs.map((d) => {'id': d.id, 'name': d.data()['name']}).toList();
+    });
+  }
 
   Color get _roleColor {
     switch (widget.role) {
@@ -66,6 +88,9 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
         role: widget.role,
         specialization: _isDoctor ? _specializationController.text.trim() : '',
         phone: _phoneController.text.trim(),
+        departmentId: _isDoctor
+            ? (_selectedDepartmentId ?? '')
+            : '', // ← YEH LINE ADD KAR
       );
 
       if (inviteCode != null) {
@@ -302,12 +327,49 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
                 ),
                 const SizedBox(height: 16),
                 _buildLabel('Department'),
-                _buildField(
-                  controller: _departmentController,
-                  hint: 'e.g. Cardiology, ENT',
-                  icon: Icons.business_outlined,
-                  validator: (v) =>
-                      v!.isEmpty ? 'Department is required' : null,
+                DropdownButtonFormField<String>(
+                  value: _selectedDepartmentId,
+                  decoration: InputDecoration(
+                    prefixIcon: Icon(Icons.business_outlined,
+                        color: _roleColor, size: 20),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: _roleColor, width: 1.5),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                          color: Color(0xFFDB4437), width: 1.5),
+                    ),
+                  ),
+                  hint: const Text('Select Department',
+                      style: TextStyle(color: Color(0xFFB0B8C1), fontSize: 14)),
+                  items: _departments.map((dept) {
+                    return DropdownMenuItem<String>(
+                      value: dept['id'],
+                      child: Text(dept['name']),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedDepartmentId = value;
+                      _selectedDepartmentName = _departments
+                          .firstWhere((d) => d['id'] == value)['name'];
+                    });
+                  },
+                  validator: (v) => v == null ? 'Department is required' : null,
                 ),
                 const SizedBox(height: 16),
                 _buildLabel('Licence No.'),

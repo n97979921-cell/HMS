@@ -4,6 +4,9 @@ import 'user_list_screen.dart';
 class ManageUsersScreen extends StatelessWidget {
   const ManageUsersScreen({super.key});
 
+  static const Color primaryColor = Color(0xFF0D6B6B);
+  static const Color bgColor = Color(0xFFBDD8D8);
+
   @override
   Widget build(BuildContext context) {
     final roles = [
@@ -11,66 +14,49 @@ class ManageUsersScreen extends StatelessWidget {
         'title': 'Doctors',
         'role': 'doctor',
         'icon': Icons.medical_services_rounded,
-        'color': const Color(0xFF1A73E8),
-        'light': const Color(0xFFE8F0FE),
       },
       {
         'title': 'Admins',
         'role': 'admin',
         'icon': Icons.admin_panel_settings_rounded,
-        'color': const Color(0xFF0F9D58),
-        'light': const Color(0xFFE6F4EA),
       },
       {
         'title': 'Receptionists',
         'role': 'receptionist',
         'icon': Icons.support_agent_rounded,
-        'color': const Color(0xFFF4B400),
-        'light': const Color(0xFFFEF7E0),
       },
       {
         'title': 'Lab Staff',
         'role': 'labstaff',
         'icon': Icons.biotech_rounded,
-        'color': const Color(0xFFDB4437),
-        'light': const Color(0xFFFCE8E6),
       },
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: primaryColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: Color(0xFF1A1A2E)),
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Manage Users',
           style: TextStyle(
-            color: Color(0xFF1A1A2E),
+            color: Colors.white,
             fontWeight: FontWeight.w700,
             fontSize: 20,
           ),
         ),
-        centerTitle: false,
+        centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Select User Type',
-              style: TextStyle(
-                fontSize: 15,
-                color: Color(0xFF6B7280),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
             Expanded(
               child: GridView.builder(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -86,8 +72,6 @@ class ManageUsersScreen extends StatelessWidget {
                     title: role['title'] as String,
                     role: role['role'] as String,
                     icon: role['icon'] as IconData,
-                    color: role['color'] as Color,
-                    lightColor: role['light'] as Color,
                   );
                 },
               ),
@@ -103,15 +87,14 @@ class _RoleCard extends StatelessWidget {
   final String title;
   final String role;
   final IconData icon;
-  final Color color;
-  final Color lightColor;
+
+  static const Color primaryColor = Color(0xFF0D6B6B);
+  static const Color lightColor = Color(0xFFE0F0F0);
 
   const _RoleCard({
     required this.title,
     required this.role,
     required this.icon,
-    required this.color,
-    required this.lightColor,
   });
 
   @override
@@ -131,7 +114,7 @@ class _RoleCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.1),
+              color: primaryColor.withOpacity(0.15),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -149,25 +132,25 @@ class _RoleCard extends StatelessWidget {
                   color: lightColor,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, color: color, size: 28),
+                child: Icon(icon, color: primaryColor, size: 28),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1A1A2E),
+                      color: Color(0xFF1A1A2E),
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
+                  const Text(
                     'Tap to view',
                     style: TextStyle(
                       fontSize: 12,
-                      color: color,
+                      color: primaryColor,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
