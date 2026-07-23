@@ -10,6 +10,7 @@ import 'view_lab_test_summary_screen.dart';
 import 'view_payment_records_screen.dart';
 import 'view_feedback_screen.dart';
 import 'reports_screen.dart';
+import 'admin_profile_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -274,6 +275,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               context,
               MaterialPageRoute(
                 builder: (_) => const ManageUsersScreen(),
+              ),
+            );
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AdminProfileScreen(),
               ),
             );
           }

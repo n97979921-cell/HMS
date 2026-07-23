@@ -7,7 +7,6 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Logger _logger = Logger();
 
-  // 1. PATIENT SIGNUP
   Future<bool> patientSignup({
     required String email,
     required String password,
@@ -18,16 +17,14 @@ class AuthService {
     required String gender,
   }) async {
     try {
-      // Firebase Auth mein create kar
       UserCredential cred = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Email verification bhej
       await cred.user!.sendEmailVerification();
 
-      // Firestore mein user entry create kar
+      // users collection — sirf base fields (schema ke mutabiq)
       await _firestore.collection('users').doc(cred.user!.uid).set({
         'uid': cred.user!.uid,
         'email': email,
@@ -35,11 +32,19 @@ class AuthService {
         'phone': phone,
         'cnic': cnic,
         'role': 'patient',
+        'status': 'active',
+        'createdAt': DateTime.now(),
+      });
+
+      // patient_profiles collection — patient-specific fields
+      await _firestore.collection('patient_profiles').doc(cred.user!.uid).set({
+        'patientId': cred.user!.uid,
         'age': age,
         'gender': gender,
-        'status': 'active',
+        'bloodGroup': null,
+        'allergies': null,
+        'chronicConditions': null,
         'patientType': 'REGISTERED',
-        'createdAt': DateTime.now(),
       });
 
       _logger.i("Patient signup successful: $email");
@@ -159,7 +164,7 @@ class AuthService {
     }
   }
 
-  // 7. DOCTOR SIGNUP (VIA INVITE)
+// 7. DOCTOR SIGNUP (VIA INVITE)
   Future<bool> doctorSignupWithInvite({
     required String inviteCode,
     required String password,
@@ -191,20 +196,29 @@ class AuthService {
         password: password,
       );
 
-      // 3. Firestore mein user entry
+      // 3. Firestore mein user entry (basic info only — schema
+      // rule: doctor-specific fields go in doctor_profiles, not users)
       await _firestore.collection('users').doc(cred.user!.uid).set({
         'uid': cred.user!.uid,
         'email': inviteData['email'],
         'name': inviteData['name'],
         'role': inviteData['role'],
         'status': 'active',
-        'specialization': inviteData['specialization'] ?? '',
         'phone': inviteData['phone'] ?? '',
         'createdAt': DateTime.now(),
         'inviteCode': inviteCode,
       });
 
-      // 4. Invite ko "used" mark kar
+      // 4. Firestore mein doctor_profiles entry — schema:
+      // doctorId (=userId), specialization, license, departmentId
+      await _firestore.collection('doctor_profiles').doc(cred.user!.uid).set({
+        'doctorId': cred.user!.uid,
+        'specialization': inviteData['specialization'] ?? '',
+        'license': inviteData['license'] ?? '',
+        'departmentId': inviteData['departmentId'] ?? '',
+      });
+
+      // 5. Invite ko "used" mark kar
       await _firestore
           .collection('invites')
           .doc(inviteCode)

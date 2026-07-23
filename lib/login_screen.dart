@@ -3,6 +3,7 @@ import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 import 'package:hospital_management_app/services/auth_service.dart';
 import 'screens/admin_dashboard_screen.dart';
+import 'patient_screens/patient_home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -55,6 +56,13 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(
             builder: (_) => const AdminDashboardScreen(),
+          ),
+        );
+      } else if (role == 'patient') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const PatientHomeScreen(),
           ),
         );
       } else {

@@ -163,37 +163,50 @@ class _ReportsOverviewTabState extends State<ReportsOverviewTab> {
 
       // ---- PATIENT STATS (Monthly only) ----
       if (!_isDaily) {
+        // Total patients = all patient accounts that exist (not
+        // limited to this month — this is a running total).
         final allPatientsSnap = await FirebaseFirestore.instance
             .collection('users')
             .where('role', isEqualTo: 'patient')
             .get();
 
-        int newPatients = 0;
-        for (final doc in allPatientsSnap.docs) {
-          final createdAt = doc.data()['createdAt'];
-          if (createdAt is Timestamp) {
-            final date = createdAt.toDate();
-            if (date.isAfter(range.start) && date.isBefore(range.end)) {
-              newPatients++;
-            }
-          }
-        }
-
-        // Returning = patients with more than 1 appointment created
-        // within this month's range.
-        final apptsByPatient = <String, int>{};
+        // New vs Returning is based ONLY on patients who actually
+        // had an appointment this month (apptSnap, already fetched
+        // above for this same date range). For each of those
+        // patients we look up when they originally signed up
+        // (users.createdAt, which never changes):
+        //   - signed up THIS month  → New
+        //   - signed up a PAST month → Returning
+        final Set<String> patientIdsWithApptsThisMonth = {};
         for (final doc in apptSnap.docs) {
           final pid = doc.data()['patientId'];
-          if (pid != null) {
-            apptsByPatient[pid] = (apptsByPatient[pid] ?? 0) + 1;
+          if (pid != null) patientIdsWithApptsThisMonth.add(pid);
+        }
+
+        int newPatients = 0;
+        int returningPatients = 0;
+
+        for (final patientId in patientIdsWithApptsThisMonth) {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(patientId)
+              .get();
+
+          final createdAt = userDoc.data()?['createdAt'];
+          if (createdAt is! Timestamp) continue;
+          final signupDate = createdAt.toDate();
+
+          if (signupDate.isAfter(range.start) &&
+              signupDate.isBefore(range.end)) {
+            newPatients++;
+          } else {
+            returningPatients++;
           }
         }
-        final returning =
-            apptsByPatient.values.where((count) => count > 1).length;
 
         result['totalPatients'] = allPatientsSnap.docs.length;
         result['newPatients'] = newPatients;
-        result['returningPatients'] = returning;
+        result['returningPatients'] = returningPatients;
       }
 
       setState(() {
