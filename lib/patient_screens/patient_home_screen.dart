@@ -3,6 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'department_list_screen.dart';
+import 'my_appointments_screen.dart';
+import 'billing_screen.dart';
+import 'lab_reports_screen.dart';
+import 'prescriptions_screen.dart';
+import 'patient_profile_screen.dart';
+import 'help_screen.dart';
+import 'package:logger/logger.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -13,6 +20,7 @@ class PatientHomeScreen extends StatefulWidget {
 
 class _PatientHomeScreenState extends State<PatientHomeScreen> {
   int _currentNavIndex = 0;
+  final Logger _logger = Logger();
 
   static const Color _primary = Color(0xFF1F8A70);
   static const Color _primaryDark = Color(0xFF0D6B5A);
@@ -131,7 +139,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       }
       _topDoctors = resolvedTopDoctors;
     } catch (e) {
-      debugPrint('Error loading home data: $e');
+      _logger.e('Error loading home data: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -317,7 +325,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             ),
           ),
           ElevatedButton.icon(
-            onPressed: _comingSoon,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HelpScreen()),
+              );
+            },
             icon:
                 const Icon(Icons.support_agent, size: 16, color: Colors.white),
             label: const Text('Help', style: TextStyle(color: Colors.white)),
@@ -432,9 +445,19 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           );
         }),
         _serviceCard(Icons.science_outlined, 'Lab reports', 'View results',
-            const Color(0xFFFDE6E0), _comingSoon),
+            const Color(0xFFFDE6E0), () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const LabReportsScreen()),
+          );
+        }),
         _serviceCard(Icons.medication_outlined, 'Prescription', 'Your medicine',
-            const Color(0xFFD9ECF8), _comingSoon),
+            const Color(0xFFD9ECF8), () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PrescriptionsScreen()),
+          );
+        }),
       ],
     );
   }
@@ -473,7 +496,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
   Widget _buildBillingCard() {
     return GestureDetector(
-      onTap: _comingSoon,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const BillingScreen()),
+        );
+      },
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(14),
@@ -581,7 +609,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       currentIndex: _currentNavIndex,
       onTap: (index) {
         if (index == 1) {
-          _comingSoon();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MyAppointmentsScreen()),
+          );
+        } else if (index == 2) {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const PatientProfileScreen()));
         } else {
           setState(() => _currentNavIndex = index);
         }

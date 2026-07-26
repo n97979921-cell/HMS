@@ -866,6 +866,15 @@ class _ManageConsultationFeesScreenState
               _feeField('Walk-In Fee', walkInController),
               const SizedBox(height: 12),
               _feeField('Video Call Fee', videoCallController),
+              const SizedBox(height: 10),
+              Text(
+                'Suggested: Walk-in ≥ In-person ≥ Video call',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey.shade600,
+                ),
+              ),
             ],
           ),
         ),

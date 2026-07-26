@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'payment_upload_screen.dart';
 
+/// FIXES IS FILE MEIN:
+/// 1. Past-time slots: aaj ki date par guzre hue times ab disabled hain
+///    (pehle 3 baje bhi subah 9:00 ka slot book ho sakta tha)
+/// 2. Live fee: checkout bar ab Firestore se load ki hui LIVE fee
+///    dikhata hai (pehle purani widget.consultationFee dikhti thi,
+///    lekin transaction naya rate charge karti thi — mismatch)
 class BookAppointmentScreen extends StatefulWidget {
   final String doctorId;
   final String doctorName;
@@ -35,6 +42,9 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   String? _startTime; // "09:00"
   String? _endTime; // "17:00"
 
+  // FIX 2: live fee — screen khulte hi Firestore se load hoti hai
+  num? _displayFee;
+
   List<DateTime> _weekdays = [];
   int _selectedDateIndex = 0;
 
@@ -48,13 +58,38 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   void initState() {
     super.initState();
     _weekdays = _generateNextWeekdays(7);
+    _displayFee = widget.consultationFee; // fallback jab tak live load ho
     _loadDoctorSettings();
+    _loadLiveFee();
   }
 
   @override
   void dispose() {
     _symptomsController.dispose();
     super.dispose();
+  }
+
+  // ── FIX 2: Live fee Firestore se load karo ────────────────
+  // Taake screen wohi fee dikhaye jo transaction charge karegi.
+  Future<void> _loadLiveFee() async {
+    try {
+      final feeDoc = await FirebaseFirestore.instance
+          .collection('department_consultation_fees')
+          .doc(widget.departmentId)
+          .get();
+
+      if (feeDoc.exists && mounted) {
+        final feeData = feeDoc.data()!;
+        setState(() {
+          _displayFee = widget.appointmentType == 'VIDEO_CALL'
+              ? (feeData['videoCallFee'] ?? widget.consultationFee)
+              : (feeData['inPersonFee'] ?? widget.consultationFee);
+        });
+      }
+    } catch (_) {
+      // fail hua to fallback fee hi dikhegi — transaction phir bhi
+      // live fee charge karegi, is liye galat charge kabhi nahi hoga
+    }
   }
 
   // ── Next 7 weekdays, Sat/Sun skipped ──────────────────────
@@ -73,6 +108,21 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
   String _dateKey(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  // ── FIX 1: kya yeh time aaj ke liye guzar chuka hai? ──────
+  bool _isPastTime(String time) {
+    final selectedDate = _weekdays[_selectedDateIndex];
+    final now = DateTime.now();
+    final isToday = selectedDate.year == now.year &&
+        selectedDate.month == now.month &&
+        selectedDate.day == now.day;
+    if (!isToday) return false; // future dates par sab times valid
+
+    final parts = time.split(':').map(int.parse).toList();
+    final slotDateTime = DateTime(selectedDate.year, selectedDate.month,
+        selectedDate.day, parts[0], parts[1]);
+    return slotDateTime.isBefore(now);
+  }
 
   // ── Load doctor_settings, then load slots for first date ──
   Future<void> _loadDoctorSettings() async {
@@ -169,6 +219,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       return;
     }
 
+    // FIX 1 (safety net): agar user ne slot select kiya aur phir
+    // itni der screen par baitha raha ke time guzar gaya
+    if (_isPastTime(_selectedTime!)) {
+      _showError('This time has passed. Please pick another slot.');
+      setState(() => _selectedTime = null);
+      return;
+    }
+
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       _showError('You must be logged in to book an appointment');
@@ -189,6 +247,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         .doc(widget.departmentId);
     final apptRef = FirebaseFirestore.instance.collection('appointments').doc();
 
+    num chargedFee = widget.consultationFee; // payment screen ko dene ke liye
+
     try {
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         // 1. Check slot isn't already taken (re-verify inside transaction)
@@ -196,7 +256,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         if (slotSnap.exists) {
           final status = slotSnap.data()?['slotStatus'];
           if (status == 'HELD' || status == 'BOOKED') {
-            throw 'This slot was just taken. Please pick another.';
+            throw Exception('This slot was just taken. Please pick another.');
           }
         }
 
@@ -210,6 +270,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               ? (feeData['videoCallFee'] ?? widget.consultationFee)
               : (feeData['inPersonFee'] ?? widget.consultationFee);
         }
+        chargedFee = liveFee; // transaction ke bahar payment screen ko denge
 
         final endTimeIndex = _allTimes.indexOf(_selectedTime!);
         final slotEndTime = endTimeIndex + 1 < _allTimes.length
@@ -245,6 +306,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           'endTime': slotEndTime,
           'slotStatus': 'HELD',
           'heldByAppointmentId': apptRef.id,
+          'heldAt': FieldValue.serverTimestamp(),
           'appointmentId': null,
         });
       });
@@ -252,11 +314,35 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       if (!mounted) return;
       setState(() => _isBooking = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Appointment requested! Awaiting confirmation.'),
-        backgroundColor: _primary,
-      ));
-      Navigator.pop(context);
+      // Appointment (Requested) + slot (HELD) ban gaye. Ab FORAN payment
+      // screen kholo. Wahan se: submit → payment Pending record; cancel →
+      // appointment + slot delete (clean exit).
+      final paid = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PaymentUploadScreen(
+            appointmentId: apptRef.id,
+            slotId: slotId,
+            amount: chargedFee,
+            doctorName: widget.doctorName,
+          ),
+        ),
+      );
+
+      if (!mounted) return;
+
+      if (paid == true) {
+        // Payment submit ho gayi
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Booking requested! Awaiting reception confirmation.'),
+          backgroundColor: _primary,
+        ));
+        Navigator.pop(context);
+      } else {
+        // Cancel hua (payment nahi ki) — slot/appointment delete ho chuke
+        // payment screen me. Bas slots refresh karo.
+        _loadSlotsForSelectedDate();
+      }
     } catch (e) {
       setState(() => _isBooking = false);
       _showError(e is String ? e : 'Booking failed: $e');
@@ -469,7 +555,10 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       ),
       itemBuilder: (context, index) {
         final time = _allTimes[index];
-        final isAvailable = !_unavailableTimes.contains(time);
+        // FIX 1: slot unavailable hai agar HELD/BOOKED hai
+        // YA aaj ki date par time guzar chuka hai
+        final isAvailable =
+            !_unavailableTimes.contains(time) && !_isPastTime(time);
         final isSelected = time == _selectedTime && isAvailable;
 
         return GestureDetector(
@@ -529,7 +618,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
             children: [
               const Text('Consultation fee',
                   style: TextStyle(fontSize: 13, color: Colors.grey)),
-              Text('Rs. ${widget.consultationFee}',
+              // FIX 2: live fee dikhao, purani widget wali nahi
+              Text('Rs. ${_displayFee ?? widget.consultationFee}',
                   style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,

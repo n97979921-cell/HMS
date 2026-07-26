@@ -2,11 +2,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logger/logger.dart';
 
+/// FIXES:
+/// 1. login() ab {'success': bool, 'user'/'error': ...} deta hai
+///    (pehle null deta tha — user ko wajah nahi milti thi)
+/// 2. Invite signups TRANSACTION mein invite re-check + mark-used karte
+///    hain (double-use bug fix)
+/// 3. Transaction fail par orphan Firebase Auth account delete
+/// 4. serverTimestamp() har jagah
+/// 5. admin/doctor/labstaff/receptionist — sab invite se ban sakte hain
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Logger _logger = Logger();
 
+  // 1. PATIENT SIGNUP
   Future<bool> patientSignup({
     required String email,
     required String password,
@@ -24,7 +33,6 @@ class AuthService {
 
       await cred.user!.sendEmailVerification();
 
-      // users collection — sirf base fields (schema ke mutabiq)
       await _firestore.collection('users').doc(cred.user!.uid).set({
         'uid': cred.user!.uid,
         'email': email,
@@ -33,10 +41,9 @@ class AuthService {
         'cnic': cnic,
         'role': 'patient',
         'status': 'active',
-        'createdAt': DateTime.now(),
+        'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // patient_profiles collection — patient-specific fields
       await _firestore.collection('patient_profiles').doc(cred.user!.uid).set({
         'patientId': cred.user!.uid,
         'age': age,
@@ -55,8 +62,10 @@ class AuthService {
     }
   }
 
-  // 2. LOGIN (SABB ROLES KE LIYE)
-  Future<Map<String, dynamic>?> login({
+  // 2. LOGIN (SAB ROLES)
+  // Success: {'success': true,  'user': userData}
+  // Fail:    {'success': false, 'error': 'reason'}
+  Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
@@ -66,33 +75,61 @@ class AuthService {
         password: password,
       );
 
-      // Firestore se user data le
       DocumentSnapshot userDoc =
           await _firestore.collection('users').doc(cred.user!.uid).get();
 
       if (!userDoc.exists) {
-        throw "User not found in database";
+        await _auth.signOut();
+        return {'success': false, 'error': 'User not found in database'};
       }
 
       Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
 
-      // Check: user active hai?
       if (userData['status'] != 'active') {
-        throw "User account is inactive";
+        await _auth.signOut();
+        return {
+          'success': false,
+          'error': 'Your account is inactive. Contact the administrator.'
+        };
       }
 
       await cred.user!.reload();
 
-      // Check: email verified hai?
       String userRole = userData['role'] ?? '';
       if (userRole == 'patient' && !cred.user!.emailVerified) {
-        throw "Please verify your email first";
+        await _auth.signOut();
+        return {
+          'success': false,
+          'error': 'Please verify your email first. Check your inbox.'
+        };
       }
 
-      return userData; // Return user data
+      return {'success': true, 'user': userData};
+    } on FirebaseAuthException catch (e) {
+      _logger.e("Login FirebaseAuth error: ${e.code}");
+      String message;
+      switch (e.code) {
+        case 'user-not-found':
+        case 'wrong-password':
+        case 'invalid-credential':
+          message = 'Incorrect email or password';
+          break;
+        case 'invalid-email':
+          message = 'Invalid email format';
+          break;
+        case 'user-disabled':
+          message = 'This account has been disabled';
+          break;
+        case 'too-many-requests':
+          message = 'Too many attempts. Try again later.';
+          break;
+        default:
+          message = 'Login failed. Please try again.';
+      }
+      return {'success': false, 'error': message};
     } catch (e) {
       _logger.e("Login error: $e");
-      return null;
+      return {'success': false, 'error': 'Login failed. Please try again.'};
     }
   }
 
@@ -106,22 +143,14 @@ class AuthService {
     }
   }
 
-// 4. VERIFY USER ROLE
+  // 4. VERIFY USER ROLE
   Future<String?> verifyRole(String userId) async {
     try {
       DocumentSnapshot userDoc =
           await _firestore.collection('users').doc(userId).get();
-
-      if (!userDoc.exists) {
-        _logger.e("User not found: $userId");
-        return null;
-      }
-
+      if (!userDoc.exists) return null;
       Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-      String role = userData['role'];
-
-      _logger.i("User role verified: $role");
-      return role;
+      return userData['role'];
     } catch (e) {
       _logger.e("Error verifying role: $e");
       return null;
@@ -132,19 +161,9 @@ class AuthService {
   Future<bool> verifyEmail() async {
     try {
       User? firebaseUser = _auth.currentUser;
-
-      if (firebaseUser == null) {
-        _logger.e("No user logged in");
-        return false;
-      }
-
-      if (firebaseUser.emailVerified) {
-        _logger.i("Email already verified");
-        return true;
-      }
-
+      if (firebaseUser == null) return false;
+      if (firebaseUser.emailVerified) return true;
       await firebaseUser.sendEmailVerification();
-      _logger.i("Verification email sent to ${firebaseUser.email}");
       return true;
     } catch (e) {
       _logger.e("Error sending verification email: $e");
@@ -156,7 +175,6 @@ class AuthService {
   Future<bool> forgotPassword(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
-      _logger.i("Password reset email sent to $email");
       return true;
     } catch (e) {
       _logger.e("Forgot password error: $e");
@@ -164,203 +182,177 @@ class AuthService {
     }
   }
 
-// 7. DOCTOR SIGNUP (VIA INVITE)
+  // ─── INVITE SIGNUP — SHARED HELPER (transaction-safe) ───
+  Future<bool> _signupWithInvite({
+    required String inviteCode,
+    required String password,
+    required Map<String, dynamic> Function(
+            String uid, Map<String, dynamic> inviteData)
+        buildUserDoc,
+    Map<String, dynamic> Function(String uid, Map<String, dynamic> inviteData)?
+        buildProfileDoc,
+    String? profileCollection,
+  }) async {
+    UserCredential? cred;
+    try {
+      final inviteRef = _firestore.collection('invites').doc(inviteCode);
+      final inviteDoc = await inviteRef.get();
+
+      if (!inviteDoc.exists) throw "Invalid invite code";
+      final inviteData = inviteDoc.data()!;
+      if (inviteData['used'] == true) throw "This invite has already been used";
+      final DateTime expiresAt = inviteData['expiresAt'].toDate();
+      if (DateTime.now().isAfter(expiresAt)) throw "This invite has expired";
+
+      cred = await _auth.createUserWithEmailAndPassword(
+        email: inviteData['email'],
+        password: password,
+      );
+      final String uid = cred.user!.uid;
+
+      await _firestore.runTransaction((transaction) async {
+        final freshInvite = await transaction.get(inviteRef);
+        if (!freshInvite.exists || freshInvite.data()!['used'] == true) {
+          throw "This invite has already been used";
+        }
+
+        transaction.set(
+          _firestore.collection('users').doc(uid),
+          buildUserDoc(uid, inviteData),
+        );
+
+        if (profileCollection != null && buildProfileDoc != null) {
+          transaction.set(
+            _firestore.collection(profileCollection).doc(uid),
+            buildProfileDoc(uid, inviteData),
+          );
+        }
+
+        transaction.update(inviteRef, {
+          'used': true,
+          'usedAt': FieldValue.serverTimestamp(),
+        });
+      });
+
+      _logger.i("Invite signup successful: ${inviteData['email']}");
+      return true;
+    } catch (e) {
+      _logger.e("Invite signup error: $e");
+      try {
+        await cred?.user?.delete();
+      } catch (deleteError) {
+        _logger.e("Orphan cleanup failed: $deleteError");
+      }
+      return false;
+    }
+  }
+
+  // 7. DOCTOR SIGNUP
   Future<bool> doctorSignupWithInvite({
     required String inviteCode,
     required String password,
-  }) async {
-    try {
-      // 1. Invite validate kar
-      DocumentSnapshot inviteDoc =
-          await _firestore.collection('invites').doc(inviteCode).get();
-
-      if (!inviteDoc.exists) {
-        throw "Invalid invite code";
-      }
-
-      Map<String, dynamic> inviteData =
-          inviteDoc.data() as Map<String, dynamic>;
-
-      if (inviteData['used'] == true) {
-        throw "This invite has already been used";
-      }
-
-      DateTime expiresAt = inviteData['expiresAt'].toDate();
-      if (DateTime.now().isAfter(expiresAt)) {
-        throw "This invite has expired";
-      }
-
-      // 2. Firebase Auth mein account create kar
-      UserCredential cred = await _auth.createUserWithEmailAndPassword(
-        email: inviteData['email'],
-        password: password,
-      );
-
-      // 3. Firestore mein user entry (basic info only — schema
-      // rule: doctor-specific fields go in doctor_profiles, not users)
-      await _firestore.collection('users').doc(cred.user!.uid).set({
-        'uid': cred.user!.uid,
-        'email': inviteData['email'],
-        'name': inviteData['name'],
-        'role': inviteData['role'],
+  }) {
+    return _signupWithInvite(
+      inviteCode: inviteCode,
+      password: password,
+      buildUserDoc: (uid, invite) => {
+        'uid': uid,
+        'email': invite['email'],
+        'name': invite['name'],
+        'role': invite['role'],
         'status': 'active',
-        'phone': inviteData['phone'] ?? '',
-        'createdAt': DateTime.now(),
+        'phone': invite['phone'] ?? '',
+        'createdAt': FieldValue.serverTimestamp(),
         'inviteCode': inviteCode,
-      });
-
-      // 4. Firestore mein doctor_profiles entry — schema:
-      // doctorId (=userId), specialization, license, departmentId
-      await _firestore.collection('doctor_profiles').doc(cred.user!.uid).set({
-        'doctorId': cred.user!.uid,
-        'specialization': inviteData['specialization'] ?? '',
-        'license': inviteData['license'] ?? '',
-        'departmentId': inviteData['departmentId'] ?? '',
-      });
-
-      // 5. Invite ko "used" mark kar
-      await _firestore
-          .collection('invites')
-          .doc(inviteCode)
-          .update({'used': true});
-
-      return true;
-    } catch (e) {
-      _logger.e("Doctor signup error: $e");
-      return false;
-    }
+      },
+      profileCollection: 'doctor_profiles',
+      buildProfileDoc: (uid, invite) => {
+        'doctorId': uid,
+        'specialization': invite['specialization'] ?? '',
+        'license': invite['license'] ?? '',
+        'departmentId': invite['departmentId'] ?? '',
+      },
+    );
   }
 
-// Lab Staff Signup (Via Invite)
+  // 8. LAB STAFF SIGNUP
   Future<bool> labStaffSignupWithInvite({
     required String inviteCode,
     required String password,
-  }) async {
-    try {
-      DocumentSnapshot inviteDoc =
-          await _firestore.collection('invites').doc(inviteCode).get();
-
-      if (!inviteDoc.exists) {
-        throw "Invalid invite code";
-      }
-
-      Map<String, dynamic> inviteData =
-          inviteDoc.data() as Map<String, dynamic>;
-
-      if (inviteData['used'] == true) {
-        throw "This invite has already been used";
-      }
-
-      DateTime expiresAt = inviteData['expiresAt'].toDate();
-      if (DateTime.now().isAfter(expiresAt)) {
-        throw "This invite has expired";
-      }
-
-      UserCredential cred = await _auth.createUserWithEmailAndPassword(
-        email: inviteData['email'],
-        password: password,
-      );
-
-      await _firestore.collection('users').doc(cred.user!.uid).set({
-        'uid': cred.user!.uid,
-        'email': inviteData['email'],
-        'name': inviteData['name'],
+  }) {
+    return _signupWithInvite(
+      inviteCode: inviteCode,
+      password: password,
+      buildUserDoc: (uid, invite) => {
+        'uid': uid,
+        'email': invite['email'],
+        'name': invite['name'],
         'role': 'labstaff',
-        'phone': inviteData['phone'] ?? '',
+        'phone': invite['phone'] ?? '',
         'status': 'active',
-        'createdAt': DateTime.now(),
+        'createdAt': FieldValue.serverTimestamp(),
         'inviteCode': inviteCode,
-      });
-
-      await _firestore
-          .collection('invites')
-          .doc(inviteCode)
-          .update({'used': true});
-
-      _logger.i("Lab Staff signup successful: ${inviteData['email']}");
-      return true;
-    } catch (e) {
-      _logger.e("labStaffSignupWithInvite error: $e");
-      return false;
-    }
+      },
+    );
   }
 
-  // Receptionist Signup (Via Invite)
+  // 9. RECEPTIONIST SIGNUP
   Future<bool> receptionistSignupWithInvite({
     required String inviteCode,
     required String password,
-  }) async {
-    try {
-      DocumentSnapshot inviteDoc =
-          await _firestore.collection('invites').doc(inviteCode).get();
-
-      if (!inviteDoc.exists) {
-        throw "Invalid invite code";
-      }
-
-      Map<String, dynamic> inviteData =
-          inviteDoc.data() as Map<String, dynamic>;
-
-      if (inviteData['used'] == true) {
-        throw "This invite has already been used";
-      }
-
-      DateTime expiresAt = inviteData['expiresAt'].toDate();
-      if (DateTime.now().isAfter(expiresAt)) {
-        throw "This invite has expired";
-      }
-
-      UserCredential cred = await _auth.createUserWithEmailAndPassword(
-        email: inviteData['email'],
-        password: password,
-      );
-
-      await _firestore.collection('users').doc(cred.user!.uid).set({
-        'uid': cred.user!.uid,
-        'email': inviteData['email'],
-        'name': inviteData['name'],
+  }) {
+    return _signupWithInvite(
+      inviteCode: inviteCode,
+      password: password,
+      buildUserDoc: (uid, invite) => {
+        'uid': uid,
+        'email': invite['email'],
+        'name': invite['name'],
         'role': 'receptionist',
-        'phone': inviteData['phone'] ?? '',
+        'phone': invite['phone'] ?? '',
         'status': 'active',
-        'createdAt': DateTime.now(),
+        'createdAt': FieldValue.serverTimestamp(),
         'inviteCode': inviteCode,
-      });
-
-      await _firestore
-          .collection('invites')
-          .doc(inviteCode)
-          .update({'used': true});
-
-      _logger.i("Receptionist signup successful: ${inviteData['email']}");
-      return true;
-    } catch (e) {
-      _logger.e("receptionistSignupWithInvite error: $e");
-      return false;
-    }
+      },
+    );
   }
 
-  // 8. GET CURRENT USER
+  // 10. ADMIN SIGNUP
+  Future<bool> adminSignupWithInvite({
+    required String inviteCode,
+    required String password,
+  }) {
+    return _signupWithInvite(
+      inviteCode: inviteCode,
+      password: password,
+      buildUserDoc: (uid, invite) => {
+        'uid': uid,
+        'email': invite['email'],
+        'name': invite['name'],
+        'role': 'admin',
+        'phone': invite['phone'] ?? '',
+        'status': 'active',
+        'createdAt': FieldValue.serverTimestamp(),
+        'inviteCode': inviteCode,
+      },
+    );
+  }
+
+  // 11. GET CURRENT USER
   Future<Map<String, dynamic>?> getCurrentUser() async {
     try {
       User? firebaseUser = _auth.currentUser;
-
-      if (firebaseUser == null) {
-        _logger.w("getCurrentUser: No user is currently logged in");
-        return null;
-      }
-
+      if (firebaseUser == null) return null;
       DocumentSnapshot userDoc =
           await _firestore.collection('users').doc(firebaseUser.uid).get();
-
-      _logger.d("getCurrentUser: Fetched data for ${firebaseUser.uid}");
-      return userDoc.data() as Map<String, dynamic>;
+      return userDoc.data() as Map<String, dynamic>?;
     } catch (e) {
       _logger.e("getCurrentUser error: $e");
       return null;
     }
   }
 
-  // 9. UPDATE USER PROFILE
+  // 12. UPDATE USER PROFILE
   Future<bool> updateUserProfile({
     required String userId,
     required Map<String, dynamic> data,
@@ -374,28 +366,16 @@ class AuthService {
     }
   }
 
-  // 10. CHECK IF EMAIL EXISTS
+  // 13. CHECK IF EMAIL EXISTS
   Future<bool> emailExists(String email) async {
     try {
       final result = await _firestore
           .collection('users')
           .where('email', isEqualTo: email)
           .get();
-
       return result.docs.isNotEmpty;
     } catch (e) {
       _logger.e("emailExists error: $e");
-      return false;
-    }
-  }
-
-  // 11. RESET PASSWORD (ADMIN)
-  Future<bool> resetUserPassword(String email) async {
-    try {
-      await _auth.sendPasswordResetEmail(email: email);
-      return true;
-    } catch (e) {
-      _logger.e("resetUserPassword error: $e");
       return false;
     }
   }

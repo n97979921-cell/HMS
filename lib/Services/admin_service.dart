@@ -2,46 +2,24 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logger/logger.dart';
 
+/// FIXES IS FILE MEIN:
+/// 1. addUserDirectly() DELETE kar diya — staff sirf INVITE se add
+///    hota hai (invite_service + auth_service). Direct-create mein
+///    admin ka session naye user se replace ho jata tha.
+/// 2. Har jagah DateTime.now() ki jagah FieldValue.serverTimestamp()
 class AdminService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final Logger _logger = Logger();
 
-  // 1. ADD USER DIRECTLY
-  Future<bool> addUserDirectly({
-    required String email,
-    required String password,
-    required String name,
-    required String role,
-    required String phone,
-  }) async {
-    try {
-      UserCredential cred =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+  // NOTE: addUserDirectly() yahan se HATA diya gaya hai.
+  // Staff add karne ka SIRF ek rasta hai: Admin invite generate
+  // karta hai (InviteService.generateInvite) → user apne device
+  // par invite se signup karta hai (AuthService).
+  // Wajah: admin ke device par createUserWithEmailAndPassword
+  // chalane se admin ka login session naye user se badal jata tha.
 
-      await _firestore.collection('users').doc(cred.user!.uid).set({
-        'uid': cred.user!.uid,
-        'email': email,
-        'name': name,
-        'role': role,
-        'phone': phone,
-        'status': 'active',
-        'createdAt': DateTime.now(),
-        'createdBy': _auth.currentUser!.uid,
-      });
-
-      _logger.i("User added directly: $email | Role: $role");
-      return true;
-    } catch (e) {
-      _logger.e("addUserDirectly error: $e");
-      return false;
-    }
-  }
-
-  // 2. GET ALL USERS
+  // 1. GET ALL USERS
   Future<List<Map<String, dynamic>>> getAllUsers() async {
     try {
       QuerySnapshot snap = await _firestore.collection('users').get();
@@ -55,7 +33,7 @@ class AdminService {
     }
   }
 
-  // 3. EDIT USER
+  // 2. EDIT USER
   Future<bool> editUserInfo({
     required String userId,
     required String newName,
@@ -67,7 +45,7 @@ class AdminService {
         'name': newName,
         'phone': newPhone,
         'role': newRole,
-        'updatedAt': DateTime.now(),
+        'updatedAt': FieldValue.serverTimestamp(),
         'updatedBy': _auth.currentUser!.uid,
       });
       _logger.i("User updated: $userId | New role: $newRole");
@@ -78,12 +56,12 @@ class AdminService {
     }
   }
 
-  // 4. DEACTIVATE USER
+  // 3. DEACTIVATE USER
   Future<bool> deactivateUser(String userId) async {
     try {
       await _firestore.collection('users').doc(userId).update({
         'status': 'inactive',
-        'deactivatedAt': DateTime.now(),
+        'deactivatedAt': FieldValue.serverTimestamp(),
         'deactivatedBy': _auth.currentUser!.uid,
       });
       _logger.w("User deactivated: $userId");
@@ -94,12 +72,12 @@ class AdminService {
     }
   }
 
-  // 5. REACTIVATE USER
+  // 4. REACTIVATE USER
   Future<bool> reactivateUser(String userId) async {
     try {
       await _firestore.collection('users').doc(userId).update({
         'status': 'active',
-        'reactivatedAt': DateTime.now(),
+        'reactivatedAt': FieldValue.serverTimestamp(),
       });
       _logger.i("User reactivated: $userId");
       return true;
@@ -109,7 +87,7 @@ class AdminService {
     }
   }
 
-  // 6. RESET PASSWORD
+  // 5. RESET PASSWORD
   Future<bool> resetUserPassword(String email) async {
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
@@ -121,15 +99,15 @@ class AdminService {
     }
   }
 
-  // 7. DELETE USER
+  // 6. DELETE USER (SOFT DELETE — schema rule)
   Future<bool> deleteUser(String userId) async {
     try {
       await _firestore.collection('users').doc(userId).update({
         'status': 'deleted',
-        'deletedAt': DateTime.now(),
+        'deletedAt': FieldValue.serverTimestamp(),
         'deletedBy': _auth.currentUser!.uid,
       });
-      _logger.w("User deleted: $userId");
+      _logger.w("User deleted (soft): $userId");
       return true;
     } catch (e) {
       _logger.e("deleteUser error: $e");
@@ -137,7 +115,7 @@ class AdminService {
     }
   }
 
-  // 8. SEARCH USERS
+  // 7. SEARCH USERS
   Future<List<Map<String, dynamic>>> searchUsers(String query) async {
     try {
       QuerySnapshot snap = await _firestore
@@ -156,7 +134,7 @@ class AdminService {
     }
   }
 
-  // 9. FILTER BY ROLE
+  // 8. FILTER BY ROLE
   Future<List<Map<String, dynamic>>> getUsersByRole(String role) async {
     try {
       QuerySnapshot snap = await _firestore
