@@ -568,7 +568,7 @@ class _WalkInScreenState extends State<WalkInScreen> {
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF1A2F3A))),
           const SizedBox(height: 4),
-          const Text('Email nahi chahiye — walk-in login nahi karta.',
+          const Text('No Email Required',
               style: TextStyle(fontSize: 12, color: Colors.grey)),
           const SizedBox(height: 14),
           _regField(_nameController, 'Full name', Icons.person_outline,
