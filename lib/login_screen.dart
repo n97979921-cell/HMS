@@ -4,9 +4,20 @@ import 'forgot_password_screen.dart';
 import 'package:hospital_management_app/services/auth_service.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'patient_screens/patient_home_screen.dart';
+<<<<<<< HEAD
 import 'doctor_screens/doctor_home_screen.dart';
 import 'doctor_screens/firebase_doctor_repository.dart';
+=======
+import 'receptionist_screens/receptionist_dashboard_screen.dart';
+>>>>>>> 1e28633c11e0727c8b43bc60e5a84df734def857
 
+/// LOGIN — meri fixed auth_service ke format ke saath.
+/// login() ab {'success': bool, 'user'/'error': ...} deta hai.
+/// Routing: role ke hisaab se sahi dashboard.
+///   admin        → AdminDashboardScreen
+///   patient      → PatientHomeScreen
+///   receptionist → ReceptionistDashboardScreen
+///   doctor/labstaff → "coming soon" (jab unke dashboard banenge, add karna)
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -35,8 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    // Backend call
-    Map<String, dynamic>? user = await authService.login(
+    final result = await authService.login(
       email: _emailController.text.trim(),
       password: _passwordController.text.trim(),
     );
@@ -44,14 +54,17 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
     if (!mounted) return;
 
-    if (user != null) {
-      // Login success
+    if (result['success'] == true) {
+      final Map<String, dynamic> user = result['user'];
+      final String role = user['role'] ?? '';
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Login Successful! Welcome 👋'),
           backgroundColor: Color(0xFF1A6B6B),
         ),
       );
+<<<<<<< HEAD
       String role = user['role'] ?? '';
       if (role == 'admin') {
         Navigator.pushReplacement(
@@ -81,12 +94,36 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Dashboard coming soon!')),
         );
+=======
+
+      Widget? destination;
+      switch (role) {
+        case 'admin':
+          destination = const AdminDashboardScreen();
+          break;
+        case 'patient':
+          destination = const PatientHomeScreen();
+          break;
+        case 'receptionist':
+          destination = const ReceptionistDashboardScreen();
+          break;
+        // doctor / labstaff — jab unke dashboards banenge, yahan add karo
+        default:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Dashboard coming soon!')),
+          );
+          return;
+>>>>>>> 1e28633c11e0727c8b43bc60e5a84df734def857
       }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => destination!),
+      );
     } else {
-      // Login failed
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid email or password'),
+        SnackBar(
+          content: Text(result['error'] ?? 'Login failed'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -105,19 +142,12 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 10),
-
-                // Logo
                 SizedBox(
                   width: 280,
                   height: 280,
-                  child: Image.asset(
-                    'assets/Logo.png',
-                    fit: BoxFit.contain,
-                  ),
+                  child: Image.asset('assets/Logo.png', fit: BoxFit.contain),
                 ),
-
                 const SizedBox(height: 10),
-
                 const Text(
                   'FAMILY WELL\nCARE HOSPITAL',
                   textAlign: TextAlign.center,
@@ -129,13 +159,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     height: 1.5,
                   ),
                 ),
-
                 const SizedBox(height: 40),
-
-                // Login | Sign Up Toggle
                 Row(
                   children: [
-                    // Login Button (Active)
                     Expanded(
                       child: Container(
                         height: 50,
@@ -163,8 +189,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(width: 14),
-
-                    // Sign Up Button (Inactive)
                     Expanded(
                       child: GestureDetector(
                         onTap: () => Navigator.push(
@@ -193,10 +217,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 32),
-
-                // Email Field
                 _inputField(
                   controller: _emailController,
                   hint: 'Email',
@@ -208,10 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 16),
-
-                // Password Field
                 _inputField(
                   controller: _passwordController,
                   hint: 'Password',
@@ -233,10 +251,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 32),
-
-                // Login Button
                 SizedBox(
                   width: 180,
                   height: 52,
@@ -268,10 +283,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                   ),
                 ),
-
                 const SizedBox(height: 40),
-
-                // Forgot Password
                 GestureDetector(
                   onTap: () => Navigator.push(
                     context,
@@ -287,10 +299,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
-                // Create New Account
                 GestureDetector(
                   onTap: () => Navigator.push(
                     context,
@@ -298,10 +307,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   child: const Text(
                     'Create New Account',
-                    style: TextStyle(
-                      color: Color(0xFF7A9A9A),
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Color(0xFF7A9A9A), fontSize: 14),
                   ),
                 ),
               ],
@@ -312,7 +318,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Reusable Input Field
   Widget _inputField({
     required TextEditingController controller,
     required String hint,

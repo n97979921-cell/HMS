@@ -1,495 +1,393 @@
 import 'package:flutter/material.dart';
-import '../Services/invite_service.dart';
-import '../Services/auth_service.dart';
+import 'package:hospital_management_app/services/auth_service.dart';
+import 'package:hospital_management_app/services/invite_service.dart';
 import '../login_screen.dart';
-import 'dart:html' as html;
-import 'package:flutter/foundation.dart';
 
+/// INVITE SIGNUP (Staff only — receptionist/doctor/labstaff/admin)
+///
+/// FLOW (Option 1 — sirf deep link):
+///   Admin invite form bharta hai → user ko email par link jaata hai →
+///   user link kholta hai → main.dart URL se code nikal ke yeh screen
+///   inviteCode ke saath kholti hai → code auto-validate → user sirf
+///   password set karta hai → account ban jaata hai.
+///
+/// Koi manual code-typing NAHI. Agar bina code ke yeh screen khul jaye
+/// (galti se), to "invalid link" message dikhta hai.
+///
+/// Account banana AuthService ke role-specific methods se hota hai
+/// (transaction-safe: account + invite mark-used ek saath).
 class InviteSignupScreen extends StatefulWidget {
-  final String inviteCode;
+  /// Deep-link (invite URL) se aaya invite code.
+  final String? inviteCode;
 
-  const InviteSignupScreen({super.key, required this.inviteCode});
+  const InviteSignupScreen({super.key, this.inviteCode});
 
   @override
   State<InviteSignupScreen> createState() => _InviteSignupScreenState();
 }
 
 class _InviteSignupScreenState extends State<InviteSignupScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final InviteService _inviteService = InviteService();
-  final AuthService _authService = AuthService();
+  final _authService = AuthService();
+  final _inviteService = InviteService();
 
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
+  final _confirmController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
-  Map<String, dynamic>? _inviteData;
-  bool _isLoading = true;
-  bool _isSubmitting = false;
-  bool _obscurePass = true;
+  bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  String? _error;
+  bool _isValidating = true; // shuru mein hi validate hota hai
+  bool _isSigningUp = false;
+
+  Map<String, dynamic>? _inviteData; // validated invite ka data
+  String? _errorMessage; // invalid/expired link ka message
+
+  static const Color _primary = Color(0xFF0D6B6B);
 
   @override
   void initState() {
     super.initState();
-    _loadInvite();
-  }
-
-  Future<void> _loadInvite() async {
-    final data = await _inviteService.validateInvite(widget.inviteCode);
-    setState(() {
-      _inviteData = data;
-      _isLoading = false;
-      if (data == null) {
-        _error = 'This invite link is invalid or has expired.';
-      }
-    });
-  }
-
-  Future<void> _submitSignup() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_inviteData == null) return;
-
-    setState(() => _isSubmitting = true);
-
-    try {
-      final role = _inviteData!['role'] as String;
-      bool success = false;
-
-      if (role == 'doctor') {
-        success = await _authService.doctorSignupWithInvite(
-          inviteCode: widget.inviteCode,
-          password: _passwordController.text.trim(),
-        );
-      } else if (role == 'labstaff') {
-        success = await _authService.labStaffSignupWithInvite(
-          inviteCode: widget.inviteCode,
-          password: _passwordController.text.trim(),
-        );
-      } else if (role == 'receptionist') {
-        success = await _authService.receptionistSignupWithInvite(
-          inviteCode: widget.inviteCode,
-          password: _passwordController.text.trim(),
-        );
-      } else {
-        // Admin or other roles
-        success = await _authService.doctorSignupWithInvite(
-          inviteCode: widget.inviteCode,
-          password: _passwordController.text.trim(),
-        );
-      }
-
-      if (success && mounted) {
-        _showSuccessDialog();
-      } else if (mounted) {
-        _showError('Signup failed. Please try again.');
-      }
-    } catch (e) {
-      _showError('Error: $e');
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
-    }
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Color(0xFFE6F4EA),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check_rounded,
-                  color: Color(0xFF0F9D58), size: 40),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Account Created!',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Welcome, ${_inviteData!['name']}!\nYour account is ready.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Color(0xFF6B7280),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                if (kIsWeb) {
-                  html.window.location.href =
-                      'https://hospitalmanagement-7605b.web.app';
-                } else {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(
-                      builder: (_) => const LoginScreen(),
-                    ),
-                    (route) => false,
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1A73E8),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: const Text('Go to Login',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: const Color(0xFFDB4437),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+    _validateInviteFromLink();
   }
 
   @override
   void dispose() {
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
+    _confirmController.dispose();
     super.dispose();
+  }
+
+  // Deep link se aaye code ko validate karo
+  Future<void> _validateInviteFromLink() async {
+    final code = widget.inviteCode?.trim();
+
+    // Bina code ke aaye (galat raasta) → error message
+    if (code == null || code.isEmpty) {
+      setState(() {
+        _isValidating = false;
+        _errorMessage =
+            'This page can only be opened from an invite link sent to your email.';
+      });
+      return;
+    }
+
+    try {
+      final data = await _inviteService.validateInvite(code);
+      if (!mounted) return;
+      if (data == null) {
+        setState(() {
+          _isValidating = false;
+          _errorMessage =
+              'This invite link is invalid, already used, or has expired.';
+        });
+      } else {
+        setState(() {
+          _isValidating = false;
+          _inviteData = data;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isValidating = false;
+        _errorMessage = 'Could not validate invite. Please try again.';
+      });
+    }
+  }
+
+  // Password set karke account banao
+  Future<void> _completeSignup() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_inviteData == null) return;
+
+    setState(() => _isSigningUp = true);
+
+    final inviteCode = widget.inviteCode!.trim();
+    final password = _passwordController.text.trim();
+    final role = (_inviteData!['role'] ?? '').toString().toLowerCase();
+
+    try {
+      bool success;
+      switch (role) {
+        case 'doctor':
+          success = await _authService.doctorSignupWithInvite(
+              inviteCode: inviteCode, password: password);
+          break;
+        case 'labstaff':
+          success = await _authService.labStaffSignupWithInvite(
+              inviteCode: inviteCode, password: password);
+          break;
+        case 'receptionist':
+          success = await _authService.receptionistSignupWithInvite(
+              inviteCode: inviteCode, password: password);
+          break;
+        case 'admin':
+          success = await _authService.adminSignupWithInvite(
+              inviteCode: inviteCode, password: password);
+          break;
+        default:
+          _showError('Unknown role in invite: $role');
+          setState(() => _isSigningUp = false);
+          return;
+      }
+
+      if (!mounted) return;
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Account created! Please log in.'),
+          backgroundColor: _primary,
+        ));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      } else {
+        _showError('Signup failed. The invite may already be used or expired.');
+      }
+    } catch (e) {
+      _showError('Error creating account: $e');
+    } finally {
+      if (mounted) setState(() => _isSigningUp = false);
+    }
+  }
+
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: Colors.redAccent,
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(color: Color(0xFF1A73E8)),
-        ),
-      );
-    }
-
-    if (_error != null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.link_off_rounded,
-                    size: 64, color: Color(0xFFDB4437)),
-                const SizedBox(height: 16),
-                const Text(
-                  'Invalid Invite',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF6B7280),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    final name = _inviteData!['name'] ?? '';
-    final email = _inviteData!['email'] ?? '';
-    final role = _inviteData!['role'] ?? '';
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
+      backgroundColor: const Color(0xFFBDD8D8),
+      appBar: AppBar(
+        backgroundColor: _primary,
+        elevation: 0,
+        title: const Text('Staff Sign Up',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: _isValidating
+          ? const Center(child: CircularProgressIndicator(color: _primary))
+          : _errorMessage != null
+              ? _buildErrorView()
+              : _buildSignupForm(),
+    );
+  }
 
-                // Header
-                Center(
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8F0FE),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.lock_open_rounded,
-                            color: Color(0xFF1A73E8), size: 40),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Complete Your Signup',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A2E),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Set a password to activate your account',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF6B7280),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Auto-filled info card
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Your Information',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF6B7280),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _infoRow(Icons.person_outline_rounded, 'Name', name),
-                      const Divider(height: 20, color: Color(0xFFF3F4F6)),
-                      _infoRow(Icons.email_outlined, 'Email', email),
-                      const Divider(height: 20, color: Color(0xFFF3F4F6)),
-                      _infoRow(
-                        Icons.badge_outlined,
-                        'Role',
-                        role[0].toUpperCase() + role.substring(1),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Password field
-                const Text(
-                  'Password',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF374151),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePass,
-                  validator: (v) {
-                    if (v!.isEmpty) return 'Password is required';
-                    if (v.length < 6) return 'Minimum 6 characters';
-                    return null;
-                  },
-                  decoration: _inputDecoration(
-                    hint: 'Create a password',
-                    icon: Icons.lock_outline_rounded,
-                    suffix: IconButton(
-                      icon: Icon(
-                        _obscurePass
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: const Color(0xFF6B7280),
-                        size: 20,
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscurePass = !_obscurePass),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Confirm password
-                const Text(
-                  'Confirm Password',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF374151),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: _obscureConfirm,
-                  validator: (v) {
-                    if (v!.isEmpty) return 'Please confirm password';
-                    if (v != _passwordController.text)
-                      return 'Passwords do not match';
-                    return null;
-                  },
-                  decoration: _inputDecoration(
-                    hint: 'Re-enter password',
-                    icon: Icons.lock_outline_rounded,
-                    suffix: IconButton(
-                      icon: Icon(
-                        _obscureConfirm
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: const Color(0xFF6B7280),
-                        size: 20,
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscureConfirm = !_obscureConfirm),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 32),
-
-                // Submit button
-                SizedBox(
-                  width: double.infinity,
-                  height: 54,
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _submitSignup,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1A73E8),
-                      disabledBackgroundColor:
-                          const Color(0xFF1A73E8).withOpacity(0.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : const Text(
-                            'Create Account',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
+  // Invalid / expired / no-code
+  Widget _buildErrorView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.link_off_rounded,
+                size: 64, color: Color(0xFFD9534F)),
+            const SizedBox(height: 20),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontSize: 15, color: Color(0xFF1A2F3A), height: 1.4),
             ),
-          ),
+            const SizedBox(height: 28),
+            SizedBox(
+              height: 50,
+              width: 200,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _primary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30)),
+                ),
+                child: const Text('Go to Login',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _infoRow(IconData icon, String label, String value) {
+  // Valid invite — details + password (koi code box nahi)
+  Widget _buildSignupForm() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 10),
+            const Text(
+              'Welcome! Complete your account',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A2F5A)),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Set a password to finish creating your staff account.',
+              style: TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+            const SizedBox(height: 20),
+
+            // Invite details (read-only)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _detailRow('Name', _inviteData!['name'] ?? '—'),
+                  const SizedBox(height: 8),
+                  _detailRow('Email', _inviteData!['email'] ?? '—'),
+                  const SizedBox(height: 8),
+                  _detailRow('Role',
+                      (_inviteData!['role'] ?? '—').toString().toUpperCase()),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            const Text(
+              'Set your password',
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A2F5A)),
+            ),
+            const SizedBox(height: 12),
+            _passwordField(
+              controller: _passwordController,
+              hint: 'Password',
+              obscure: _obscurePassword,
+              onToggle: () =>
+                  setState(() => _obscurePassword = !_obscurePassword),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Password is required';
+                if (v.length < 6) return 'Minimum 6 characters';
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            _passwordField(
+              controller: _confirmController,
+              hint: 'Confirm Password',
+              obscure: _obscureConfirm,
+              onToggle: () =>
+                  setState(() => _obscureConfirm = !_obscureConfirm),
+              validator: (v) {
+                if (v == null || v.isEmpty) return 'Please confirm password';
+                if (v != _passwordController.text) {
+                  return 'Passwords do not match';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _isSigningUp ? null : _completeSignup,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _primary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30)),
+                ),
+                child: _isSigningUp
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2.5))
+                    : const Text('Create Account',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: const Color(0xFF1A73E8)),
-        const SizedBox(width: 10),
-        Text(
-          '$label: ',
-          style: const TextStyle(
-            fontSize: 13,
-            color: Color(0xFF6B7280),
-          ),
+        SizedBox(
+          width: 60,
+          child: Text(label,
+              style: const TextStyle(fontSize: 13, color: Colors.grey)),
         ),
         Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A2E),
-            ),
-          ),
+          child: Text(value,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1A2F3A))),
         ),
       ],
     );
   }
 
-  InputDecoration _inputDecoration({
+  Widget _passwordField({
+    required TextEditingController controller,
     required String hint,
-    required IconData icon,
-    Widget? suffix,
+    required bool obscure,
+    required VoidCallback onToggle,
+    required String? Function(String?) validator,
   }) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xFFB0B8C1), fontSize: 14),
-      prefixIcon: Icon(icon, color: const Color(0xFF1A73E8), size: 20),
-      suffixIcon: suffix,
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF1A73E8), width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFDB4437), width: 1.5),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFDB4437), width: 1.5),
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      validator: validator,
+      style: const TextStyle(fontSize: 15, color: Colors.black87),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Colors.grey, fontSize: 15),
+        prefixIcon:
+            const Icon(Icons.lock_outline, color: Colors.grey, size: 20),
+        suffixIcon: IconButton(
+          icon: Icon(
+            obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+            color: Colors.grey,
+          ),
+          onPressed: onToggle,
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: const BorderSide(color: _primary, width: 1.5),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 22),
       ),
     );
   }

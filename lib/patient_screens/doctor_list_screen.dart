@@ -44,11 +44,23 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
           .doc(widget.departmentId)
           .get();
 
+      bool feeIsSet = false;
       if (feeDoc.exists) {
         final feeData = feeDoc.data()!;
         _consultationFee = widget.appointmentType == 'VIDEO_CALL'
             ? (feeData['videoCallFee'] ?? 0) as num
             : (feeData['inPersonFee'] ?? 0) as num;
+        feeIsSet = _consultationFee > 0;
+      }
+
+      // Schema rule: fee must be set for this appointment type,
+      // otherwise no doctor in this department should be bookable.
+      if (!feeIsSet) {
+        setState(() {
+          _doctors = [];
+          _isLoading = false;
+        });
+        return;
       }
 
       // ---- Doctors in this department ----

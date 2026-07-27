@@ -9,6 +9,9 @@ class InviteService {
   final Logger _logger = Logger();
 
   // 1. GENERATE INVITE
+  // FIX: pehle inviteCode timestamp se banta tha (INVITE-1784905218084)
+  // — guessable tha. Ab Firestore ki apni random 20-character ID use
+  // hoti hai (e.g. "Xk9fT2mQpL7aB3nRw8sD") — guess karna impossible.
   Future<String?> generateInvite({
     required String doctorName,
     required String email,
@@ -19,10 +22,12 @@ class InviteService {
     String license = '',
   }) async {
     try {
-      String inviteCode = 'INVITE-${DateTime.now().millisecondsSinceEpoch}';
+      // Firestore se free random unique ID lo — yehi inviteCode hai
+      final inviteRef = _firestore.collection('invites').doc();
+      final String inviteCode = inviteRef.id;
 
-      await _firestore.collection('invites').doc(inviteCode).set({
-        'code': inviteCode,
+      await inviteRef.set({
+        'inviteCode': inviteCode,
         'email': email,
         'name': doctorName,
         'role': role,
@@ -31,8 +36,8 @@ class InviteService {
         'departmentId': departmentId,
         'license': license,
         'used': false,
-        'createdAt': DateTime.now(),
-        'expiresAt': DateTime.now().add(Duration(days: 7)),
+        'createdAt': FieldValue.serverTimestamp(),
+        'expiresAt': DateTime.now().add(const Duration(days: 7)),
         'createdBy': _auth.currentUser!.uid,
       });
 
@@ -46,6 +51,10 @@ class InviteService {
   }
 
   // 2. SEND INVITE EMAIL - EMAILJS
+  //
+  // ⚠️ TODO (security): yeh keys code mein hard-coded hain — koi bhi
+  // APK decompile kar ke nikal sakta hai. Viva se pehle inhe ek alag
+  // config file mein le jao jo .gitignore mein ho. Demo ke liye chalega.
   Future<bool> sendInviteEmail({
     required String email,
     required String inviteCode,
@@ -55,11 +64,7 @@ class InviteService {
       String inviteLink =
           'https://hospitalmanagement-7605b.web.app?code=$inviteCode';
 
-      _logger.i("Sending Email...");
-      _logger.i("Email: $email");
-      _logger.i("Name: $name");
-      _logger.i("Invite Code: $inviteCode");
-      _logger.i("Invite Link: $inviteLink");
+      _logger.i("Sending Email to: $email | Code: $inviteCode");
 
       await emailjs.send(
         'service_sc6wvhf',
@@ -134,21 +139,12 @@ class InviteService {
     }
   }
 
-  // 6. MARK AS USED
-  Future<bool> markAsUsed(String inviteCode) async {
-    try {
-      await _firestore.collection('invites').doc(inviteCode).update({
-        'used': true,
-        'usedAt': DateTime.now(),
-      });
-      return true;
-    } catch (e) {
-      _logger.e("markAsUsed error: $e");
-      return false;
-    }
-  }
+  // NOTE: markAsUsed() yahan se HATA diya gaya hai.
+  // Invite ko "used" mark karna ab AuthService ke signup
+  // transaction ke ANDAR hota hai — taake do log same invite
+  // ek saath use na kar sakein. (Dekho auth_service.dart)
 
-  // 7. IS EXPIRED
+  // 6. IS EXPIRED
   Future<bool> isExpired(String inviteCode) async {
     try {
       DocumentSnapshot doc =
