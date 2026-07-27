@@ -3,7 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'verify_payments_screen.dart';
 import 'refunds_pending_screen.dart';
+import 'receptionist_profile_screen.dart';
 import 'walk_in_screen.dart';
+import 'appointments_today_screen.dart';
 
 /// RECEPTIONIST DASHBOARD
 /// Patient-side green theme, lekin dashboard-style (doosron ka data manage).
@@ -14,7 +16,7 @@ import 'walk_in_screen.dart';
 ///   4. Lab Payments      → unpaid lab test cash collect → Paid
 ///
 /// NOTE: abhi cards ke destination screens (#2 onwards) ban rahe hain —
-/// jaise jaise banenge, _comingSoon ki jagah navigation lagate jayenge.
+/// Lab Payments card abhi _comingSoon par hai (doctor lab-request ke baad banega).
 class ReceptionistDashboardScreen extends StatefulWidget {
   const ReceptionistDashboardScreen({super.key});
 
@@ -100,32 +102,6 @@ class _ReceptionistDashboardScreenState
     ));
   }
 
-  Future<void> _logout() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Log out?'),
-        content: const Text('You will need to sign in again to continue.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Log out', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-    await FirebaseAuth.instance.signOut();
-    if (!mounted) return;
-    Navigator.of(context).popUntil((route) => route.isFirst);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -154,6 +130,8 @@ class _ReceptionistDashboardScreenState
                 ),
                 const SizedBox(height: 14),
                 _buildActionGrid(),
+                const SizedBox(height: 12),
+                _buildRefundsCard(),
               ],
             ),
           ),
@@ -197,15 +175,42 @@ class _ReceptionistDashboardScreenState
               ],
             ),
           ),
+          // Bell (notifications — abhi coming soon)
           GestureDetector(
-            onTap: _logout,
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Notifications coming soon'),
+                backgroundColor: _primary,
+                behavior: SnackBarBehavior.floating,
+              ));
+            },
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.logout_rounded,
+              child: const Icon(Icons.notifications_outlined,
+                  color: Colors.white, size: 20),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Profile
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const ReceptionistProfileScreen()),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.person_outline,
                   color: Colors.white, size: 20),
             ),
           ),
@@ -293,8 +298,15 @@ class _ReceptionistDashboardScreenState
           iconBg: const Color(0xFFDCEFE9),
           iconColor: _primary,
           title: 'Appointments',
-          subtitle: 'View & manage',
-          onTap: _comingSoon, // #2 banega
+          subtitle: 'Check-in & no-show',
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const AppointmentsTodayScreen()),
+            );
+            _loadData();
+          },
         ),
         _actionCard(
           icon: Icons.person_add_alt_1_outlined,
@@ -319,22 +331,80 @@ class _ReceptionistDashboardScreenState
           badge: _unpaidLabTests,
           onTap: _comingSoon, // #4 banega
         ),
-        _actionCard(
-          icon: Icons.currency_exchange_outlined,
-          iconBg: const Color(0xFFFDE6E0),
-          iconColor: const Color(0xFFD9534F),
-          title: 'Pending Refunds',
-          subtitle: 'Pay & mark done',
-          badge: _pendingRefunds,
-          onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const RefundsPendingScreen()),
-            );
-            _loadData();
-          },
-        ),
       ],
+    );
+  }
+
+  // Pending Refunds — full-width card (grid ke neeche, akela latakta nahi)
+  Widget _buildRefundsCard() {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const RefundsPendingScreen()),
+        );
+        _loadData();
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFDE6E0),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.currency_exchange_outlined,
+                  color: Color(0xFFD9534F), size: 24),
+            ),
+            const SizedBox(width: 14),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Pending Refunds',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1A2F3A))),
+                  SizedBox(height: 2),
+                  Text('Pay & mark done',
+                      style: TextStyle(fontSize: 12, color: Colors.black54)),
+                ],
+              ),
+            ),
+            if (_pendingRefunds > 0)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD9534F),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text('$_pendingRefunds',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold)),
+              ),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF)),
+          ],
+        ),
+      ),
     );
   }
 

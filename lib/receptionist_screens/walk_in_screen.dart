@@ -512,7 +512,7 @@ class _WalkInScreenState extends State<WalkInScreen> {
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF1A2F3A))),
         const SizedBox(height: 4),
-        const Text('Pehle dhoondo — duplicate patient na bane.',
+        const Text('Search first to avoid duplicate patient records.',
             style: TextStyle(fontSize: 12, color: Colors.grey)),
         const SizedBox(height: 14),
         TextField(
