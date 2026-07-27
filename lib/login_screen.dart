@@ -4,6 +4,8 @@ import 'forgot_password_screen.dart';
 import 'package:hospital_management_app/services/auth_service.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'patient_screens/patient_home_screen.dart';
+import 'doctor_screens/doctor_home_screen.dart';
+import 'doctor_screens/firebase_doctor_repository.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -63,6 +65,16 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(
             builder: (_) => const PatientHomeScreen(),
+          ),
+        );
+      } else if (role == 'doctor') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DoctorHomeScreen(
+              repository: FirebaseDoctorRepository(),
+              doctorId: user['uid'] ?? '',
+            ),
           ),
         );
       } else {
