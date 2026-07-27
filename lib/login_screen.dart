@@ -4,7 +4,12 @@ import 'forgot_password_screen.dart';
 import 'package:hospital_management_app/services/auth_service.dart';
 import 'screens/admin_dashboard_screen.dart';
 import 'patient_screens/patient_home_screen.dart';
+<<<<<<< HEAD
+import 'doctor_screens/doctor_home_screen.dart';
+import 'doctor_screens/firebase_doctor_repository.dart';
+=======
 import 'receptionist_screens/receptionist_dashboard_screen.dart';
+>>>>>>> 1e28633c11e0727c8b43bc60e5a84df734def857
 
 /// LOGIN — meri fixed auth_service ke format ke saath.
 /// login() ab {'success': bool, 'user'/'error': ...} deta hai.
@@ -59,6 +64,37 @@ class _LoginScreenState extends State<LoginScreen> {
           backgroundColor: Color(0xFF1A6B6B),
         ),
       );
+<<<<<<< HEAD
+      String role = user['role'] ?? '';
+      if (role == 'admin') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const AdminDashboardScreen(),
+          ),
+        );
+      } else if (role == 'patient') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const PatientHomeScreen(),
+          ),
+        );
+      } else if (role == 'doctor') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DoctorHomeScreen(
+              repository: FirebaseDoctorRepository(),
+              doctorId: user['uid'] ?? '',
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dashboard coming soon!')),
+        );
+=======
 
       Widget? destination;
       switch (role) {
@@ -77,6 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SnackBar(content: Text('Dashboard coming soon!')),
           );
           return;
+>>>>>>> 1e28633c11e0727c8b43bc60e5a84df734def857
       }
 
       Navigator.pushReplacement(
