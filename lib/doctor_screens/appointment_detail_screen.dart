@@ -36,7 +36,8 @@ class AppointmentDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<AppointmentDetailScreen> createState() => _AppointmentDetailScreenState();
+  State<AppointmentDetailScreen> createState() =>
+      _AppointmentDetailScreenState();
 }
 
 class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
@@ -66,6 +67,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   /// requests and admission recommendations only make sense at this point.
   bool get _visitIsActiveOrDone =>
       _currentStatus == AppointmentStatus.confirmed ||
+      _currentStatus == AppointmentStatus.checkedIn ||
       _currentStatus == AppointmentStatus.inProgress ||
       _currentStatus == AppointmentStatus.completed;
 
@@ -123,11 +125,13 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   }
 
   Future<void> _markCompleted() async {
-    // Schema rule: "VIDEO_CALL: Doctor marks completed" — IN_PERSON and
-    // WALK_IN appointments are completed by the Receptionist instead, so
-    // this should never be reachable for those types (UI also hides the
-    // button), but we guard here too in case this is ever called elsewhere.
-    if (!_isVideoCall) return;
+    // Updated schema: DOCTOR marks Completed for ALL appointment types
+    // (in-person, walk-in, video). For video, this is only valid from
+    // InProgress; for in-person/walk-in, only valid from CheckedIn.
+    // (Both guarded by the UI in _buildActionSection — this is a safety
+    // net in case _markCompleted is ever called from elsewhere.)
+    if (_isVideoCall && _currentStatus != AppointmentStatus.inProgress) return;
+    if (!_isVideoCall && _currentStatus != AppointmentStatus.checkedIn) return;
 
     setState(() => _isCompleting = true);
     try {
@@ -185,7 +189,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.check_circle, color: _DetailColors.primary, size: 18),
+                Icon(Icons.check_circle,
+                    color: _DetailColors.primary, size: 18),
                 SizedBox(width: 8),
                 Text(
                   'Visit completed',
@@ -202,7 +207,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _openAddPrescription,
-              icon: const Icon(Icons.receipt_long_outlined, color: Colors.white),
+              icon:
+                  const Icon(Icons.receipt_long_outlined, color: Colors.white),
               label: const Text(
                 'Add Prescription',
                 style: TextStyle(color: Colors.white),
@@ -221,7 +227,37 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     }
 
     if (!_isVideoCall) {
-      // IN_PERSON / WALK_IN — doctor has no completion action here.
+      // IN_PERSON / WALK_IN — updated schema: DOCTOR marks completed here
+      // (not the receptionist). Button only active once patient has
+      // checked in with reception.
+      if (_currentStatus == AppointmentStatus.checkedIn) {
+        return SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _isCompleting ? null : _markCompleted,
+            icon: _isCompleting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2),
+                  )
+                : const Icon(Icons.check_circle_outline, color: Colors.white),
+            label: const Text(
+              'Mark Completed',
+              style: TextStyle(color: Colors.white),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _DetailColors.primary,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
+            ),
+          ),
+        );
+      }
+      // Confirmed but not yet checked in — nothing for doctor to do yet.
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
@@ -235,7 +271,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
             SizedBox(width: 8),
             Expanded(
               child: Text(
-                'This appointment will be marked completed by the receptionist.',
+                'Waiting for patient to check in at reception.',
                 style: TextStyle(color: _DetailColors.textMuted, fontSize: 12),
               ),
             ),
@@ -418,7 +454,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: _openPatientProfile,
-                      icon: const Icon(Icons.person_search_outlined, color: _DetailColors.primary),
+                      icon: const Icon(Icons.person_search_outlined,
+                          color: _DetailColors.primary),
                       label: const Text(
                         'View Patient Profile',
                         style: TextStyle(color: _DetailColors.primary),
@@ -435,26 +472,34 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                   if (_visitIsActiveOrDone) ...[
                     const SizedBox(height: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
                         color: _DetailColors.cardBackground,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
+                          BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2)),
                         ],
                       ),
                       child: SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         value: _admissionRecommended,
-                        onChanged: _isTogglingAdmission ? null : _toggleAdmissionRecommendation,
+                        onChanged: _isTogglingAdmission
+                            ? null
+                            : _toggleAdmissionRecommendation,
                         activeColor: _DetailColors.primary,
                         title: const Text(
                           'Recommend Admission',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600),
                         ),
                         subtitle: const Text(
                           'Flags this patient for receptionist to assign a room/bed',
-                          style: TextStyle(fontSize: 11, color: _DetailColors.textMuted),
+                          style: TextStyle(
+                              fontSize: 11, color: _DetailColors.textMuted),
                         ),
                       ),
                     ),
@@ -464,13 +509,15 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                         width: double.infinity,
                         child: OutlinedButton.icon(
                           onPressed: _openRequestLabTest,
-                          icon: const Icon(Icons.science_outlined, color: _DetailColors.primary),
+                          icon: const Icon(Icons.science_outlined,
+                              color: _DetailColors.primary),
                           label: const Text(
                             'Request Lab Test',
                             style: TextStyle(color: _DetailColors.primary),
                           ),
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: _DetailColors.primary),
+                            side:
+                                const BorderSide(color: _DetailColors.primary),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
@@ -588,12 +635,17 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   Widget _buildInfoRow() {
     return Row(
       children: [
-        Expanded(child: _infoTile(Icons.calendar_today_outlined, 'Date', widget.dateLabel)),
-        const SizedBox(width: 12),
-        Expanded(child: _infoTile(Icons.access_time, 'Time', widget.appointment.slotTime)),
+        Expanded(
+            child: _infoTile(
+                Icons.calendar_today_outlined, 'Date', widget.dateLabel)),
         const SizedBox(width: 12),
         Expanded(
-            child: _infoTile(Icons.info_outline, 'Status', _currentStatus.name)),
+            child: _infoTile(
+                Icons.access_time, 'Time', widget.appointment.slotTime)),
+        const SizedBox(width: 12),
+        Expanded(
+            child:
+                _infoTile(Icons.info_outline, 'Status', _currentStatus.name)),
       ],
     );
   }
@@ -616,8 +668,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
           Icon(icon, size: 18, color: _DetailColors.primary),
           const SizedBox(height: 6),
           Text(label,
-              style:
-                  const TextStyle(fontSize: 11, color: _DetailColors.textMuted)),
+              style: const TextStyle(
+                  fontSize: 11, color: _DetailColors.textMuted)),
           const SizedBox(height: 2),
           Text(
             value,
