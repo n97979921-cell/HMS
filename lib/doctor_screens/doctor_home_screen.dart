@@ -1,22 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../doctor_screens/appointment_detail_screen.dart';
-import '../doctor_screens/doctor_repository.dart';
-import '../doctor_screens/firebase_doctor_repository.dart';
-import '../doctor_screens/doctor_appointment_list_item.dart';
-import '../doctor_screens/appointment_status.dart';
+import 'appointment_detail_screen.dart';
+import 'appointment_status.dart';
+import 'doctor_appointment_list_item.dart';
+import 'firebase_doctor_repository.dart';
 
 /// DOCTOR HOME — aaj ke patients
 ///
 /// SCHEMA RULES:
-///  - Doctor ko sirf CHECKED-IN patients dikhte hain (arrival = receptionist
-///    check-in). Confirmed = paisa aaya lekin patient aaya ya nahi, pata nahi.
-///  - Doctor "Completed" mark karta hai (in-person, walk-in, video — teeno).
-///  - Tabs: Waiting (CheckedIn) | Completed
+///  - IN_PERSON/WALK_IN: Waiting = CheckedIn (receptionist ne check-in kiya)
+///  - VIDEO_CALL: Waiting = Confirmed (video mein "aana" nahi hota, is liye
+///    Confirmed hi "waiting" maana jata hai — patient/doctor Join/Start
+///    dabate hain seedha appointment-detail se)
+///  - Doctor "Completed" mark karta hai (in-person, walk-in, video — teeno)
 ///
-/// PATTERN: seedha Firestore (koi repository/model class nahi) — baaki
-/// project (patient/receptionist/admin) jaisa hi.
+/// VIDEO CALL LAZY-CHECK (list load hote waqt, jaise receptionist ka
+/// NoShow-check pattern — Cloud Function nahi, free tier):
+///   Confirmed (Start nahi hua) + slot-time se 5+ min guzar gaye
+///     → Cancelled + FULL refund (doctor ki galti — service mili hi nahi)
+///   InProgress (Start hua) + patientJoinedAt null + slot-time se 5+ min
+///     → NoShow + HALF refund (patient ki galti)
+///   InProgress + patientJoinedAt set → chhuo mat, consultation chal rahi
 class DoctorHomeScreen extends StatefulWidget {
   const DoctorHomeScreen({super.key});
 
@@ -30,9 +35,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
   String _doctorName = '';
   bool _isLoading = true;
+  int _autoProcessed = 0;
 
   DateTime _selectedDate = DateTime.now();
-  String _selectedTab = 'CheckedIn'; // CheckedIn | Completed
+  String _selectedTab = 'CheckedIn'; // CheckedIn(=Waiting) | Completed
 
   List<Map<String, dynamic>> _appointments = [];
 
@@ -45,18 +51,29 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   String _dateStr(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+  DateTime? _slotDateTime(String? date, String? startTime) {
+    try {
+      final d = DateTime.parse(date!);
+      final p = startTime!.split(':').map(int.parse).toList();
+      return DateTime(d.year, d.month, d.day, p[0], p[1]);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _autoProcessed = 0;
+    });
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return;
 
-      // Doctor ka naam
       final userDoc =
           await FirebaseFirestore.instance.collection('users').doc(uid).get();
       _doctorName = userDoc.data()?['name'] ?? 'Doctor';
 
-      // Us din ke BOOKED slots (receptionist pattern jaisa)
       final slotsSnap = await FirebaseFirestore.instance
           .collection('slots')
           .where('doctorId', isEqualTo: uid)
@@ -78,18 +95,43 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         if (!apptDoc.exists) continue;
         final appt = apptDoc.data()!;
 
-        // Tab filter: Waiting = CheckedIn (arrival hui) YA
-        // VIDEO_CALL+Confirmed (video mein "aana" nahi hota, is liye
-        // Confirmed hi "waiting" maana jata hai) | Completed = Completed
         final status = appt['status'];
         final type = appt['appointmentType'];
+        final isVideo = type == 'VIDEO_CALL';
+
+        final slotDt = _slotDateTime(slot['date'], slot['startTime']);
+
+        // ── VIDEO CALL LAZY-CHECK ──
+        if (isVideo && slotDt != null) {
+          final now = DateTime.now();
+          final fiveMinPast =
+              now.isAfter(slotDt.add(const Duration(minutes: 5)));
+
+          if (status == 'Confirmed' && fiveMinPast) {
+            // Doctor ne Start nahi kiya — service mili hi nahi, full refund
+            await _autoProcessVideo(apptId, 'Cancelled', fullRefund: true);
+            _autoProcessed++;
+            continue;
+          }
+          if (status == 'InProgress' &&
+              appt['patientJoinedAt'] == null &&
+              fiveMinPast) {
+            // Doctor ready tha, patient nahi aaya — half refund
+            await _autoProcessVideo(apptId, 'NoShow', fullRefund: false);
+            _autoProcessed++;
+            continue;
+          }
+        }
+
+        // Tab filter: Waiting = CheckedIn (in-person/walk-in) YA
+        // VIDEO_CALL+Confirmed (video mein "aana" nahi hota)
         final isWaiting = status == 'CheckedIn' ||
-            (type == 'VIDEO_CALL' && status == 'Confirmed');
+            (isVideo && status == 'Confirmed') ||
+            (isVideo && status == 'InProgress');
 
         if (_selectedTab == 'CheckedIn' && !isWaiting) continue;
         if (_selectedTab == 'Completed' && status != 'Completed') continue;
 
-        // Patient naam
         String patientName = 'Patient';
         try {
           final p = await FirebaseFirestore.instance
@@ -104,13 +146,12 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           'patientId': appt['patientId'],
           'patientName': patientName,
           'startTime': slot['startTime'] ?? '',
-          'appointmentType': appt['appointmentType'] ?? 'IN_PERSON',
-          'status': appt['status'],
-          'symptoms': appt['symptoms'],
+          'appointmentType': type ?? 'IN_PERSON',
+          'status': status,
+          'admissionRecommended': appt['admissionRecommended'] ?? false,
         });
       }
 
-      // Time ke hisaab se sort
       result.sort((a, b) =>
           (a['startTime'] as String).compareTo(b['startTime'] as String));
 
@@ -118,9 +159,65 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         _appointments = result;
         _isLoading = false;
       });
+
+      if (_autoProcessed > 0 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              '$_autoProcessed video call(s) auto-processed (no-show/refund)'),
+          backgroundColor: const Color(0xFFB8860B),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       _showError('Error loading appointments: $e');
+    }
+  }
+
+  // Video call timeout — appointment status badlo + payment refund set karo.
+  // Transaction: reads pehle, writes baad. Double-check status abhi bhi
+  // wahi hai (kahin isi beech doctor/patient ne action na li ho).
+  Future<void> _autoProcessVideo(String apptId, String newStatus,
+      {required bool fullRefund}) async {
+    try {
+      final paySnap = await FirebaseFirestore.instance
+          .collection('payments')
+          .where('appointmentId', isEqualTo: apptId)
+          .where('status', isEqualTo: 'Paid')
+          .limit(1)
+          .get();
+      final payRef =
+          paySnap.docs.isNotEmpty ? paySnap.docs.first.reference : null;
+      final payAmount = paySnap.docs.isNotEmpty
+          ? (paySnap.docs.first.data()['amount'] ?? 0)
+          : 0;
+
+      final apptRef =
+          FirebaseFirestore.instance.collection('appointments').doc(apptId);
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final apptSnap = await transaction.get(apptRef);
+        if (!apptSnap.exists) return;
+        final currentStatus = apptSnap.data()!['status'];
+        // Double-check: sirf tab process karo jab abhi bhi wahi state ho
+        if (newStatus == 'Cancelled' && currentStatus != 'Confirmed') return;
+        if (newStatus == 'NoShow' && currentStatus != 'InProgress') return;
+
+        transaction.update(apptRef, {
+          'status': newStatus,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        if (payRef != null) {
+          transaction.update(payRef, {
+            'status': fullRefund ? 'Refunded' : 'HalfRefunded',
+            'refundAmount': fullRefund ? payAmount : payAmount / 2,
+            'refundPaid': false,
+          });
+        }
+      });
+    } catch (_) {
+      // Silent — agli load par dobara try hoga
     }
   }
 
@@ -248,7 +345,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               ],
             ),
           ),
-          // Bell (abhi coming soon)
           GestureDetector(
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -268,7 +364,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          // Profile (screen ban jaye to yahan lagayenge)
           GestureDetector(
             onTap: _comingSoon,
             child: Container(
@@ -397,8 +492,9 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           const SizedBox(height: 6),
           Text(
             _selectedTab == 'CheckedIn'
-                ? 'Patients appear here after reception check-in'
+                ? 'Patients appear here after check-in (or when confirmed, for video calls)'
                 : 'Completed consultations will appear here',
+            textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
           ),
         ],
@@ -451,14 +547,13 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                 ),
                 appointmentType: AppointmentTypeX.fromString(
                     appt['appointmentType'] ?? 'IN_PERSON'),
-                admissionRecommended: false,
+                admissionRecommended: appt['admissionRecommended'] ?? false,
               ),
               dateLabel: _formatDate(_selectedDate),
             ),
           ),
         );
 
-        // Detail screen se wapas aaye to list refresh karo
         if (result == true) _loadData();
       },
       child: Container(
@@ -476,7 +571,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         ),
         child: Row(
           children: [
-            // Time chip
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
@@ -504,6 +598,22 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                       const SizedBox(width: 4),
                       Text(typeLabel,
                           style: TextStyle(fontSize: 12, color: badgeColor)),
+                      if (isVideo && appt['status'] == 'InProgress') ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD9534F),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text('LIVE',
+                              style: TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ],
                     ],
                   ),
                 ],

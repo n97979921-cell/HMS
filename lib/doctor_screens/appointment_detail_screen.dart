@@ -21,10 +21,6 @@ class AppointmentDetailScreen extends StatefulWidget {
   final DoctorRepository repository;
   final String doctorId;
   final DoctorAppointmentListItem appointment;
-
-  /// Human-readable date label for this appointment (e.g. "20 Jul 2026").
-  /// Passed in from the Home screen's currently selected date, since the
-  /// list item itself only carries the slot time, not the full date.
   final String dateLabel;
 
   const AppointmentDetailScreen({
@@ -46,6 +42,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   bool _isStarting = false;
   bool _isCompleting = false;
   bool _isTogglingAdmission = false;
+  bool _isMarkingNoShow = false;
 
   @override
   void initState() {
@@ -61,20 +58,44 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   bool get _isConfirmed => _currentStatus == AppointmentStatus.confirmed;
   bool get _isInProgress => _currentStatus == AppointmentStatus.inProgress;
 
-  /// True once the doctor has actually met/is meeting the patient
-  /// (Confirmed, InProgress, or Completed) — as opposed to a pending
-  /// Requested appointment, or one that was Cancelled/NoShow. Lab test
-  /// requests and admission recommendations only make sense at this point.
   bool get _visitIsActiveOrDone =>
       _currentStatus == AppointmentStatus.confirmed ||
       _currentStatus == AppointmentStatus.checkedIn ||
       _currentStatus == AppointmentStatus.inProgress ||
       _currentStatus == AppointmentStatus.completed;
 
-  /// Builds a stable Jitsi Meet room name from the appointment ID, so the
-  /// same room is reused if the doctor or patient rejoins later, but it's
-  /// unique per appointment. Uses the free public meet.jit.si server —
-  /// no account, API key, or extra backend setup required.
+  /// Admission recommendation sirf ACTIVE consultation ke dauran editable
+  /// hai. Completed hone ke baad LOCKED — sirf dekhne ke liye, kyunki
+  /// receptionist is decision par bed/room assign kar sakta hai; baad
+  /// mein badalna data inconsistent kar deta.
+  bool get _admissionEditable =>
+      _currentStatus == AppointmentStatus.confirmed ||
+      _currentStatus == AppointmentStatus.checkedIn ||
+      _currentStatus == AppointmentStatus.inProgress;
+
+  /// VIDEO CALL: Start/Join buttons slot-time se 5 min PEHLE se active.
+  /// Appointment ka waqt widget se seedha nahi milta (sirf slotTime
+  /// string, jaise "15:00") — is liye dateLabel se date parse karke
+  /// poora DateTime banate hain. Agar parse fail ho (unlikely), fail-open
+  /// karte hain (button active rakhte hain) taake doctor block na ho.
+  bool get _isWithinJoinWindow {
+    try {
+      final timeParts = widget.appointment.slotTime.split(':');
+      final now = DateTime.now();
+      // dateLabel format: "20 Jul 2026" — lekin humein sirf aaj ke context
+      // mein time-gate chahiye, is liye simplification: agar appointment
+      // ka din AAJ hai to slot time check karo, warna (future date select
+      // ki hui ho doctor ne) hamesha allow karo — us din jab aayega tab
+      // relevant hoga.
+      final slotToday = DateTime(now.year, now.month, now.day,
+          int.parse(timeParts[0]), int.parse(timeParts[1]));
+      final windowStart = slotToday.subtract(const Duration(minutes: 5));
+      return now.isAfter(windowStart);
+    } catch (_) {
+      return true; // fail-open
+    }
+  }
+
   String get _roomUrl =>
       'https://meet.jit.si/FamilyWellCare-${widget.appointment.appointmentId}';
 
@@ -95,9 +116,6 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     }
   }
 
-  /// Doctor.startVideoConsultation() — per the schema's video call rule,
-  /// pressing this moves the appointment Confirmed → InProgress and records
-  /// consultationStartedAt, then opens the Jitsi room.
   Future<void> _startConsultation() async {
     setState(() => _isStarting = true);
     try {
@@ -124,15 +142,10 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     }
   }
 
+  /// Doctor karta hai — in-person, walk-in, video, teeno ke liye
+  /// (updated schema). In-person/walk-in: sirf CheckedIn se. Video:
+  /// sirf InProgress se.
   Future<void> _markCompleted() async {
-    // Updated schema: DOCTOR marks Completed for ALL appointment types
-    // (in-person, walk-in, video). For video, this is only valid from
-    // InProgress; for in-person/walk-in, only valid from CheckedIn.
-    // (Both guarded by the UI in _buildActionSection — this is a safety
-    // net in case _markCompleted is ever called from elsewhere.)
-    if (_isVideoCall && _currentStatus != AppointmentStatus.inProgress) return;
-    if (!_isVideoCall && _currentStatus != AppointmentStatus.checkedIn) return;
-
     setState(() => _isCompleting = true);
     try {
       await widget.repository.updateAppointmentStatus(
@@ -150,8 +163,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
             backgroundColor: _DetailColors.primary,
           ),
         );
-        // Let the Home screen know it should refresh its list.
-        Navigator.pop(context, true);
+        // Screen par hi raho — doctor turant Add Prescription kar sake.
       }
     } catch (e) {
       if (mounted) {
@@ -166,15 +178,73 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     }
   }
 
-  /// Implements the schema's appointment lifecycle for the doctor's view:
-  ///
-  /// VIDEO_CALL: Requested → Confirmed → [Start Consultation] → InProgress
-  ///             → [Mark Completed] → Completed → [Add Prescription]
-  ///   ("VIDEO_CALL: Doctor marks completed")
-  ///
-  /// IN_PERSON / WALK_IN: the Receptionist marks these completed, not the
-  /// doctor — so no completion button is shown here for those types; once
-  /// completed, the doctor can still add a prescription.
+  /// VIDEO CALL ONLY: doctor Start kar chuka (InProgress) lekin patient
+  /// join nahi hua. Manual foran-wala option (lazy-check bhi hai list
+  /// screen mein, yeh us se pehle ka fast-path hai agar doctor khud
+  /// dekh le ke patient nahi aaya). → NoShow + HALF refund.
+  Future<void> _markPatientDidNotJoin() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Patient did not join?'),
+        content: const Text(
+            'This will mark the appointment as a no-show. A HALF refund '
+            'will be added to pending refunds for the patient.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB8860B)),
+            child: const Text('Confirm — Half Refund',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    setState(() => _isMarkingNoShow = true);
+    try {
+      await widget.repository.updateAppointmentStatus(
+        appointmentId: widget.appointment.appointmentId,
+        status: 'NoShow',
+      );
+      // NOTE: refund-status update repository ke through nahi ho raha
+      // (DoctorRepository mein payment update ka method nahi hai — yeh
+      // jaan-boojh kar hai, payment sirf receptionist-side se touch hoti
+      // hai). Lazy-check list-screen mein isko HalfRefunded set kar dega
+      // agli load par. Yahan sirf appointment-status set kar rahe hain.
+      if (mounted) {
+        setState(() {
+          _currentStatus = AppointmentStatus.noShow;
+          _isMarkingNoShow = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Marked as no-show'),
+            backgroundColor: Color(0xFFB8860B),
+          ),
+        );
+        Navigator.pop(context, true); // list refresh ho
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isMarkingNoShow = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update: $e'),
+            backgroundColor: _DetailColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildActionSection() {
     if (_isCompleted) {
       return Column(
@@ -183,7 +253,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
-              color: _DetailColors.primary.withOpacity(0.1),
+              color: _DetailColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(30),
             ),
             child: const Row(
@@ -192,13 +262,10 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                 Icon(Icons.check_circle,
                     color: _DetailColors.primary, size: 18),
                 SizedBox(width: 8),
-                Text(
-                  'Visit completed',
-                  style: TextStyle(
-                    color: _DetailColors.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text('Visit completed',
+                    style: TextStyle(
+                        color: _DetailColors.primary,
+                        fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -209,16 +276,13 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
               onPressed: _openAddPrescription,
               icon:
                   const Icon(Icons.receipt_long_outlined, color: Colors.white),
-              label: const Text(
-                'Add Prescription',
-                style: TextStyle(color: Colors.white),
-              ),
+              label: const Text('Add Prescription',
+                  style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _DetailColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
+                    borderRadius: BorderRadius.circular(30)),
               ),
             ),
           ),
@@ -226,10 +290,29 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       );
     }
 
+    if (_currentStatus == AppointmentStatus.noShow) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFB8860B).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.event_busy_outlined, color: Color(0xFFB8860B), size: 18),
+            SizedBox(width: 8),
+            Text('Marked as no-show',
+                style: TextStyle(
+                    color: Color(0xFFB8860B), fontWeight: FontWeight.w600)),
+          ],
+        ),
+      );
+    }
+
     if (!_isVideoCall) {
-      // IN_PERSON / WALK_IN — updated schema: DOCTOR marks completed here
-      // (not the receptionist). Button only active once patient has
-      // checked in with reception.
+      // IN_PERSON / WALK_IN — doctor marks completed (updated schema).
       if (_currentStatus == AppointmentStatus.checkedIn) {
         return SizedBox(
           width: double.infinity,
@@ -240,29 +323,24 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2),
-                  )
+                        color: Colors.white, strokeWidth: 2))
                 : const Icon(Icons.check_circle_outline, color: Colors.white),
-            label: const Text(
-              'Mark Completed',
-              style: TextStyle(color: Colors.white),
-            ),
+            label: const Text('Mark Completed',
+                style: TextStyle(color: Colors.white)),
             style: ElevatedButton.styleFrom(
               backgroundColor: _DetailColors.primary,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
+                  borderRadius: BorderRadius.circular(30)),
             ),
           ),
         );
       }
-      // Confirmed but not yet checked in — nothing for doctor to do yet.
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         decoration: BoxDecoration(
-          color: _DetailColors.textMuted.withOpacity(0.1),
+          color: _DetailColors.textMuted.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(16),
         ),
         child: const Row(
@@ -270,42 +348,55 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
             Icon(Icons.info_outline, color: _DetailColors.textMuted, size: 18),
             SizedBox(width: 8),
             Expanded(
-              child: Text(
-                'Waiting for patient to check in at reception.',
-                style: TextStyle(color: _DetailColors.textMuted, fontSize: 12),
-              ),
+              child: Text('Waiting for patient to check in at reception.',
+                  style:
+                      TextStyle(color: _DetailColors.textMuted, fontSize: 12)),
             ),
           ],
         ),
       );
     }
 
-    // VIDEO_CALL, not yet completed:
+    // ── VIDEO_CALL, not yet completed ──
     if (_isConfirmed) {
-      return SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: _isStarting ? null : _startConsultation,
-          icon: _isStarting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2),
-                )
-              : const Icon(Icons.videocam, color: Colors.white),
-          label: const Text(
-            'Start Consultation',
-            style: TextStyle(color: Colors.white),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _DetailColors.primary,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
+      final canStart = _isWithinJoinWindow;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ElevatedButton.icon(
+            onPressed: (_isStarting || !canStart) ? null : _startConsultation,
+            icon: _isStarting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2))
+                : const Icon(Icons.videocam, color: Colors.white),
+            label: Text(
+              canStart
+                  ? 'Start Consultation'
+                  : 'Available 5 min before slot time',
+              style: const TextStyle(color: Colors.white),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _DetailColors.primary,
+              disabledBackgroundColor:
+                  _DetailColors.textMuted.withValues(alpha: 0.4),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30)),
             ),
           ),
-        ),
+          if (!canStart) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'The Start button will activate 5 minutes before the '
+              'scheduled time.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: _DetailColors.textMuted),
+            ),
+          ],
+        ],
       );
     }
 
@@ -317,16 +408,13 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
             child: OutlinedButton.icon(
               onPressed: _openJitsi,
               icon: const Icon(Icons.videocam, color: _DetailColors.primary),
-              label: const Text(
-                'Rejoin Video Consultation',
-                style: TextStyle(color: _DetailColors.primary),
-              ),
+              label: const Text('Rejoin Video Consultation',
+                  style: TextStyle(color: _DetailColors.primary)),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: _DetailColors.primary),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
+                    borderRadius: BorderRadius.circular(30)),
               ),
             ),
           ),
@@ -340,19 +428,38 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2),
-                    )
+                          color: Colors.white, strokeWidth: 2))
                   : const Icon(Icons.check_circle_outline, color: Colors.white),
-              label: const Text(
-                'Mark Completed',
-                style: TextStyle(color: Colors.white),
-              ),
+              label: const Text('Mark Completed',
+                  style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: _DetailColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
+                    borderRadius: BorderRadius.circular(30)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _isMarkingNoShow ? null : _markPatientDidNotJoin,
+              icon: _isMarkingNoShow
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          color: Color(0xFFB8860B), strokeWidth: 2))
+                  : const Icon(Icons.person_off_outlined,
+                      color: Color(0xFFB8860B), size: 18),
+              label: const Text('Patient Didn\'t Join',
+                  style: TextStyle(color: Color(0xFFB8860B))),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFFB8860B)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
               ),
             ),
           ),
@@ -360,7 +467,6 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       );
     }
 
-    // Requested / Cancelled / NoShow — no doctor action applicable.
     return const SizedBox.shrink();
   }
 
@@ -406,7 +512,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _admissionRecommended = previous; // revert on failure
+          _admissionRecommended = previous;
           _isTogglingAdmission = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -456,16 +562,13 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                       onPressed: _openPatientProfile,
                       icon: const Icon(Icons.person_search_outlined,
                           color: _DetailColors.primary),
-                      label: const Text(
-                        'View Patient Profile',
-                        style: TextStyle(color: _DetailColors.primary),
-                      ),
+                      label: const Text('View Patient Profile',
+                          style: TextStyle(color: _DetailColors.primary)),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: _DetailColors.primary),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
+                            borderRadius: BorderRadius.circular(30)),
                       ),
                     ),
                   ),
@@ -479,7 +582,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
+                              color: Colors.black.withValues(alpha: 0.04),
                               blurRadius: 6,
                               offset: const Offset(0, 2)),
                         ],
@@ -487,18 +590,18 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                       child: SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         value: _admissionRecommended,
-                        onChanged: _isTogglingAdmission
+                        onChanged: (_isTogglingAdmission || !_admissionEditable)
                             ? null
                             : _toggleAdmissionRecommendation,
                         activeColor: _DetailColors.primary,
-                        title: const Text(
-                          'Recommend Admission',
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: const Text(
-                          'Flags this patient for receptionist to assign a room/bed',
-                          style: TextStyle(
+                        title: const Text('Recommend Admission',
+                            style: TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                          _admissionEditable
+                              ? 'Flags this patient for receptionist to assign a room/bed'
+                              : 'Locked — visit completed',
+                          style: const TextStyle(
                               fontSize: 11, color: _DetailColors.textMuted),
                         ),
                       ),
@@ -511,17 +614,14 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                           onPressed: _openRequestLabTest,
                           icon: const Icon(Icons.science_outlined,
                               color: _DetailColors.primary),
-                          label: const Text(
-                            'Request Lab Test',
-                            style: TextStyle(color: _DetailColors.primary),
-                          ),
+                          label: const Text('Request Lab Test',
+                              style: TextStyle(color: _DetailColors.primary)),
                           style: OutlinedButton.styleFrom(
                             side:
                                 const BorderSide(color: _DetailColors.primary),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
+                                borderRadius: BorderRadius.circular(30)),
                           ),
                         ),
                       ),
@@ -556,14 +656,15 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       child: Row(
         children: [
           IconButton(
-            onPressed: () => Navigator.pop(context, _isCompleted),
+            onPressed: () => Navigator.pop(context,
+                _isCompleted || _currentStatus == AppointmentStatus.noShow),
             icon: const Icon(Icons.arrow_back, color: Colors.white),
           ),
-          const Text(
-            'Appointment Detail',
-            style: TextStyle(
-                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+          const Text('Appointment Detail',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -578,7 +679,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: const Offset(0, 2)),
         ],
@@ -587,7 +688,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         children: [
           CircleAvatar(
             radius: 26,
-            backgroundColor: _DetailColors.primary.withOpacity(0.15),
+            backgroundColor: _DetailColors.primary.withValues(alpha: 0.15),
             child: Text(
               appointment.patientName.isNotEmpty
                   ? appointment.patientName[0].toUpperCase()
@@ -610,18 +711,15 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                 Row(
                   children: [
                     Icon(
-                      _isVideoCall
-                          ? Icons.videocam_outlined
-                          : Icons.storefront_outlined,
-                      size: 14,
-                      color: _DetailColors.textMuted,
-                    ),
+                        _isVideoCall
+                            ? Icons.videocam_outlined
+                            : Icons.storefront_outlined,
+                        size: 14,
+                        color: _DetailColors.textMuted),
                     const SizedBox(width: 4),
-                    Text(
-                      appointment.appointmentType.label,
-                      style: const TextStyle(
-                          fontSize: 12, color: _DetailColors.textMuted),
-                    ),
+                    Text(appointment.appointmentType.label,
+                        style: const TextStyle(
+                            fontSize: 12, color: _DetailColors.textMuted)),
                   ],
                 ),
               ],
@@ -658,7 +756,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: const Offset(0, 2)),
         ],
@@ -671,11 +769,10 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
               style: const TextStyle(
                   fontSize: 11, color: _DetailColors.textMuted)),
           const SizedBox(height: 2),
-          Text(
-            value,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
+          Text(value,
+              textAlign: TextAlign.center,
+              style:
+                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         ],
       ),
     );

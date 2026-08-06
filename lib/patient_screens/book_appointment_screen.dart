@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 import 'payment_upload_screen.dart';
 
 /// FIXES IS FILE MEIN:
@@ -53,6 +55,11 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   String? _selectedTime;
 
   final _symptomsController = TextEditingController();
+  final _picker = ImagePicker();
+  // Optional: patient purani medical report attach kar sakta hai.
+  // Storage avoid karne ke liye base64 me Firestore me jaati hai
+  // (jaise payment screenshot) — schema: patientReportUrl → base64.
+  String? _reportBase64;
 
   @override
   void initState() {
@@ -119,8 +126,9 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     if (!isToday) return false; // future dates par sab times valid
 
     final parts = time.split(':').map(int.parse).toList();
-    final slotDateTime = DateTime(selectedDate.year, selectedDate.month,
-        selectedDate.day, parts[0], parts[1]);
+    final slotDateTime = DateTime(
+        selectedDate.year, selectedDate.month, selectedDate.day,
+        parts[0], parts[1]);
     return slotDateTime.isBefore(now);
   }
 
@@ -212,6 +220,30 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     ));
   }
 
+  // ── Optional: attach a previous medical report (gallery only) ────
+  Future<void> _pickReport() async {
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 65,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      if (bytes.lengthInBytes > 700 * 1024) {
+        _showError('Image too large. Please choose a smaller file.');
+        return;
+      }
+      setState(() => _reportBase64 = base64Encode(bytes));
+    } catch (e) {
+      _showError('Could not load report: $e');
+    }
+  }
+
+  void _removeReport() => setState(() => _reportBase64 = null);
+
   // ── Book: slot + appointment created atomically ───────────
   Future<void> _bookAppointment() async {
     if (_selectedTime == null) {
@@ -289,7 +321,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           'symptoms': _symptomsController.text.trim().isEmpty
               ? null
               : _symptomsController.text.trim(),
-          'patientReportUrl': null,
+          'patientReportBase64': _reportBase64,
           'appointmentType': widget.appointmentType,
           'admissionRecommended': false,
           'consultationStartedAt': null,
@@ -412,6 +444,19 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 20),
+                          const Text('Attach previous report (optional)',
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1A2F3A))),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Share an old prescription or test result, if relevant.',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 10),
+                          _buildReportPicker(),
                         ],
                       ),
                     ),
@@ -597,6 +642,65 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildReportPicker() {
+    if (_reportBase64 != null) {
+      return Column(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.memory(
+              base64Decode(_reportBase64!),
+              height: 160,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton.icon(
+                onPressed: _pickReport,
+                icon: const Icon(Icons.refresh, size: 16, color: _primary),
+                label:
+                    const Text('Change', style: TextStyle(color: _primary)),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: _removeReport,
+                icon: const Icon(Icons.close, size: 16, color: Colors.red),
+                label: const Text('Remove', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return GestureDetector(
+      onTap: _pickReport,
+      child: Container(
+        width: double.infinity,
+        height: 100,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: _primary.withOpacity(0.4), width: 1.5),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.attach_file, size: 28, color: _primary.withOpacity(0.6)),
+            const SizedBox(height: 6),
+            const Text('Tap to attach a report',
+                style: TextStyle(fontSize: 12, color: Colors.black54)),
+          ],
+        ),
+      ),
     );
   }
 
