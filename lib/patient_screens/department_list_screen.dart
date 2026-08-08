@@ -73,6 +73,7 @@ class _DepartmentListScreenState extends State<DepartmentListScreen> {
             .collection('doctor_profiles')
             .doc(settingDoc.id)
             .get();
+
         if (profileDoc.exists) {
           final deptId = profileDoc.data()?['departmentId'];
           if (deptId != null) departmentsWithDoctors.add(deptId);
