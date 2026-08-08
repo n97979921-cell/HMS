@@ -5,6 +5,7 @@ import 'appointment_detail_screen.dart';
 import 'appointment_status.dart';
 import 'doctor_appointment_list_item.dart';
 import 'firebase_doctor_repository.dart';
+import 'doctor_profile_screen.dart';
 
 /// DOCTOR HOME — aaj ke patients
 ///
@@ -365,7 +366,17 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           ),
           const SizedBox(width: 10),
           GestureDetector(
-            onTap: _comingSoon,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DoctorProfileScreen(
+                    repository: FirebaseDoctorRepository(),
+                    doctorId: FirebaseAuth.instance.currentUser?.uid ?? '',
+                  ),
+                ),
+              );
+            },
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
