@@ -103,8 +103,8 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
           if (createdAt is Timestamp) bookedAt = createdAt.toDate();
 
           final slotExpired = slotDateTime != null && now.isAfter(slotDateTime);
-          final bookingTooOld = bookedAt != null &&
-              now.difference(bookedAt).inHours >= 24;
+          final bookingTooOld =
+              bookedAt != null && now.difference(bookedAt).inHours >= 24;
 
           if (slotExpired || bookingTooOld) {
             // AUTO-CANCEL appointment + slot, payment CHHUO MAT
@@ -151,10 +151,11 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
     }
   }
 
-  Future<Map<String, dynamic>> _buildRow(
-      String paymentId, Map<String, dynamic> data, Map<String, dynamic> appt) async {
+  Future<Map<String, dynamic>> _buildRow(String paymentId,
+      Map<String, dynamic> data, Map<String, dynamic> appt) async {
     String patientName = 'Patient';
     String doctorName = '';
+    String slotLabel = '';
     try {
       final p = await FirebaseFirestore.instance
           .collection('users')
@@ -166,6 +167,19 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
           .doc(appt['doctorId'])
           .get();
       doctorName = d.data()?['name'] ?? '';
+
+      // Slot date+time bhi fetch karo — receptionist ko dikhna zaroori hai
+      final slotId = appt['slotId'];
+      if (slotId != null) {
+        final slotDoc = await FirebaseFirestore.instance
+            .collection('slots')
+            .doc(slotId)
+            .get();
+        if (slotDoc.exists) {
+          final s = slotDoc.data()!;
+          slotLabel = '${s['date']} · ${s['startTime']}';
+        }
+      }
     } catch (_) {}
 
     return {
@@ -173,6 +187,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
       'appointmentId': data['appointmentId'],
       'patientName': patientName,
       'doctorName': doctorName,
+      'slotLabel': slotLabel,
       'amount': data['amount'] ?? 0,
       'screenshotBase64': data['screenshotBase64'],
       'transactionId': data['transactionId'],
@@ -320,7 +335,8 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
             FirebaseFirestore.instance.collection('slots').doc(slotId);
         final slotSnap = await transaction.get(slotRef);
 
-        transaction.update(paymentRef, {'status': 'Rejected', 'verifiedBy': uid});
+        transaction
+            .update(paymentRef, {'status': 'Rejected', 'verifiedBy': uid});
         transaction.update(apptRef, {
           'status': 'Cancelled',
           'updatedAt': FieldValue.serverTimestamp(),
@@ -425,8 +441,8 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
               Navigator.pop(context);
               _verifyButCancel(payment);
             },
-            style:
-                ElevatedButton.styleFrom(backgroundColor: const Color(0xFFB8860B)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB8860B)),
             child: const Text('Cancel & Refund',
                 style: TextStyle(color: Colors.white)),
           ),
@@ -455,8 +471,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
               _expiredRefund(payment);
             },
             style: ElevatedButton.styleFrom(backgroundColor: _primary),
-            child:
-                const Text('Refund', style: TextStyle(color: Colors.white)),
+            child: const Text('Refund', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -746,9 +761,13 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1A2F3A))),
                     if (p['doctorName'] != '')
-                      Text('Dr. ${p['doctorName']}',
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.black54)),
+                      Text(
+                        p['slotLabel'] != null && p['slotLabel'] != ''
+                            ? 'Dr. ${p['doctorName']} · ${p['slotLabel']}'
+                            : 'Dr. ${p['doctorName']}',
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.black54),
+                      ),
                   ],
                 ),
               ),

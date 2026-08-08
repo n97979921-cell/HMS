@@ -6,6 +6,8 @@ import 'refunds_pending_screen.dart';
 import 'receptionist_profile_screen.dart';
 import 'walk_in_screen.dart';
 import 'appointments_today_screen.dart';
+import 'lab_payments_screen.dart';
+import 'admissions_screen.dart';
 
 /// RECEPTIONIST DASHBOARD
 /// Patient-side green theme, lekin dashboard-style (doosron ka data manage).
@@ -329,7 +331,27 @@ class _ReceptionistDashboardScreenState
           title: 'Lab Payments',
           subtitle: 'Collect & forward',
           badge: _unpaidLabTests,
-          onTap: _comingSoon, // #4 banega
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LabPaymentsScreen()),
+            );
+            _loadData();
+          },
+        ),
+        _actionCard(
+          icon: Icons.bed_outlined,
+          iconBg: const Color(0xFFEAE3F7),
+          iconColor: const Color(0xFF7E57C2),
+          title: 'Admissions',
+          subtitle: 'Assign beds & release',
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AdmissionsScreen()),
+            );
+            _loadData();
+          },
         ),
       ],
     );

@@ -180,7 +180,7 @@ class FirebaseDoctorRepository implements DoctorRepository {
         testType: (data['testType'] as String?) ?? '',
         status:
             LabTestStatusX.fromString((data['status'] as String?) ?? 'Pending'),
-        reportUrl: data['reportUrl'] as String?,
+        reportBase64: data['reportBase64'] as String?,
       );
     } on FirebaseException catch (e) {
       throw Exception('Failed to load report: ${e.message}');
@@ -385,7 +385,7 @@ class FirebaseDoctorRepository implements DoctorRepository {
         'patientId': patientId,
         'testType': testType,
         'status': 'Pending',
-        'reportUrl': null,
+        'reportBase64': null,
         'charge': charge,
         'paymentStatus': null,
         'createdAt': FieldValue.serverTimestamp(),

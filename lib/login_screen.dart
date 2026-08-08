@@ -6,6 +6,7 @@ import 'screens/admin_dashboard_screen.dart';
 import 'patient_screens/patient_home_screen.dart';
 import 'receptionist_screens/receptionist_dashboard_screen.dart';
 import 'doctor_screens/doctor_home_screen.dart';
+import 'labstaff_screens/lab_staff_dashboard_screen.dart';
 
 /// LOGIN — nayi auth_service ke format ke saath.
 /// login() ab {'success': bool, 'user'/'error': ...} deta hai.
@@ -77,7 +78,9 @@ class _LoginScreenState extends State<LoginScreen> {
         case 'doctor':
           destination = const DoctorHomeScreen();
           break;
-        // labstaff — lab side abhi nahi bani
+        case 'labstaff':
+          destination = const LabStaffDashboardScreen();
+          break;
         default:
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Dashboard coming soon!')),
