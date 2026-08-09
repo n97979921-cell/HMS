@@ -242,6 +242,23 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
         patientId = apptDoc.data()?['patientId'];
       }
 
+      // Release se PEHLE — current room_type_prices se fresh rate lo
+      // (billing purani/locked price se hi hogi, yeh sirf bed ki
+      // display-price ko naye rate pe REFRESH karta hai taake agla
+      // patient sahi rate dekhe).
+      num freshRate = bed['pricePerHour']; // fallback: purani price hi
+      try {
+        final priceDoc = await FirebaseFirestore.instance
+            .collection('room_type_prices')
+            .doc(bed['roomType'])
+            .get();
+        if (priceDoc.exists && priceDoc.data()?['pricePerHour'] != null) {
+          freshRate = priceDoc.data()!['pricePerHour'];
+        }
+      } catch (_) {
+        // fetch fail ho to purani price hi rakho, release na roko
+      }
+
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         final bedSnap = await transaction.get(bedRef);
         if (!bedSnap.exists) throw Exception('Bed not found');
@@ -253,6 +270,7 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
           'availability': 'Available',
           'releasedAt': FieldValue.serverTimestamp(),
           'appointmentId': null,
+          'pricePerHour': freshRate, // naye rate pe refresh
           'updatedAt': FieldValue.serverTimestamp(),
         });
 
