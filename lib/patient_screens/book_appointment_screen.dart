@@ -52,6 +52,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
   List<String> _allTimes = []; // generated e.g. ["09:00","09:15",...]
   Set<String> _unavailableTimes = {}; // HELD or BOOKED for selected date
+  Set<String> _patientBookedTimes =
+      {}; // is date, patient ki apni doosri bookings
   String? _selectedTime;
 
   final _symptomsController = TextEditingController();
@@ -126,9 +128,8 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     if (!isToday) return false; // future dates par sab times valid
 
     final parts = time.split(':').map(int.parse).toList();
-    final slotDateTime = DateTime(
-        selectedDate.year, selectedDate.month, selectedDate.day,
-        parts[0], parts[1]);
+    final slotDateTime = DateTime(selectedDate.year, selectedDate.month,
+        selectedDate.day, parts[0], parts[1]);
     return slotDateTime.isBefore(now);
   }
 
@@ -182,6 +183,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       _isLoadingSlots = true;
       _selectedTime = null;
       _unavailableTimes = {};
+      _patientBookedTimes = {};
     });
     try {
       final dateStr = _dateKey(_weekdays[_selectedDateIndex]);
@@ -200,8 +202,37 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         }
       }
 
+      // ── PATIENT SELF-COLLISION CHECK ──
+      // Isi patient ki, isی date ki, KISI BHI doctor ke saath
+      // (chahe alag department ho) Requested/Confirmed appointment
+      // ho to us time ko is patient ke liye disable karo — ek waqt
+      // pe do jagah nahi ho sakta.
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final Set<String> patientTimes = {};
+      if (uid != null) {
+        final patientApptSnap = await FirebaseFirestore.instance
+            .collection('appointments')
+            .where('patientId', isEqualTo: uid)
+            .where('status', whereIn: ['Requested', 'Confirmed']).get();
+
+        for (final apptDoc in patientApptSnap.docs) {
+          final apptSlotId = apptDoc.data()['slotId'];
+          if (apptSlotId == null) continue;
+          final apptSlotDoc = await FirebaseFirestore.instance
+              .collection('slots')
+              .doc(apptSlotId)
+              .get();
+          if (!apptSlotDoc.exists) continue;
+          final apptSlotData = apptSlotDoc.data()!;
+          if (apptSlotData['date'] == dateStr) {
+            patientTimes.add(apptSlotData['startTime']);
+          }
+        }
+      }
+
       setState(() {
         _unavailableTimes = taken;
+        _patientBookedTimes = patientTimes;
         _isLoadingSlots = false;
       });
     } catch (e) {
@@ -602,8 +633,9 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         final time = _allTimes[index];
         // FIX 1: slot unavailable hai agar HELD/BOOKED hai
         // YA aaj ki date par time guzar chuka hai
-        final isAvailable =
-            !_unavailableTimes.contains(time) && !_isPastTime(time);
+        final isAvailable = !_unavailableTimes.contains(time) &&
+            !_isPastTime(time) &&
+            !_patientBookedTimes.contains(time);
         final isSelected = time == _selectedTime && isAvailable;
 
         return GestureDetector(
@@ -665,14 +697,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               TextButton.icon(
                 onPressed: _pickReport,
                 icon: const Icon(Icons.refresh, size: 16, color: _primary),
-                label:
-                    const Text('Change', style: TextStyle(color: _primary)),
+                label: const Text('Change', style: TextStyle(color: _primary)),
               ),
               const SizedBox(width: 8),
               TextButton.icon(
                 onPressed: _removeReport,
                 icon: const Icon(Icons.close, size: 16, color: Colors.red),
-                label: const Text('Remove', style: TextStyle(color: Colors.red)),
+                label:
+                    const Text('Remove', style: TextStyle(color: Colors.red)),
               ),
             ],
           ),
@@ -688,8 +720,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: _primary.withOpacity(0.4), width: 1.5),
+          border: Border.all(color: _primary.withOpacity(0.4), width: 1.5),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
