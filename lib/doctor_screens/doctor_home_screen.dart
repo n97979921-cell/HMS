@@ -152,6 +152,8 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           'appointmentType': type ?? 'IN_PERSON',
           'status': status,
           'admissionRecommended': appt['admissionRecommended'] ?? false,
+          'symptoms': appt['symptoms'],
+          'patientReportBase64': appt['patientReportBase64'],
         });
       }
 
@@ -569,6 +571,8 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                 appointmentType: AppointmentTypeX.fromString(
                     appt['appointmentType'] ?? 'IN_PERSON'),
                 admissionRecommended: appt['admissionRecommended'] ?? false,
+                symptoms: appt['symptoms'],
+                patientReportBase64: appt['patientReportBase64'],
               ),
               dateLabel: _formatDate(_selectedDate),
             ),

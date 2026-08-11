@@ -92,13 +92,22 @@ class _BillingScreenState extends State<BillingScreen> {
           }
         }
 
+        // Sirf PAID payments hi bill mein count hote hain — Pending
+        // (abhi collect nahi hui), Rejected (fake thi) aur
+        // Refunded/HalfRefunded (paisa wapas ho gaya) shamil nahi.
         num total = 0;
         bool hasPending = false;
         for (final p in payments) {
-          final amount = (p['amount'] ?? 0) as num;
-          total += amount;
+          if (p['status'] == 'Paid') {
+            total += (p['amount'] ?? 0) as num;
+          }
           if (p['status'] == 'Pending') hasPending = true;
         }
+
+        // Agar is appointment ka koi bhi payment abhi tak Paid nahi
+        // hua, koi bill-card mat dikhao — abhi "confirmed kharcha"
+        // hai hi nahi.
+        if (total == 0 && !hasPending) continue;
 
         result.add({
           'appointmentId': apptId,

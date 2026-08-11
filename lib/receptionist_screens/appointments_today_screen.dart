@@ -266,6 +266,93 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
     }
   }
 
+  void _confirmCancelWalkIn(Map<String, dynamic> appt) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Cancel this walk-in?'),
+        content: Text('${appt['patientName']} decided not to proceed before '
+            'check-in. This will cancel the appointment and process a '
+            'FULL refund.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Back')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _cancelWalkIn(appt);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Cancel & Refund',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Patient khud mana karta hai (check-in se PEHLE) — full refund,
+  // kyunki yeh patient ki "no-show" galti nahi, khud cancel kiya.
+  Future<void> _cancelWalkIn(Map<String, dynamic> appt) async {
+    try {
+      final apptId = appt['appointmentId'];
+      final apptRef =
+          FirebaseFirestore.instance.collection('appointments').doc(apptId);
+
+      final apptDoc = await apptRef.get();
+      final slotId = apptDoc.data()?['slotId'];
+
+      final paySnap = await FirebaseFirestore.instance
+          .collection('payments')
+          .where('appointmentId', isEqualTo: apptId)
+          .where('status', isEqualTo: 'Paid')
+          .limit(1)
+          .get();
+      final payRef =
+          paySnap.docs.isNotEmpty ? paySnap.docs.first.reference : null;
+      final payAmount = paySnap.docs.isNotEmpty
+          ? (paySnap.docs.first.data()['amount'] ?? 0)
+          : 0;
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final apptSnap = await transaction.get(apptRef);
+        if (!apptSnap.exists) throw Exception('Appointment not found');
+        if (apptSnap.data()!['status'] != 'Confirmed') {
+          throw Exception('This appointment can no longer be cancelled.');
+        }
+
+        DocumentReference? slotRef;
+        bool slotExists = false;
+        if (slotId != null) {
+          slotRef = FirebaseFirestore.instance.collection('slots').doc(slotId);
+          final slotSnap = await transaction.get(slotRef);
+          slotExists = slotSnap.exists;
+        }
+
+        transaction.update(apptRef, {
+          'status': 'Cancelled',
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+        if (slotRef != null && slotExists) transaction.delete(slotRef);
+
+        if (payRef != null) {
+          transaction.update(payRef, {
+            'status': 'Refunded',
+            'refundAmount': payAmount,
+            'refundPaid': false,
+          });
+        }
+      });
+
+      _showSuccess('Walk-in cancelled — full refund pending');
+      _loadAndProcess();
+    } catch (e) {
+      _showError('Error: $e');
+    }
+  }
+
   void _showError(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -376,7 +463,8 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
 
   Widget _appointmentCard(Map<String, dynamic> appt) {
     final isCheckedIn = appt['status'] == 'CheckedIn';
-    final typeLabel = appt['appointmentType'] == 'WALK_IN'
+    final isWalkIn = appt['appointmentType'] == 'WALK_IN';
+    final typeLabel = isWalkIn
         ? 'Walk-in'
         : appt['appointmentType'] == 'VIDEO_CALL'
             ? 'Video'
@@ -395,38 +483,42 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
               offset: const Offset(0, 2))
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Time chip
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFDCEFE9),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(appt['startTime'],
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, color: _primaryDark)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(appt['patientName'],
+          Row(
+            children: [
+              // Time chip
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCEFE9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(appt['startTime'],
                     style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A2F3A))),
-                const SizedBox(height: 2),
-                Text('${appt['doctorName']} · $typeLabel',
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.black54)),
-              ],
-            ),
-          ),
-          isCheckedIn
-              ? Container(
+                        fontWeight: FontWeight.bold, color: _primaryDark)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(appt['patientName'],
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1A2F3A))),
+                    const SizedBox(height: 2),
+                    Text('${appt['doctorName']} · $typeLabel',
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.black54)),
+                  ],
+                ),
+              ),
+              if (isCheckedIn)
+                Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
@@ -444,19 +536,68 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
                               color: _primary)),
                     ],
                   ),
-                )
-              : ElevatedButton(
-                  onPressed: () => _checkIn(appt),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _primary,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text('Check-in',
-                      style: TextStyle(color: Colors.white, fontSize: 12)),
                 ),
+            ],
+          ),
+          // Walk-in ke liye: Check-in se pehle patient khud mana kar
+          // sakta hai — "Cancel" button (FULL refund, kyunki patient
+          // ki galti nahi, khud mana kiya).
+          if (isWalkIn && !isCheckedIn) ...[
+            const SizedBox(height: 10),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _confirmCancelWalkIn(appt),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      side: const BorderSide(color: Color(0xFFD9534F)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('Cancel',
+                        style: TextStyle(
+                            color: Color(0xFFD9534F),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: () => _checkIn(appt),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _primary,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('Check-in',
+                        style: TextStyle(color: Colors.white, fontSize: 12)),
+                  ),
+                ),
+              ],
+            ),
+          ] else if (!isCheckedIn) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _checkIn(appt),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _primary,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Check-in',
+                    style: TextStyle(color: Colors.white, fontSize: 12)),
+              ),
+            ),
+          ],
         ],
       ),
     );

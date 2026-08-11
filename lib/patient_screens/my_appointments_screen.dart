@@ -39,6 +39,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     'Confirmed',
     'Completed',
     'Cancelled',
+    'NoShow',
   ];
 
   bool _isLoading = true;

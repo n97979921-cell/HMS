@@ -170,6 +170,13 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
     final List<String> times = [];
     while (cursor.isBefore(endTime)) {
+      // Sirf tab add karo jab poora 15-min slot end-time ke andar
+      // fit ho jaye — warna aisa slot na bane jo doctor ki asal
+      // availability se bahar chala jaye (jaise 11:45 slot jab
+      // doctor sirf 11:50 tak available hai).
+      final slotEnd = cursor.add(const Duration(minutes: 15));
+      if (slotEnd.isAfter(endTime)) break;
+
       times.add(
           '${cursor.hour.toString().padLeft(2, '0')}:${cursor.minute.toString().padLeft(2, '0')}');
       cursor = cursor.add(const Duration(minutes: 15));
@@ -313,6 +320,33 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     num chargedFee = widget.consultationFee; // payment screen ko dene ke liye
 
     try {
+      // Patient collision-check: transaction se PEHLE karna hoga
+      // (Firestore transaction ke andar collection-query allowed
+      // nahi hoti, sirf .get() single-documents ki). Yeh guaranteed
+      // check hai, UI-check ke alawa ek aur safety-layer.
+      final patientApptSnap = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('patientId', isEqualTo: uid)
+          .where('status', whereIn: ['Requested', 'Confirmed']).get();
+
+      for (final apptDoc in patientApptSnap.docs) {
+        final apptSlotId = apptDoc.data()['slotId'];
+        if (apptSlotId == null) continue;
+        final apptSlotDoc = await FirebaseFirestore.instance
+            .collection('slots')
+            .doc(apptSlotId)
+            .get();
+        if (!apptSlotDoc.exists) continue;
+        final apptSlotData = apptSlotDoc.data()!;
+        if (apptSlotData['date'] == dateStr &&
+            apptSlotData['startTime'] == _selectedTime) {
+          _showError(
+              'You already have an appointment at this time on this date.');
+          setState(() => _isBooking = false);
+          return;
+        }
+      }
+
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         // 1. Check slot isn't already taken (re-verify inside transaction)
         final slotSnap = await transaction.get(slotRef);
