@@ -134,11 +134,13 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   Widget _buildJoinSection() {
     if (!_isVideoCall) return const SizedBox.shrink();
 
-    if (!_isInProgress) {
-      // Session khatam ho chuki (NoShow/Cancelled) ya abhi shuru nahi hui
-      final status = _appt?['status'];
-      final ended =
-          status == 'NoShow' || status == 'Cancelled' || status == 'Completed';
+    final status = _appt?['status'];
+    final ended =
+        status == 'NoShow' || status == 'Cancelled' || status == 'Completed';
+
+    // Session khatam ho chuki, ya abhi appointment Requested hai
+    // (payment/receptionist verify hona baaki hai)
+    if (ended || status == 'Requested') {
       return Container(
         width: double.infinity,
         margin: const EdgeInsets.only(top: 16),
@@ -155,7 +157,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
               child: Text(
                 ended
                     ? 'This video session has ended.'
-                    : 'Waiting for the doctor to start the consultation.',
+                    : 'Waiting for payment/booking confirmation.',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
               ),
             ),
@@ -164,7 +166,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       );
     }
 
-    // InProgress — doctor ready hai
+    // Confirmed YA InProgress — patient apna independent 5-min window
+    // follow karta hai, doctor ke start karne ka intezaar nahi karta.
     final canJoin = _isWithinJoinWindow;
     return Container(
       margin: const EdgeInsets.only(top: 16),
@@ -194,9 +197,13 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
           ),
           if (canJoin) ...[
             const SizedBox(height: 8),
-            const Text('The doctor is ready for your consultation.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 11, color: Colors.grey)),
+            Text(
+              status == 'InProgress'
+                  ? 'The doctor is ready for your consultation.'
+                  : 'You can join now — the doctor will join shortly.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
           ],
         ],
       ),

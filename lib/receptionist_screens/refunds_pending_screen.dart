@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/notification_service.dart';
 
 /// REFUNDS PENDING SCREEN (Receptionist)
 ///
@@ -58,6 +59,7 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
 
         result.add({
           'paymentId': doc.id,
+          'patientId': data['patientId'],
           'patientName': patientName,
           'amount': data['amount'] ?? 0,
           'refundAmount': data['refundAmount'],
@@ -118,7 +120,13 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
         'refundedBy': uid,
         'refundedAt': FieldValue.serverTimestamp(),
       });
-
+      // ── NOTIFICATION: Refund Processed → Patient ──
+      await NotificationService.send(
+        userId: refund['patientId'] ?? '',
+        type: 'Payment',
+        referenceId: refund['paymentId'],
+        message: 'Your refund of Rs. $refundAmt has been processed.',
+      );
       _showSuccess('Refund marked as paid');
       _loadRefunds();
     } catch (e) {

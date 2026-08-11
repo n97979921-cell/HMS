@@ -92,10 +92,20 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
         // Sirf Confirmed / CheckedIn dikhani hain
         if (status != 'Confirmed' && status != 'CheckedIn') continue;
 
+        // VIDEO_CALL ke liye receptionist check-in irrelevant hai —
+        // schema: video call sirf doctor-triggered flow follow karta
+        // hai (Requested → Confirmed → InProgress → Completed),
+        // koi CheckedIn step nahi.
+        if (appt['appointmentType'] == 'VIDEO_CALL') continue;
+
         final slotDt = _slotDateTime(slotData['date'], slotData['startTime']);
 
         // ── LAZY AUTO-CANCEL check (sirf Confirmed, check-in nahi hui) ──
-        if (status == 'Confirmed' && slotDt != null) {
+        // VIDEO_CALL ka apna alag missed/no-show handling doctor side
+        // aur video-call join screen pe hota hai — yahan skip.
+        if (status == 'Confirmed' &&
+            slotDt != null &&
+            appt['appointmentType'] != 'VIDEO_CALL') {
           final createdAt = appt['createdAt'];
           DateTime? bookedAt;
           if (createdAt is Timestamp) bookedAt = createdAt.toDate();

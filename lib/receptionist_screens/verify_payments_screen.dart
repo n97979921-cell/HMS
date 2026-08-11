@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/notification_service.dart';
 
 /// VERIFY PAYMENTS SCREEN (Receptionist) — Pending | Expired tabs
 ///
@@ -185,6 +186,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
     return {
       'paymentId': paymentId,
       'appointmentId': data['appointmentId'],
+      'patientId': data['patientId'],
       'patientName': patientName,
       'doctorName': doctorName,
       'slotLabel': slotLabel,
@@ -243,6 +245,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
         final apptSnap = await transaction.get(apptRef);
         if (!apptSnap.exists) throw Exception('Appointment not found');
         final slotId = apptSnap.data()!['slotId'];
+
         final slotRef =
             FirebaseFirestore.instance.collection('slots').doc(slotId);
         final slotSnap = await transaction.get(slotRef);
@@ -264,6 +267,17 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
           });
         }
       });
+
+      // ── NOTIFICATION: Appointment Confirmed → Patient ──
+      // Sab appointment-types (IN_PERSON/WALK_IN/VIDEO_CALL) ke liye
+      // Patient ko yeh notification jaati hai. Doctor ko VIDEO_CALL
+      // ke liye bhi NAHI bhejni (schema-decision).
+      await NotificationService.send(
+        userId: payment['patientId'] ?? '',
+        type: 'Appointment',
+        referenceId: payment['appointmentId'],
+        message: 'Your appointment has been confirmed.',
+      );
 
       _showSuccess('Payment verified — appointment confirmed');
       _loadAndProcess();
@@ -307,6 +321,17 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
         if (slotSnap.exists) transaction.delete(slotRef);
       });
 
+      // ── NOTIFICATION: Appointment Cancelled → Patient ──
+      // (Refund-notification alag trigger hai — Step 9 mein, jab
+      // receptionist actual paisa de kar "Mark as Refunded" kare)
+      await NotificationService.send(
+        userId: payment['patientId'] ?? '',
+        type: 'Appointment',
+        referenceId: payment['appointmentId'],
+        message: 'Your appointment was cancelled by the hospital. A full '
+            'refund is being processed.',
+      );
+
       _showSuccess('Verified & cancelled — full refund pending');
       _loadAndProcess();
     } catch (e) {
@@ -343,6 +368,15 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
         });
         if (slotSnap.exists) transaction.delete(slotRef);
       });
+
+      // ── NOTIFICATION: Appointment Cancelled → Patient ──
+      await NotificationService.send(
+        userId: payment['patientId'] ?? '',
+        type: 'Appointment',
+        referenceId: payment['appointmentId'],
+        message: 'Your appointment was cancelled — the payment screenshot '
+            'could not be verified.',
+      );
 
       _showSuccess('Payment rejected — slot freed');
       _loadAndProcess();

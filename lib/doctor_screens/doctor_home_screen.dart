@@ -6,6 +6,8 @@ import 'appointment_status.dart';
 import 'doctor_appointment_list_item.dart';
 import 'firebase_doctor_repository.dart';
 import 'doctor_profile_screen.dart';
+import '../services/notification_service.dart';
+import '../screens/notifications_screen.dart';
 
 /// DOCTOR HOME — aaj ke patients
 ///
@@ -217,6 +219,23 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           });
         }
       });
+      // ── NOTIFICATION: Video Missed → Receptionist ──
+      final receptionistSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'receptionist')
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get();
+      if (receptionistSnap.docs.isNotEmpty) {
+        await NotificationService.send(
+          userId: receptionistSnap.docs.first.id,
+          type: 'VideoConsultation',
+          referenceId: apptId,
+          message: newStatus == 'Cancelled'
+              ? 'A video consultation was missed by the doctor.'
+              : 'A patient missed their video consultation.',
+        );
+      }
     } catch (_) {
       // Silent — agli load par dobara try hoga
     }
@@ -263,14 +282,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       backgroundColor: const Color(0xFFDB4437),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
-  }
-
-  void _comingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Coming soon'),
-      backgroundColor: _primary,
-      behavior: SnackBarBehavior.floating,
     ));
   }
 
@@ -348,11 +359,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           ),
           GestureDetector(
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Notifications coming soon'),
-                backgroundColor: _primary,
-                behavior: SnackBarBehavior.floating,
-              ));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              );
             },
             child: Container(
               padding: const EdgeInsets.all(10),

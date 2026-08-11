@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'assign_bed_screen.dart';
+import '../services/notification_service.dart';
 
 /// ADMISSIONS (Receptionist) — Pending | Occupied tabs
 ///
@@ -292,6 +293,13 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
           'paidAt': FieldValue.serverTimestamp(),
         });
       });
+      // ── NOTIFICATION: Room Payment Confirmed → Patient ──
+      await NotificationService.send(
+        userId: patientId ?? '',
+        type: 'Payment',
+        referenceId: bed['bedId'],
+        message: 'Your room payment of Rs. $amount has been received.',
+      );
 
       if (!mounted) return;
       _showSuccess('Bed released — Rs. $amount collected');

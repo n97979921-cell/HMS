@@ -100,6 +100,8 @@ class FirebaseDoctorRepository implements DoctorRepository {
           appointmentType: AppointmentTypeX.fromString(
               data['appointmentType'] as String? ?? 'IN_PERSON'),
           admissionRecommended: data['admissionRecommended'] as bool? ?? false,
+          symptoms: data['symptoms'] as String?,
+          patientReportBase64: data['patientReportBase64'] as String?,
         );
       }).toList();
     } on FirebaseException catch (e) {

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import '../services/notification_service.dart';
 
 /// LAB TEST DETAIL (Lab Staff)
 ///
@@ -140,6 +141,31 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
         'reportBase64': _reportBase64,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // ── NOTIFICATION: Lab Report Ready ──
+      // IN_PERSON: Doctor + Patient | WALK_IN: sirf Doctor (patient
+      // ke paas app nahi)
+      final apptDoc = await FirebaseFirestore.instance
+          .collection('appointments')
+          .doc(_test!['appointmentId'])
+          .get();
+      final apptType = apptDoc.data()?['appointmentType'] ?? 'IN_PERSON';
+
+      await NotificationService.send(
+        userId: _test!['doctorId'] ?? '',
+        type: 'Lab',
+        referenceId: widget.testId,
+        message: 'Lab report ready for ${_patientName}: ${_test!['testType']}.',
+      );
+
+      if (apptType != 'WALK_IN') {
+        await NotificationService.send(
+          userId: _test!['patientId'] ?? '',
+          type: 'Lab',
+          referenceId: widget.testId,
+          message: 'Your lab report is ready. Test: ${_test!['testType']}.',
+        );
+      }
       if (!mounted) return;
       _showSuccess('Report uploaded — test completed');
       Navigator.pop(context, true);

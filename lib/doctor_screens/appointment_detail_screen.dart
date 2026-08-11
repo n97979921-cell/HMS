@@ -7,6 +7,9 @@ import 'doctor_repository.dart';
 import 'add_prescription_screen.dart';
 import 'patient_profile_view_screen.dart';
 import 'request_lab_test_screen.dart';
+import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/notification_service.dart';
 
 class _DetailColors {
   static const primary = Color(0xFF1F8A70);
@@ -81,15 +84,31 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   bool get _isWithinJoinWindow {
     try {
       final timeParts = widget.appointment.slotTime.split(':');
+      // dateLabel format: "10 Aug 2026" — parse karo asal appointment
+      // date nikalne ke liye, "aaj" assume mat karo.
+      final dateParts = widget.dateLabel.split(' ');
+      const months = {
+        'Jan': 1,
+        'Feb': 2,
+        'Mar': 3,
+        'Apr': 4,
+        'May': 5,
+        'Jun': 6,
+        'Jul': 7,
+        'Aug': 8,
+        'Sep': 9,
+        'Oct': 10,
+        'Nov': 11,
+        'Dec': 12,
+      };
+      final day = int.parse(dateParts[0]);
+      final month = months[dateParts[1]]!;
+      final year = int.parse(dateParts[2]);
+
+      final slotDateTime = DateTime(
+          year, month, day, int.parse(timeParts[0]), int.parse(timeParts[1]));
       final now = DateTime.now();
-      // dateLabel format: "20 Jul 2026" — lekin humein sirf aaj ke context
-      // mein time-gate chahiye, is liye simplification: agar appointment
-      // ka din AAJ hai to slot time check karo, warna (future date select
-      // ki hui ho doctor ne) hamesha allow karo — us din jab aayega tab
-      // relevant hoga.
-      final slotToday = DateTime(now.year, now.month, now.day,
-          int.parse(timeParts[0]), int.parse(timeParts[1]));
-      final windowStart = slotToday.subtract(const Duration(minutes: 5));
+      final windowStart = slotDateTime.subtract(const Duration(minutes: 5));
       return now.isAfter(windowStart);
     } catch (_) {
       return true; // fail-open
@@ -508,6 +527,27 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         appointmentId: widget.appointment.appointmentId,
         recommended: value,
       );
+
+      // ── NOTIFICATION: Admission Recommended → Receptionist ──
+      // Sirf jab ON kiya jaye (value == true), OFF karne par nahi.
+      if (value) {
+        final receptionistSnap = await FirebaseFirestore.instance
+            .collection('users')
+            .where('role', isEqualTo: 'receptionist')
+            .where('status', isEqualTo: 'active')
+            .limit(1)
+            .get();
+        if (receptionistSnap.docs.isNotEmpty) {
+          await NotificationService.send(
+            userId: receptionistSnap.docs.first.id,
+            type: 'RoomRecommendation',
+            referenceId: widget.appointment.appointmentId,
+            message:
+                'Dr. recommends admission for ${widget.appointment.patientName}.',
+          );
+        }
+      }
+
       if (mounted) setState(() => _isTogglingAdmission = false);
     } catch (e) {
       if (mounted) {
@@ -554,6 +594,11 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                 children: [
                   _buildPatientCard(),
                   const SizedBox(height: 16),
+                  if ((widget.appointment.symptoms?.isNotEmpty ?? false) ||
+                      widget.appointment.patientReportBase64 != null) ...[
+                    _buildAppointmentInfoCard(),
+                    const SizedBox(height: 16),
+                  ],
                   _buildInfoRow(),
                   const SizedBox(height: 16),
                   SizedBox(
@@ -725,6 +770,55 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppointmentInfoCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _DetailColors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Provided by patient',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          if (widget.appointment.symptoms?.isNotEmpty ?? false) ...[
+            const Text('Symptoms',
+                style: TextStyle(fontSize: 11, color: _DetailColors.textMuted)),
+            const SizedBox(height: 4),
+            Text(widget.appointment.symptoms!,
+                style: const TextStyle(fontSize: 13)),
+            const SizedBox(height: 12),
+          ],
+          if (widget.appointment.patientReportBase64 != null) ...[
+            const Text('Attached report',
+                style: TextStyle(fontSize: 11, color: _DetailColors.textMuted)),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.memory(
+                base64Decode(widget.appointment.patientReportBase64!),
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Text(
+                    'Could not load attached image',
+                    style: TextStyle(
+                        fontSize: 12, color: _DetailColors.textMuted)),
+              ),
+            ),
+          ],
         ],
       ),
     );

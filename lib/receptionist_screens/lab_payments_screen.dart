@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/notification_service.dart';
 
 /// LAB PAYMENTS (Receptionist)
 ///
@@ -195,6 +196,14 @@ class _LabPaymentsScreenState extends State<LabPaymentsScreen> {
           'paidAt': FieldValue.serverTimestamp(),
         });
       });
+      // ── NOTIFICATION: Lab Payment Done → Patient ──
+      await NotificationService.send(
+        userId: test['patientId'] ?? '',
+        type: 'Lab',
+        referenceId: test['testId'],
+        message:
+            'Your lab payment has been received. Test: ${test['testType']}.',
+      );
 
       _showSuccess('Payment confirmed — test sent to lab');
       _loadAndProcess();

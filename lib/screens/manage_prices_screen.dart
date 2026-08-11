@@ -173,7 +173,7 @@ class _ManageRoomPricesScreenState extends State<ManageRoomPricesScreen> {
   static const Color bgColor = Color(0xFFBDD8D8);
 
   // Fixed room types
-  final List<String> _roomTypes = ['General Room', 'Private Room', 'ICU'];
+  final List<String> _roomTypes = ['ICU', 'General', 'Private'];
   Map<String, double> _prices = {};
   bool _isLoading = true;
 

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'lab_test_detail_screen.dart';
+import 'lab_staff_profile_screen.dart';
+import '../screens/notifications_screen.dart';
 
 /// LAB STAFF DASHBOARD — aaj/sab Confirmed tests dikhata hai
 ///
-/// Sirf status: Confirmed | In Progress | Completed wale tests dikhte
+/// Sirf status: Ready | In Progress | Completed wale tests dikhte
 /// hain (Pending abhi receptionist ke paas hai, patient ne pay nahi kiya).
 ///
 /// Tabs: "Pending" (Confirmed — kaam shuru karna hai) |
@@ -202,11 +204,10 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
           ),
           GestureDetector(
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Notifications coming soon'),
-                backgroundColor: _primary,
-                behavior: SnackBarBehavior.floating,
-              ));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              );
             },
             child: Container(
               padding: const EdgeInsets.all(10),
@@ -220,14 +221,20 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
           ),
           const SizedBox(width: 10),
           GestureDetector(
-            onTap: _logout,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const LabStaffProfileScreen()),
+              );
+            },
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.logout_rounded,
+              child: const Icon(Icons.person_outline,
                   color: Colors.white, size: 20),
             ),
           ),
@@ -249,7 +256,7 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
       ),
       child: Row(
         children: [
-          _tabButton('Confirmed', 'Pending'),
+          _tabButton('Ready', 'Pending'),
           _tabButton('In Progress', 'In Progress'),
           _tabButton('Completed', 'Completed'),
         ],

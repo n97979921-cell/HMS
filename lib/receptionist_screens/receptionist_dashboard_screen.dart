@@ -2,23 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'verify_payments_screen.dart';
-import 'refunds_pending_screen.dart';
-import 'receptionist_profile_screen.dart';
-import 'walk_in_screen.dart';
 import 'appointments_today_screen.dart';
+import 'walk_in_screen.dart';
 import 'lab_payments_screen.dart';
 import 'admissions_screen.dart';
+import 'refunds_pending_screen.dart';
+import 'receptionist_profile_screen.dart';
+import '../screens/notifications_screen.dart';
 
-/// RECEPTIONIST DASHBOARD
-/// Patient-side green theme, lekin dashboard-style (doosron ka data manage).
-/// 4 core kaam (schema ke mutabiq):
-///   1. Pending Payments  → EasyPaisa screenshot verify → appointment Confirm
-///   2. Appointments      → saari appointments dekhna/manage
-///   3. Walk-in Patient   → CNIC check → register → book
-///   4. Lab Payments      → unpaid lab test cash collect → Paid
+/// RECEPTIONIST DASHBOARD — professional layout
 ///
-/// NOTE: abhi cards ke destination screens (#2 onwards) ban rahe hain —
-/// Lab Payments card abhi _comingSoon par hai (doctor lab-request ke baad banega).
+/// Header (gradient, name + bell + profile) → compact stat-chip row
+/// (Pending / Today / Refunds) → 2x2 quick-action grid (Verify, Check-in,
+/// Walk-in, Lab Payments) → 2 full-width cards (Admissions, Pending
+/// Refunds), consistent style — no mismatched card shapes.
 class ReceptionistDashboardScreen extends StatefulWidget {
   const ReceptionistDashboardScreen({super.key});
 
@@ -35,10 +32,8 @@ class _ReceptionistDashboardScreenState
   String _receptionistName = '';
   bool _isLoading = true;
 
-  // Live counts — dashboard cards par badge dikhane ke liye
   int _pendingPayments = 0;
   int _todayAppointments = 0;
-  int _unpaidLabTests = 0;
   int _pendingRefunds = 0;
 
   @override
@@ -57,14 +52,12 @@ class _ReceptionistDashboardScreenState
         _receptionistName = userDoc.data()?['name'] ?? 'Receptionist';
       }
 
-      // Pending consultation payments (verify karne wale)
       final paymentsSnap = await FirebaseFirestore.instance
           .collection('payments')
           .where('status', isEqualTo: 'Pending')
           .get();
       _pendingPayments = paymentsSnap.docs.length;
 
-      // Aaj ki appointments
       final today = DateTime.now();
       final dateStr =
           '${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
@@ -75,14 +68,6 @@ class _ReceptionistDashboardScreenState
           .get();
       _todayAppointments = slotsSnap.docs.length;
 
-      // Unpaid lab tests
-      final labSnap = await FirebaseFirestore.instance
-          .collection('lab_tests')
-          .where('paymentStatus', isNull: true)
-          .get();
-      _unpaidLabTests = labSnap.docs.length;
-
-      // Pending refunds (dena baaki)
       final refundsSnap = await FirebaseFirestore.instance
           .collection('payments')
           .where('status', whereIn: ['Refunded', 'HalfRefunded'])
@@ -94,14 +79,6 @@ class _ReceptionistDashboardScreenState
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _comingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('Coming soon'),
-      backgroundColor: _primary,
-      behavior: SnackBarBehavior.floating,
-    ));
   }
 
   @override
@@ -119,21 +96,49 @@ class _ReceptionistDashboardScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(),
+                const SizedBox(height: 16),
+                _buildStatChips(),
                 const SizedBox(height: 20),
-                _buildStatsRow(),
-                const SizedBox(height: 24),
-                const Text(
-                  'Quick actions',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A2F3A),
-                  ),
-                ),
-                const SizedBox(height: 14),
+                const Text('Quick actions',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF6B7280))),
+                const SizedBox(height: 10),
                 _buildActionGrid(),
-                const SizedBox(height: 12),
-                _buildRefundsCard(),
+                const SizedBox(height: 10),
+                _buildListCard(
+                  icon: Icons.bed_outlined,
+                  iconBg: const Color(0xFFEAE3F7),
+                  iconColor: const Color(0xFF7E57C2),
+                  title: 'Admissions',
+                  subtitle: 'Assign and release beds',
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const AdmissionsScreen()),
+                    );
+                    _loadData();
+                  },
+                ),
+                const SizedBox(height: 10),
+                _buildListCard(
+                  icon: Icons.currency_exchange_outlined,
+                  iconBg: const Color(0xFFFDE6E0),
+                  iconColor: const Color(0xFFD9534F),
+                  title: 'Pending refunds',
+                  subtitle: 'Pay and mark done',
+                  badge: _pendingRefunds,
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const RefundsPendingScreen()),
+                    );
+                    _loadData();
+                  },
+                ),
               ],
             ),
           ),
@@ -160,31 +165,26 @@ class _ReceptionistDashboardScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Reception Desk',
-                    style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const Text('Reception desk',
+                    style: TextStyle(color: Colors.white70, fontSize: 12)),
                 const SizedBox(height: 4),
                 Text(
                   _isLoading ? 'Loading...' : _receptionistName,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
-                const Text('Manage appointments & payments',
-                    style: TextStyle(color: Colors.white70, fontSize: 12)),
               ],
             ),
           ),
-          // Bell (notifications — abhi coming soon)
           GestureDetector(
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Notifications coming soon'),
-                backgroundColor: _primary,
-                behavior: SnackBarBehavior.floating,
-              ));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              );
             },
             child: Container(
               padding: const EdgeInsets.all(10),
@@ -197,7 +197,6 @@ class _ReceptionistDashboardScreenState
             ),
           ),
           const SizedBox(width: 10),
-          // Profile
           GestureDetector(
             onTap: () {
               Navigator.push(
@@ -221,50 +220,45 @@ class _ReceptionistDashboardScreenState
     );
   }
 
-  Widget _buildStatsRow() {
+  Widget _buildStatChips() {
     return Row(
       children: [
-        _statCard('Pending\nPayments', _pendingPayments,
-            const Color(0xFFFCEFD8), const Color(0xFFB8860B)),
-        const SizedBox(width: 10),
-        _statCard('Today\nBooked', _todayAppointments, const Color(0xFFDCEFE9),
-            _primary),
-        const SizedBox(width: 10),
-        _statCard('Unpaid\nLab Tests', _unpaidLabTests, const Color(0xFFD9ECF8),
-            const Color(0xFF1565C0)),
+        _statChip('Pending', _pendingPayments, const Color(0xFFB8860B)),
+        const SizedBox(width: 8),
+        _statChip('Today', _todayAppointments, _primary),
+        const SizedBox(width: 8),
+        _statChip('Refunds', _pendingRefunds, const Color(0xFFD9534F)),
       ],
     );
   }
 
-  Widget _statCard(String label, int count, Color bg, Color textColor) {
+  Widget _statChip(String label, int count, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2)),
+          ],
         ),
         child: Column(
           children: [
             Text(
               _isLoading ? '—' : '$count',
               style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                color: textColor,
-              ),
+                  fontSize: 20, fontWeight: FontWeight.w700, color: color),
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: textColor.withValues(alpha: 0.9),
-                height: 1.2,
-              ),
-            ),
+            const SizedBox(height: 2),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF9CA3AF))),
           ],
         ),
       ),
@@ -276,16 +270,16 @@ class _ReceptionistDashboardScreenState
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
       childAspectRatio: 1.05,
       children: [
-        _actionCard(
+        _gridCard(
           icon: Icons.payments_outlined,
           iconBg: const Color(0xFFFCEFD8),
           iconColor: const Color(0xFFB8860B),
-          title: 'Verify Payments',
-          subtitle: 'Confirm consultations',
+          title: 'Verify payments',
+          subtitle: 'Confirm bookings',
           badge: _pendingPayments,
           onTap: () async {
             await Navigator.push(
@@ -295,12 +289,12 @@ class _ReceptionistDashboardScreenState
             _loadData();
           },
         ),
-        _actionCard(
+        _gridCard(
           icon: Icons.event_note_outlined,
           iconBg: const Color(0xFFDCEFE9),
           iconColor: _primary,
           title: 'Appointments',
-          subtitle: 'Check-in & no-show',
+          subtitle: 'Check-in patients',
           onTap: () async {
             await Navigator.push(
               context,
@@ -310,12 +304,12 @@ class _ReceptionistDashboardScreenState
             _loadData();
           },
         ),
-        _actionCard(
+        _gridCard(
           icon: Icons.person_add_alt_1_outlined,
           iconBg: const Color(0xFFEAE3F7),
           iconColor: const Color(0xFF7E57C2),
-          title: 'Walk-in Patient',
-          subtitle: 'Register & book',
+          title: 'Walk-in patient',
+          subtitle: 'Register and book',
           onTap: () async {
             await Navigator.push(
               context,
@@ -324,13 +318,12 @@ class _ReceptionistDashboardScreenState
             _loadData();
           },
         ),
-        _actionCard(
+        _gridCard(
           icon: Icons.science_outlined,
           iconBg: const Color(0xFFD9ECF8),
           iconColor: const Color(0xFF1565C0),
-          title: 'Lab Payments',
-          subtitle: 'Collect & forward',
-          badge: _unpaidLabTests,
+          title: 'Lab payments',
+          subtitle: 'Collect and forward',
           onTap: () async {
             await Navigator.push(
               context,
@@ -339,98 +332,11 @@ class _ReceptionistDashboardScreenState
             _loadData();
           },
         ),
-        _actionCard(
-          icon: Icons.bed_outlined,
-          iconBg: const Color(0xFFEAE3F7),
-          iconColor: const Color(0xFF7E57C2),
-          title: 'Admissions',
-          subtitle: 'Assign beds & release',
-          onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const AdmissionsScreen()),
-            );
-            _loadData();
-          },
-        ),
       ],
     );
   }
 
-  // Pending Refunds — full-width card (grid ke neeche, akela latakta nahi)
-  Widget _buildRefundsCard() {
-    return GestureDetector(
-      onTap: () async {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const RefundsPendingScreen()),
-        );
-        _loadData();
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFDE6E0),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(Icons.currency_exchange_outlined,
-                  color: Color(0xFFD9534F), size: 24),
-            ),
-            const SizedBox(width: 14),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Pending Refunds',
-                      style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A2F3A))),
-                  SizedBox(height: 2),
-                  Text('Pay & mark done',
-                      style: TextStyle(fontSize: 12, color: Colors.black54)),
-                ],
-              ),
-            ),
-            if (_pendingRefunds > 0)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD9534F),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text('$_pendingRefunds',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold)),
-              ),
-            const SizedBox(width: 6),
-            const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _actionCard({
+  Widget _gridCard({
     required IconData icon,
     required Color iconBg,
     required Color iconColor,
@@ -442,16 +348,15 @@ class _ReceptionistDashboardScreenState
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2)),
           ],
         ),
         child: Column(
@@ -461,46 +366,115 @@ class _ReceptionistDashboardScreenState
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     color: iconBg,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: iconColor, size: 24),
+                  alignment: Alignment.center,
+                  child: Icon(icon, color: iconColor, size: 18),
                 ),
                 if (badge > 0)
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
                       color: const Color(0xFFD9534F),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text(
-                      '$badge',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: Text('$badge',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600)),
                   ),
               ],
             ),
             const Spacer(),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A2F3A),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1A2F3A))),
+            const SizedBox(height: 2),
+            Text(subtitle,
+                style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Full-width list-style card — Admissions + Pending Refunds share this
+  // (consistent look, no mismatched shapes on the dashboard)
+  Widget _buildListCard({
+    required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    int badge = 0,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: Icon(icon, color: iconColor, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1A2F3A))),
+                  const SizedBox(height: 2),
+                  Text(subtitle,
+                      style: const TextStyle(
+                          fontSize: 11, color: Color(0xFF9CA3AF))),
+                ],
               ),
             ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-            ),
+            if (badge > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD9534F),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text('$badge',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600)),
+              ),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF), size: 18),
           ],
         ),
       ),

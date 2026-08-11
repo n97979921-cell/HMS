@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/notification_service.dart';
 
 /// WALK-IN PATIENT SCREEN (Receptionist) — Phase 3
 ///
@@ -400,6 +401,17 @@ class _WalkInScreenState extends State<WalkInScreen> {
           'paidAt': FieldValue.serverTimestamp(),
         });
       });
+
+      // ── NOTIFICATION: Walk-in Booked → Doctor only ──
+      // Walk-in patient ke paas app nahi (email null), isliye Patient
+      // ko koi notification NAHI jaati — sirf Doctor ko.
+      await NotificationService.send(
+        userId: doctor['doctorId'] ?? '',
+        type: 'Appointment',
+        referenceId: apptRef.id,
+        message: 'A walk-in patient ($_patientName) has been booked '
+            'for today at $_selectedTime.',
+      );
 
       if (!mounted) return;
       _showSuccess('Walk-in booked — today $_selectedTime');
