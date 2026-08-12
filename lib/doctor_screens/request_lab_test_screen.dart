@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'doctor_repository.dart';
 import 'test_type_price.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class _RLColors {
   static const primary = Color(0xFF1F8A70);
@@ -39,6 +40,7 @@ class RequestLabTestScreen extends StatefulWidget {
 class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
   List<TestTypePrice> _testTypes = [];
   final Set<TestTypePrice> _selected = {}; // multi-select
+  Set<String> _alreadyRequested = {}; // is appointment ke liye
   bool _isLoading = true;
   bool _isSubmitting = false;
   String? _errorMessage;
@@ -47,6 +49,27 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
   void initState() {
     super.initState();
     _loadTestTypes();
+    _loadAlreadyRequested();
+  }
+
+  // Is appointment ke liye jo tests PEHLE SE request ho chuke hain
+  // (koi bhi status), unhe disable karna hai — duplicate-prevention.
+  Future<void> _loadAlreadyRequested() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('lab_tests')
+          .where('appointmentId', isEqualTo: widget.appointmentId)
+          .get();
+      if (mounted) {
+        setState(() {
+          _alreadyRequested =
+              snap.docs.map((d) => d.data()['testType'] as String).toSet();
+        });
+      }
+    } catch (_) {
+      // fail ho to koi disable nahi hoga — worst case duplicate
+      // ban sakta hai, lekin crash nahi hoga
+    }
   }
 
   Future<void> _loadTestTypes() async {
@@ -260,15 +283,26 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
                 child: Column(
                   children: _testTypes.map((t) {
                     final isSelected = _selected.contains(t);
+                    final isAlreadyRequested =
+                        _alreadyRequested.contains(t.testType);
                     return CheckboxListTile(
                       value: isSelected,
-                      onChanged: (checked) => _toggleSelection(t, checked),
+                      onChanged: isAlreadyRequested
+                          ? null
+                          : (checked) => _toggleSelection(t, checked),
                       activeColor: _RLColors.primary,
                       controlAffinity: ListTileControlAffinity.leading,
                       title: Text(t.testType,
-                          style: const TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w600)),
-                      subtitle: Text('Rs. ${t.charge}',
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isAlreadyRequested
+                                  ? _RLColors.textMuted
+                                  : null)),
+                      subtitle: Text(
+                          isAlreadyRequested
+                              ? 'Already requested'
+                              : 'Rs. ${t.charge}',
                           style: const TextStyle(
                               fontSize: 12, color: _RLColors.textMuted)),
                     );

@@ -147,6 +147,7 @@ class FirebaseDoctorRepository implements DoctorRepository {
           testType: (data['testType'] as String?) ?? '',
           status: LabTestStatusX.fromString(
               (data['status'] as String?) ?? 'Pending'),
+          cancelReason: data['cancelReason'] as String?,
         );
       }).toList();
     } on FirebaseException catch (e) {

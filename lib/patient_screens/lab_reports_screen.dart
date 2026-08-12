@@ -71,6 +71,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
           'doctorName': doctorDoc.data()?['name'] ?? 'Doctor',
           'dateLabel': dateLabel,
           'createdAt': createdAt,
+          'cancelReason': data['cancelReason'],
         });
       }
 
@@ -352,6 +353,11 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                       style: TextStyle(fontSize: 11, color: Colors.grey)),
               ],
             ),
+          if (status == 'Cancelled' && test['cancelReason'] != null) ...[
+            const SizedBox(height: 6),
+            Text('Reason: ${test['cancelReason']}',
+                style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          ],
         ],
       ),
     );

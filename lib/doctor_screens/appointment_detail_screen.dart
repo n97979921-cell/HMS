@@ -597,8 +597,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     }
   }
 
-  void _openAddPrescription() {
-    Navigator.push(
+  void _openAddPrescription() async {
+    final saved = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => AddPrescriptionScreen(
@@ -610,6 +610,11 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         ),
       ),
     );
+    // Prescription save ho chuki — turant button hide karo (screen
+    // pe hi rukte huae bhi dobara-Add possible na ho).
+    if (saved == true && mounted) {
+      setState(() => _hasPrescription = true);
+    }
   }
 
   @override

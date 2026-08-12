@@ -267,6 +267,12 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                 Text(item.testType,
                     style: const TextStyle(
                         color: _LabColors.textMuted, fontSize: 13)),
+                if (item.status == LabTestStatus.cancelled &&
+                    item.cancelReason != null) ...[
+                  const SizedBox(height: 2),
+                  Text('Reason: ${item.cancelReason}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                ],
               ],
             ),
           ),
