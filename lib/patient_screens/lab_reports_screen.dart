@@ -267,7 +267,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1A2F3A))),
                     const SizedBox(height: 4),
-                    Text('Requested by ${test['doctorName']}',
+                    Text('Requested by Dr. ${test['doctorName']}',
                         style: const TextStyle(
                             fontSize: 11, color: Colors.black54)),
                     const SizedBox(height: 2),
@@ -334,23 +334,24 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
             ),
             const SizedBox(height: 10),
           ],
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                isPaid
-                    ? 'Rs. ${test['charge']} — Paid'
-                    : 'Rs. ${test['charge']} — Pay at reception',
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isPaid ? _primary : const Color(0xFFB8860B)),
-              ),
-              if (!canView)
-                const Text('Report not ready',
-                    style: TextStyle(fontSize: 11, color: Colors.grey)),
-            ],
-          ),
+          if (status != 'Cancelled')
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  isPaid
+                      ? 'Rs. ${test['charge']} — Paid'
+                      : 'Rs. ${test['charge']} — Pay at reception',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isPaid ? _primary : const Color(0xFFB8860B)),
+                ),
+                if (!canView)
+                  const Text('Report not ready',
+                      style: TextStyle(fontSize: 11, color: Colors.grey)),
+              ],
+            ),
         ],
       ),
     );

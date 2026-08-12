@@ -256,7 +256,7 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
       ),
       child: Row(
         children: [
-          _tabButton('Ready', 'Pending'),
+          _tabButton('Ready', 'Confirmed'),
           _tabButton('In Progress', 'In Progress'),
           _tabButton('Completed', 'Completed'),
         ],
