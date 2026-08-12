@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
+/// BILL DETAIL — Simple version
+/// - Grand total = sirf PAID payments ka sum (Pending/Cancelled/
+///   Refunded shaamil nahi)
+/// - Breakdown list mein SAB payments dikhte hain (status ke saath),
+///   Lab-type ke liye asal test-ka-naam bhi (referenceId se
+///   lab_tests collection se fetch karke), na ke generic "Lab"
 class BillDetailScreen extends StatefulWidget {
   final String appointmentId;
 
@@ -79,8 +85,36 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
       num total = 0;
       for (final doc in paySnap.docs) {
         final data = doc.data();
-        payments.add({'paymentId': doc.id, ...data});
-        total += (data['amount'] ?? 0) as num;
+
+        // Lab-type payment ke liye asal test-naam fetch karo
+        // (referenceId = testId → lab_tests collection)
+        String displayName = data['type'] ?? '';
+        if (data['type'] == 'Lab' && data['referenceId'] != null) {
+          try {
+            final testDoc = await FirebaseFirestore.instance
+                .collection('lab_tests')
+                .doc(data['referenceId'])
+                .get();
+            if (testDoc.exists) {
+              displayName = testDoc.data()?['testType'] ?? 'Lab';
+            }
+          } catch (_) {
+            // fetch fail ho to generic "Lab" hi dikha do
+          }
+        }
+
+        payments.add({
+          'paymentId': doc.id,
+          'displayName': displayName,
+          ...data,
+        });
+
+        // Sirf PAID payments hi grand-total mein count hoti hain —
+        // Pending (abhi collect nahi hui), Cancelled/Refunded (paisa
+        // wapas ya kabhi liya hi nahi) shamil nahi.
+        if (data['status'] == 'Paid') {
+          total += (data['amount'] ?? 0) as num;
+        }
       }
 
       // Consultation first, then Lab, then Room
@@ -95,6 +129,23 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'Paid':
+        return _primary;
+      case 'Pending':
+        return const Color(0xFFB8860B);
+      case 'Cancelled':
+      case 'Rejected':
+        return Colors.grey;
+      case 'Refunded':
+      case 'HalfRefunded':
+        return const Color(0xFFD9534F);
+      default:
+        return Colors.grey;
     }
   }
 
@@ -146,7 +197,7 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child:
@@ -173,7 +224,7 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2))
         ],
@@ -200,7 +251,7 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF1A2F3A))),
-          const Text('Total for this appointment',
+          const Text('Total for this appointment (paid so far)',
               style: TextStyle(fontSize: 12, color: Colors.grey)),
         ],
       ),
@@ -215,7 +266,7 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2))
         ],
@@ -223,7 +274,7 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
       child: Column(
         children: List.generate(_payments.length, (i) {
           final p = _payments[i];
-          final isPending = p['status'] == 'Pending';
+          final status = p['status'] ?? '';
           return Column(
             children: [
               Padding(
@@ -236,7 +287,7 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(p['type'] ?? '',
+                          Text(p['displayName'] ?? p['type'] ?? '',
                               style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
@@ -260,13 +311,11 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
                                 color: Color(0xFF1A2F3A))),
                         const SizedBox(height: 2),
                         Text(
-                          p['status'] ?? '',
+                          status,
                           style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: isPending
-                                  ? const Color(0xFFB8860B)
-                                  : const Color(0xFF1F8A70)),
+                              color: _statusColor(status)),
                         ),
                       ],
                     ),
