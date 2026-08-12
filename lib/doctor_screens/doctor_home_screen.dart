@@ -8,6 +8,7 @@ import 'firebase_doctor_repository.dart';
 import 'doctor_profile_screen.dart';
 import '../services/notification_service.dart';
 import '../screens/notifications_screen.dart';
+import 'lab_reports_screen.dart';
 
 /// DOCTOR HOME — aaj ke patients
 ///
@@ -295,6 +296,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         child: Column(
           children: [
             _buildHeader(),
+            _buildLabReportsCard(),
             _buildDateNavigator(),
             _buildTabToggle(),
             Expanded(
@@ -400,6 +402,64 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLabReportsCard() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => LabReportsScreen(
+                repository: FirebaseDoctorRepository(),
+                doctorId: FirebaseAuth.instance.currentUser?.uid ?? '',
+              ),
+            ),
+          );
+        },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD9ECF8),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: const Icon(Icons.science_outlined,
+                    color: Color(0xFF1565C0), size: 18),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text('Lab Reports',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1A2F3A))),
+              ),
+              const Icon(Icons.chevron_right,
+                  color: Color(0xFF9CA3AF), size: 18),
+            ],
+          ),
+        ),
       ),
     );
   }
