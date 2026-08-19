@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../Services/admin_service.dart';
 import 'invite_form_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class UserListScreen extends StatefulWidget {
   final String role;
@@ -594,6 +595,20 @@ class _UserCardState extends State<_UserCard> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   onSelected: (value) async {
+                    // Self-protection: admin can't deactivate/delete their own account
+                    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+                    if ((value == 'deactivate' || value == 'delete') &&
+                        widget.user['uid'] == currentUid) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'You cannot deactivate or delete your own account.'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
                     if (value == 'edit') {
                       _showEditDialog(context);
                     } else if (value == 'timing') {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'department_doctors_screen.dart';
 
 class ManageDepartmentsScreen extends StatefulWidget {
   const ManageDepartmentsScreen({super.key});
@@ -54,6 +55,23 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
         isEditMode: false,
         onSave: () async {
           if (nameController.text.trim().isEmpty) return;
+
+          final existing = await _firestore
+              .collection('departments')
+              .where('name', isEqualTo: nameController.text.trim())
+              .get();
+          if (existing.docs.isNotEmpty) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Department already exists.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+
           await _firestore.collection('departments').add({
             'name': nameController.text.trim(),
             'description': descController.text.trim(),
@@ -91,42 +109,6 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
           Navigator.pop(context);
           _loadDepartments();
         },
-      ),
-    );
-  }
-
-  void _showDeleteConfirm(Map<String, dynamic> dept) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Delete Department',
-          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.red),
-        ),
-        content: Text('Are you sure you want to delete "${dept['name']}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await _firestore
-                  .collection('departments')
-                  .doc(dept['id'])
-                  .delete();
-              Navigator.pop(context);
-              _loadDepartments();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -190,89 +172,100 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                     itemCount: _departments.length,
                     itemBuilder: (context, index) {
                       final dept = _departments[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DepartmentDoctorsScreen(
+                                departmentId: dept['id'],
+                                departmentName: dept['name'] ?? '',
+                              ),
                             ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              // Icon
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  color: primaryColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: const Icon(Icons.business_rounded,
-                                    color: primaryColor, size: 24),
-                              ),
-                              const SizedBox(width: 14),
-                              // Info
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      dept['name'] ?? '',
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF1A1A2E),
-                                      ),
-                                    ),
-                                    if (dept['description'] != null &&
-                                        dept['description'] != '')
-                                      const SizedBox(height: 4),
-                                    if (dept['description'] != null &&
-                                        dept['description'] != '')
-                                      Text(
-                                        dept['description'],
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Color(0xFF6B7280),
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              // Actions
-                              PopupMenuButton<String>(
-                                icon: const Icon(Icons.more_vert_rounded,
-                                    color: Color(0xFF6B7280), size: 20),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                                onSelected: (value) {
-                                  if (value == 'edit') {
-                                    _showEditDialog(dept);
-                                  }
-                                },
-                                itemBuilder: (_) => [
-                                  const PopupMenuItem(
-                                    value: 'edit',
-                                    child: Row(children: [
-                                      Icon(Icons.edit_rounded,
-                                          color: primaryColor, size: 18),
-                                      SizedBox(width: 8),
-                                      Text('Edit'),
-                                    ]),
-                                  ),
-                                ],
+                          );
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                               ),
                             ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: primaryColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: const Icon(Icons.business_rounded,
+                                      color: primaryColor, size: 24),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        dept['name'] ?? '',
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF1A1A2E),
+                                        ),
+                                      ),
+                                      if (dept['description'] != null &&
+                                          dept['description'] != '')
+                                        const SizedBox(height: 4),
+                                      if (dept['description'] != null &&
+                                          dept['description'] != '')
+                                        Text(
+                                          dept['description'],
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF6B7280),
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuButton<String>(
+                                  icon: const Icon(Icons.more_vert_rounded,
+                                      color: Color(0xFF6B7280), size: 20),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
+                                  onSelected: (value) {
+                                    if (value == 'edit') {
+                                      _showEditDialog(dept);
+                                    }
+                                  },
+                                  itemBuilder: (_) => [
+                                    const PopupMenuItem(
+                                      value: 'edit',
+                                      child: Row(children: [
+                                        Icon(Icons.edit_rounded,
+                                            color: primaryColor, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('Edit'),
+                                      ]),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );

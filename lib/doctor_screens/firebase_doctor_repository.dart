@@ -11,6 +11,7 @@ import 'doctor_profile.dart';
 import 'prescription.dart';
 import 'patient_profile.dart';
 import 'test_type_price.dart';
+import '../services/notification_service.dart';
 
 class FirebaseDoctorRepository implements DoctorRepository {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -271,6 +272,28 @@ class FirebaseDoctorRepository implements DoctorRepository {
         'status': status,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // ── NOTIFICATION: Appointment Completed → Patient (feedback prompt) ──
+      if (status == 'Completed') {
+        final apptDoc =
+            await _db.collection('appointments').doc(appointmentId).get();
+        final patientId = apptDoc.data()?['patientId'];
+        final doctorId = apptDoc.data()?['doctorId'];
+        String doctorName = 'your doctor';
+        if (doctorId != null) {
+          final d = await _db.collection('users').doc(doctorId).get();
+          doctorName = d.data()?['name'] ?? doctorName;
+        }
+        if (patientId != null) {
+          await NotificationService.send(
+            userId: patientId,
+            type: 'Appointment',
+            referenceId: appointmentId,
+            message:
+                'Your appointment with Dr. $doctorName is complete. You can now leave feedback.',
+          );
+        }
+      }
     } on FirebaseException catch (e) {
       throw Exception('Failed to update appointment: ${e.message}');
     }
