@@ -10,6 +10,7 @@ import 'prescriptions_screen.dart';
 import 'patient_profile_screen.dart';
 import 'help_screen.dart';
 import 'package:logger/logger.dart';
+import '../screens/notifications_screen.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -284,14 +285,22 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               ),
             ],
           ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              shape: BoxShape.circle,
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.notifications_outlined,
+                  color: Colors.white, size: 22),
             ),
-            child: const Icon(Icons.notifications_outlined,
-                color: Colors.white, size: 22),
           ),
         ],
       ),

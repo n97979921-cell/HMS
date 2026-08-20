@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'appointment_detail_screen.dart';
+import '../services/notification_service.dart';
 
 /// FIXES IS FILE MEIN:
 /// 1. _cancelAppointment: Firestore rule — transaction mein SAB reads
@@ -12,6 +13,12 @@ import 'appointment_detail_screen.dart';
 ///    schema decision: Firestore mein sirf HELD/BOOKED slots exist
 ///    karte hain, free slot ka koi document nahi hota.
 /// 3. Card tap → AppointmentDetailScreen kholti hai.
+/// 4. NAYA — VIDEO CALL LAZY-CHECK: Patient-side pe bhi wahi check
+///    jo Doctor-side (doctor_home_screen.dart) mein hai, taake
+///    Doctor ke apni list kholने par depend na rehna pade.
+///    Priority: status=='Confirmed' (Doctor never started) → FULL
+///    refund, patientJoinedAt irrelevant. status=='InProgress' +
+///    patientJoinedAt==null → HALF refund.
 class MyAppointmentsScreen extends StatefulWidget {
   const MyAppointmentsScreen({super.key});
 
@@ -32,9 +39,11 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     'Confirmed',
     'Completed',
     'Cancelled',
+    'NoShow',
   ];
 
   bool _isLoading = true;
+  int _autoProcessed = 0;
   List<Map<String, dynamic>> _appointments = [];
 
   @override
@@ -44,7 +53,10 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
   }
 
   Future<void> _loadAppointments() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _autoProcessed = 0;
+    });
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) {
@@ -61,6 +73,50 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
 
       for (final doc in apptSnap.docs) {
         final data = doc.data();
+
+        // ── VIDEO CALL LAZY-CHECK (Patient-side) ──
+        // Doctor-side (doctor_home_screen.dart) mein bhi yehi check
+        // hai — jo bhi pehle list khole (Doctor ya Patient), wahi
+        // trigger karega. Reliability ke liye dono jagah zaroori.
+        if (data['appointmentType'] == 'VIDEO_CALL') {
+          final slotId = data['slotId'];
+          if (slotId != null) {
+            final slotDoc = await FirebaseFirestore.instance
+                .collection('slots')
+                .doc(slotId)
+                .get();
+            if (slotDoc.exists) {
+              final slotData = slotDoc.data()!;
+              final slotDt =
+                  _parseSlotDateTime(slotData['date'], slotData['startTime']);
+              if (slotDt != null) {
+                final now = DateTime.now();
+                final fiveMinPast =
+                    now.isAfter(slotDt.add(const Duration(minutes: 5)));
+                final status = data['status'];
+
+                if (fiveMinPast) {
+                  if (status == 'Confirmed') {
+                    // Priority 1: Doctor never started (regardless
+                    // of patientJoinedAt) — full refund.
+                    await _autoProcessVideo(doc.id, 'Cancelled',
+                        fullRefund: true);
+                    _autoProcessed++;
+                    continue; // agli load pe naya status dikhega
+                  } else if (status == 'InProgress' &&
+                      data['patientJoinedAt'] == null) {
+                    // Priority 2: Doctor started, patient never
+                    // joined — half refund.
+                    await _autoProcessVideo(doc.id, 'NoShow',
+                        fullRefund: false);
+                    _autoProcessed++;
+                    continue;
+                  }
+                }
+              }
+            }
+          }
+        }
 
         final doctorDoc = await FirebaseFirestore.instance
             .collection('users')
@@ -118,9 +174,82 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         _appointments = result;
         _isLoading = false;
       });
+
+      if (_autoProcessed > 0 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              '$_autoProcessed video call(s) auto-processed (no-show/refund)'),
+          backgroundColor: const Color(0xFFB8860B),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       _showError('Error loading appointments: $e');
+    }
+  }
+
+  // Video call timeout — appointment status badlo + payment refund set
+  // karo. Transaction: reads pehle, writes baad. Double-check status
+  // abhi bhi wahi hai (kahin isi beech doctor/patient ne action na
+  // li ho).
+  Future<void> _autoProcessVideo(String apptId, String newStatus,
+      {required bool fullRefund}) async {
+    try {
+      final paySnap = await FirebaseFirestore.instance
+          .collection('payments')
+          .where('appointmentId', isEqualTo: apptId)
+          .where('status', isEqualTo: 'Paid')
+          .limit(1)
+          .get();
+      final payRef =
+          paySnap.docs.isNotEmpty ? paySnap.docs.first.reference : null;
+      final payAmount = paySnap.docs.isNotEmpty
+          ? (paySnap.docs.first.data()['amount'] ?? 0)
+          : 0;
+
+      final apptRef =
+          FirebaseFirestore.instance.collection('appointments').doc(apptId);
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final apptSnap = await transaction.get(apptRef);
+        if (!apptSnap.exists) return;
+        final currentStatus = apptSnap.data()!['status'];
+        if (newStatus == 'Cancelled' && currentStatus != 'Confirmed') return;
+        if (newStatus == 'NoShow' && currentStatus != 'InProgress') return;
+
+        transaction.update(apptRef, {
+          'status': newStatus,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+
+        if (payRef != null) {
+          transaction.update(payRef, {
+            'status': fullRefund ? 'Refunded' : 'HalfRefunded',
+            'refundAmount': fullRefund ? payAmount : payAmount / 2,
+            'refundPaid': false,
+          });
+        }
+      });
+      // ── NOTIFICATION: Video Missed → Receptionist ──
+      final receptionistSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'receptionist')
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get();
+      if (receptionistSnap.docs.isNotEmpty) {
+        await NotificationService.send(
+          userId: receptionistSnap.docs.first.id,
+          type: 'VideoConsultation',
+          referenceId: apptId,
+          message: newStatus == 'Cancelled'
+              ? 'A video consultation was missed by the doctor.'
+              : 'A patient missed their video consultation.',
+        );
+      }
+    } catch (_) {
+      // Silent — agli load par dobara try hoga
     }
   }
 
@@ -302,7 +431,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child:
@@ -344,7 +473,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
+                      color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 6,
                       offset: const Offset(0, 2))
                 ],
@@ -371,7 +500,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.calendar_today_outlined,
-              size: 64, color: _primary.withOpacity(0.3)),
+              size: 64, color: _primary.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
           const Text(
             'No appointments found',
@@ -409,7 +538,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2))
           ],
@@ -421,7 +550,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: _primary.withOpacity(0.15),
+                  backgroundColor: _primary.withValues(alpha: 0.15),
                   child: const Icon(Icons.person, color: _primary, size: 26),
                 ),
                 const SizedBox(width: 12),
@@ -507,9 +636,9 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
       case 'InProgress':
         return {'bg': const Color(0xFFEAE3F7), 'text': const Color(0xFF7E57C2)};
       case 'NoShow':
-        return {'bg': Colors.grey.withOpacity(0.15), 'text': Colors.grey};
+        return {'bg': Colors.grey.withValues(alpha: 0.15), 'text': Colors.grey};
       default:
-        return {'bg': Colors.grey.withOpacity(0.15), 'text': Colors.grey};
+        return {'bg': Colors.grey.withValues(alpha: 0.15), 'text': Colors.grey};
     }
   }
 

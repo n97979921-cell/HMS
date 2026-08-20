@@ -173,7 +173,7 @@ class _ManageRoomPricesScreenState extends State<ManageRoomPricesScreen> {
   static const Color bgColor = Color(0xFFBDD8D8);
 
   // Fixed room types
-  final List<String> _roomTypes = ['General Room', 'Private Room', 'ICU'];
+  final List<String> _roomTypes = ['ICU', 'General', 'Private'];
   Map<String, double> _prices = {};
   bool _isLoading = true;
 
@@ -257,6 +257,8 @@ class _ManageRoomPricesScreenState extends State<ManageRoomPricesScreen> {
             child: ElevatedButton(
               onPressed: () async {
                 final price = double.tryParse(priceController.text.trim()) ?? 0;
+
+                // 1. Master rate-card update
                 await _firestore
                     .collection('room_type_prices')
                     .doc(roomType)
@@ -265,7 +267,35 @@ class _ManageRoomPricesScreenState extends State<ManageRoomPricesScreen> {
                   'pricePerHour': price,
                   'updatedAt': DateTime.now(),
                 });
-                Navigator.pop(context);
+
+                // 2. Sirf FREE beds (Available + Under Maintenance) turant
+                //    naye rate pe update karo. Occupied beds ko chhuo mat —
+                //    unki price patient-assignment ke waqt "lock" ho chuki,
+                //    release hote hi refresh hogi (admissions_screen.dart).
+                final roomsSnap = await _firestore
+                    .collection('rooms')
+                    .where('roomType', isEqualTo: roomType)
+                    .get();
+
+                for (final roomDoc in roomsSnap.docs) {
+                  final bedsSnap = await _firestore
+                      .collection('beds')
+                      .where('roomId', isEqualTo: roomDoc.id)
+                      .where('availability',
+                          whereIn: ['Available', 'Under Maintenance']).get();
+
+                  if (bedsSnap.docs.isEmpty) continue;
+                  final batch = _firestore.batch();
+                  for (final bedDoc in bedsSnap.docs) {
+                    batch.update(bedDoc.reference, {
+                      'pricePerHour': price,
+                      'updatedAt': DateTime.now(),
+                    });
+                  }
+                  await batch.commit();
+                }
+
+                if (context.mounted) Navigator.pop(context);
                 _loadPrices();
               },
               style: ElevatedButton.styleFrom(

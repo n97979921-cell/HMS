@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logger/logger.dart';
+import '../Services/notification_service.dart';
 
 /// FIXES IS FILE MEIN:
 /// 1. addUserDirectly() DELETE kar diya — staff sirf INVITE se add
@@ -56,6 +57,81 @@ class AdminService {
     }
   }
 
+// NAYA: doctor ki saari future Requested/Confirmed appointments
+  // cancel karo + full refund set karo — jab doctor deactivate/delete
+  // ho, taake patient wait na kare kabhi na aane wale doctor ka.
+  Future<void> _cancelDoctorAppointments(String doctorId) async {
+    try {
+      final apptSnap = await _firestore
+          .collection('appointments')
+          .where('doctorId', isEqualTo: doctorId)
+          .where('status', whereIn: ['Requested', 'Confirmed']).get();
+
+      for (final apptDoc in apptSnap.docs) {
+        final apptRef = apptDoc.reference;
+        final apptData = apptDoc.data();
+        final slotId = apptData['slotId'];
+
+        // Payment dhoondo (agar Paid hai, refund karna hai)
+        final paySnap = await _firestore
+            .collection('payments')
+            .where('appointmentId', isEqualTo: apptDoc.id)
+            .where('status', isEqualTo: 'Paid')
+            .limit(1)
+            .get();
+
+        await _firestore.runTransaction((transaction) async {
+          // READS pehle
+          final apptSnapshot = await transaction.get(apptRef);
+          if (!apptSnapshot.exists) return;
+
+          DocumentReference? slotRef;
+          bool slotExists = false;
+          if (slotId != null) {
+            slotRef = _firestore.collection('slots').doc(slotId);
+            final slotSnap = await transaction.get(slotRef);
+            slotExists = slotSnap.exists;
+          }
+
+          // WRITES
+          transaction.update(apptRef, {
+            'status': 'Cancelled',
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+
+          if (slotRef != null && slotExists) {
+            transaction.delete(slotRef);
+          }
+
+          if (paySnap.docs.isNotEmpty) {
+            final payRef = paySnap.docs.first.reference;
+            final payAmount = paySnap.docs.first.data()['amount'] ?? 0;
+            transaction.update(payRef, {
+              'status': 'Refunded',
+              'refundAmount': payAmount,
+              'refundPaid': false,
+            });
+          }
+        });
+        // ── NOTIFICATION: Appointment Cancelled → Patient ──
+        final patientId = apptData['patientId'];
+        if (patientId != null) {
+          await NotificationService.send(
+            userId: patientId,
+            type: 'Appointment',
+            referenceId: apptDoc.id,
+            message: 'Your appointment was cancelled because the doctor '
+                'is no longer available. A full refund is being processed.',
+          );
+        }
+      }
+      _logger.w(
+          "Cancelled ${apptSnap.docs.length} appointments for doctor: $doctorId");
+    } catch (e) {
+      _logger.e("_cancelDoctorAppointments error: $e");
+    }
+  }
+
   // 3. DEACTIVATE USER
   Future<bool> deactivateUser(String userId) async {
     try {
@@ -64,6 +140,8 @@ class AdminService {
         'deactivatedAt': FieldValue.serverTimestamp(),
         'deactivatedBy': _auth.currentUser!.uid,
       });
+      await _cancelDoctorAppointments(
+          userId); // koi appointment na ho to kuch nahi karega
       _logger.w("User deactivated: $userId");
       return true;
     } catch (e) {
@@ -107,6 +185,7 @@ class AdminService {
         'deletedAt': FieldValue.serverTimestamp(),
         'deletedBy': _auth.currentUser!.uid,
       });
+      await _cancelDoctorAppointments(userId);
       _logger.w("User deleted (soft): $userId");
       return true;
     } catch (e) {

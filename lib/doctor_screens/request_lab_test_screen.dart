@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'doctor_repository.dart';
 import 'test_type_price.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class _RLColors {
   static const primary = Color(0xFF1F8A70);
@@ -12,6 +13,10 @@ class _RLColors {
   static const error = Color(0xFFD64545);
 }
 
+/// Doctor ek saath MULTIPLE lab tests request kar sakta hai — har test
+/// apna alag lab_tests document banta hai (Receptionist/Lab-Staff side
+/// pe individually dikhega, individually pay/process hoga — schema
+/// decision).
 class RequestLabTestScreen extends StatefulWidget {
   final DoctorRepository repository;
   final String appointmentId;
@@ -34,7 +39,8 @@ class RequestLabTestScreen extends StatefulWidget {
 
 class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
   List<TestTypePrice> _testTypes = [];
-  TestTypePrice? _selected;
+  final Set<TestTypePrice> _selected = {}; // multi-select
+  Set<String> _alreadyRequested = {}; // is appointment ke liye
   bool _isLoading = true;
   bool _isSubmitting = false;
   String? _errorMessage;
@@ -43,6 +49,27 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
   void initState() {
     super.initState();
     _loadTestTypes();
+    _loadAlreadyRequested();
+  }
+
+  // Is appointment ke liye jo tests PEHLE SE request ho chuke hain
+  // (koi bhi status), unhe disable karna hai — duplicate-prevention.
+  Future<void> _loadAlreadyRequested() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('lab_tests')
+          .where('appointmentId', isEqualTo: widget.appointmentId)
+          .get();
+      if (mounted) {
+        setState(() {
+          _alreadyRequested =
+              snap.docs.map((d) => d.data()['testType'] as String).toSet();
+        });
+      }
+    } catch (_) {
+      // fail ho to koi disable nahi hoga — worst case duplicate
+      // ban sakta hai, lekin crash nahi hoga
+    }
   }
 
   Future<void> _loadTestTypes() async {
@@ -68,44 +95,71 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
     }
   }
 
+  void _toggleSelection(TestTypePrice test, bool? checked) {
+    setState(() {
+      if (checked == true) {
+        _selected.add(test);
+      } else {
+        _selected.remove(test);
+      }
+    });
+  }
+
+  num get _totalCharge => _selected.fold<num>(0, (sum, t) => sum + t.charge);
+
   Future<void> _submit() async {
-    final selected = _selected;
-    if (selected == null) {
+    if (_selected.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a test type')),
+        const SnackBar(content: Text('Please select at least one test')),
       );
       return;
     }
 
     setState(() => _isSubmitting = true);
-    try {
-      await widget.repository.requestLabTest(
-        appointmentId: widget.appointmentId,
-        doctorId: widget.doctorId,
-        patientId: widget.patientId,
-        testType: selected.testType,
-        charge: selected.charge,
+    int successCount = 0;
+    final List<String> failedTests = [];
+
+    // Har test apna ALAG request/document — ek fail ho to baaki
+    // rukte nahi, taake partial-success bhi patient/doctor ko
+    // milta rahe (koi bhi cheez atomic-block nahi honi chahiye,
+    // yeh independent requests hain).
+    for (final test in _selected) {
+      try {
+        await widget.repository.requestLabTest(
+          appointmentId: widget.appointmentId,
+          doctorId: widget.doctorId,
+          patientId: widget.patientId,
+          testType: test.testType,
+          charge: test.charge,
+        );
+        successCount++;
+      } catch (e) {
+        failedTests.add(test.testType);
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
+    if (failedTests.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(successCount == 1
+              ? 'Lab test requested'
+              : '$successCount lab tests requested'),
+          backgroundColor: _RLColors.primary,
+        ),
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Lab test requested'),
-            backgroundColor: _RLColors.primary,
-          ),
-        );
-        Navigator.pop(context, true);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to request test: $e'),
-            backgroundColor: _RLColors.error,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      Navigator.pop(context, true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '$successCount requested. Failed: ${failedTests.join(", ")}'),
+          backgroundColor: _RLColors.error,
+        ),
+      );
+      if (successCount > 0) Navigator.pop(context, true);
     }
   }
 
@@ -157,7 +211,8 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: _RLColors.primary));
+      return const Center(
+          child: CircularProgressIndicator(color: _RLColors.primary));
     }
     if (_errorMessage != null) {
       return Center(
@@ -168,12 +223,16 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
             children: [
               const Icon(Icons.error_outline, color: _RLColors.error, size: 40),
               const SizedBox(height: 12),
-              Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: _RLColors.textMuted)),
+              Text(_errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: _RLColors.textMuted)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadTestTypes,
-                style: ElevatedButton.styleFrom(backgroundColor: _RLColors.primary),
-                child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: _RLColors.primary),
+                child:
+                    const Text('Retry', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -193,75 +252,111 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Column(
       children: [
-        Text(
-          'Patient: ${widget.patientName}',
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: _RLColors.cardBackground,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
             children: [
-              const Text('Test Type',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF374151))),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<TestTypePrice>(
-                value: _selected,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: _RLColors.primary, width: 1.5),
-                  ),
+              Text(
+                'Patient: ${widget.patientName}',
+                style:
+                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Select one or more tests to request.',
+                style: TextStyle(fontSize: 12, color: _RLColors.textMuted),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: _RLColors.cardBackground,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2)),
+                  ],
                 ),
-                hint: const Text('Select a test type'),
-                items: _testTypes.map((t) {
-                  return DropdownMenuItem(
-                    value: t,
-                    child: Text('${t.testType} — Rs. ${t.charge}'),
-                  );
-                }).toList(),
-                onChanged: (value) => setState(() => _selected = value),
+                child: Column(
+                  children: _testTypes.map((t) {
+                    final isSelected = _selected.contains(t);
+                    final isAlreadyRequested =
+                        _alreadyRequested.contains(t.testType);
+                    return CheckboxListTile(
+                      value: isSelected,
+                      onChanged: isAlreadyRequested
+                          ? null
+                          : (checked) => _toggleSelection(t, checked),
+                      activeColor: _RLColors.primary,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      title: Text(t.testType,
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isAlreadyRequested
+                                  ? _RLColors.textMuted
+                                  : null)),
+                      subtitle: Text(
+                          isAlreadyRequested
+                              ? 'Already requested'
+                              : 'Rs. ${t.charge}',
+                          style: const TextStyle(
+                              fontSize: 12, color: _RLColors.textMuted)),
+                    );
+                  }).toList(),
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 24),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _isSubmitting ? null : _submit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _RLColors.primary,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        if (_selected.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                    '${_selected.length} test${_selected.length == 1 ? '' : 's'} selected',
+                    style: const TextStyle(
+                        fontSize: 12, color: _RLColors.textMuted)),
+                Text('Total: Rs. $_totalCharge',
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: _RLColors.primary)),
+              ],
             ),
-            child: _isSubmitting
-                ? const SizedBox(
-                    width: 22, height: 22,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                : const Text('Request Test',
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+          ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isSubmitting ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _RLColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30)),
+              ),
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2.5))
+                  : Text(
+                      _selected.length > 1
+                          ? 'Request ${_selected.length} Tests'
+                          : 'Request Test',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600)),
+            ),
           ),
         ),
       ],

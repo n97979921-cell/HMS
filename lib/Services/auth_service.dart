@@ -1,19 +1,51 @@
+// lib/services/auth_service.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:logger/logger.dart';
 
 /// FIXES:
 /// 1. login() ab {'success': bool, 'user'/'error': ...} deta hai
-///    (pehle null deta tha — user ko wajah nahi milti thi)
-/// 2. Invite signups TRANSACTION mein invite re-check + mark-used karte
-///    hain (double-use bug fix)
+/// 2. Invite signups TRANSACTION mein invite re-check + mark-used karte hain
 /// 3. Transaction fail par orphan Firebase Auth account delete
 /// 4. serverTimestamp() har jagah
 /// 5. admin/doctor/labstaff/receptionist — sab invite se ban sakte hain
+/// 6. Google Sign-In — SIRF patients ke liye (invite-based roles allowed nahi)
+/// 7. MOBILE-ONLY Google Sign-In (google_sign_in v7.2.0) — serverClientId ke
+///    saath initialize hota hai taake Firebase ke liye ID token mil sake.
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Logger _logger = Logger();
+
+  // Firebase Console > Authentication > Sign-in method > Google >
+  // Web SDK configuration > Web client ID (yehi wala, jo aapne diya)
+  static const String _webClientId =
+      '904098371260-h7ds81cbguoji0ae7d1cfujj9unpuhaq.apps.googleusercontent.com';
+
+  // google_sign_in v7+ mein instance ko sirf ek dafa initialize karna
+  // zaroori hai. `static` isliye taake AuthService ka naya instance banne
+  // par bhi ye flag reset na ho (warna "init() has already been called"
+  // error aata hai).
+  static bool _googleSignInInitialized = false;
+
+  Future<void> _ensureGoogleSignInInitialized() async {
+    if (_googleSignInInitialized) return;
+    try {
+      await GoogleSignIn.instance.initialize(
+        // serverClientId zaroori hai taake authenticate() ke baad humein
+        // Firebase credential banane ke liye idToken mil sake.
+        serverClientId: _webClientId,
+      );
+      _googleSignInInitialized = true;
+    } catch (e) {
+      if (e.toString().contains('already been called')) {
+        _googleSignInInitialized = true;
+      } else {
+        rethrow;
+      }
+    }
+  }
 
   // 1. PATIENT SIGNUP
   Future<bool> patientSignup({
@@ -63,8 +95,6 @@ class AuthService {
   }
 
   // 2. LOGIN (SAB ROLES)
-  // Success: {'success': true,  'user': userData}
-  // Fail:    {'success': false, 'error': 'reason'}
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -133,10 +163,144 @@ class AuthService {
     }
   }
 
+  // 2b. GOOGLE SIGN-IN — MOBILE ONLY, PATIENT ONLY
+  // Success (existing patient): {'success': true, 'isNewUser': false, 'user': userData}
+  // Success (first-time Google user): {'success': true, 'isNewUser': true, 'googleUser': {...}}
+  // Fail: {'success': false, 'error': 'reason'}
+  Future<Map<String, dynamic>> signInWithGoogle() async {
+    try {
+      await _ensureGoogleSignInInitialized();
+
+      final GoogleSignInAccount googleUser =
+          await GoogleSignIn.instance.authenticate();
+
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+
+      if (googleAuth.idToken == null) {
+        return {
+          'success': false,
+          'error': 'Google sign-in failed. Please try again.'
+        };
+      }
+
+      final credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+      );
+
+      final userCred = await _auth.signInWithCredential(credential);
+      final firebaseUser = userCred.user!;
+
+      final userDoc =
+          await _firestore.collection('users').doc(firebaseUser.uid).get();
+
+      if (userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>;
+
+        if (userData['status'] != 'active') {
+          await _auth.signOut();
+          return {
+            'success': false,
+            'error': 'Your account is inactive. Contact the administrator.'
+          };
+        }
+        // Security check: only patients can use Google Sign-In.
+        // Doctor/Admin/Receptionist/LabStaff accounts are invite-based.
+        if (userData['role'] != 'patient') {
+          await _auth.signOut();
+          return {
+            'success': false,
+            'error': 'This sign-in method is only available for patients.'
+          };
+        }
+
+        return {'success': true, 'isNewUser': false, 'user': userData};
+      }
+
+      // No Firestore doc under this Google uid — before treating this as a
+      // brand-new patient, make sure the email isn't already registered
+      // under a different uid (e.g. an invite-created doctor/admin account).
+      final emailTaken = await emailExists(firebaseUser.email ?? '');
+      if (emailTaken) {
+        await _auth.signOut();
+        return {
+          'success': false,
+          'error':
+              'This email is already registered. Please log in with email and password instead.'
+        };
+      }
+
+      return {
+        'success': true,
+        'isNewUser': true,
+        'googleUser': {
+          'uid': firebaseUser.uid,
+          'email': firebaseUser.email ?? '',
+          'name': firebaseUser.displayName ?? '',
+        },
+      };
+    } on GoogleSignInException catch (e) {
+      _logger.e("Google sign-in exception: ${e.code} - ${e.description}");
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        return {'success': false, 'error': 'Google sign-in cancelled'};
+      }
+      return {
+        'success': false,
+        'error': 'Google sign-in failed. Please try again.'
+      };
+    } catch (e) {
+      _logger.e("Google sign-in error: $e");
+      return {
+        'success': false,
+        'error': 'Google sign-in failed. Please try again.'
+      };
+    }
+  }
+
+  // 2c. COMPLETE PROFILE AFTER FIRST GOOGLE SIGN-IN (patient only)
+  Future<bool> completeGooglePatientProfile({
+    required String uid,
+    required String email,
+    required String name,
+    required String phone,
+    required String cnic,
+    required int age,
+    required String gender,
+  }) async {
+    try {
+      await _firestore.collection('users').doc(uid).set({
+        'uid': uid,
+        'email': email,
+        'name': name,
+        'phone': phone,
+        'cnic': cnic,
+        'role': 'patient',
+        'status': 'active',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      await _firestore.collection('patient_profiles').doc(uid).set({
+        'patientId': uid,
+        'age': age,
+        'gender': gender,
+        'bloodGroup': null,
+        'allergies': null,
+        'chronicConditions': null,
+        'patientType': 'REGISTERED',
+      });
+
+      _logger.i("Google patient profile completed: $email");
+      return true;
+    } catch (e) {
+      _logger.e("completeGooglePatientProfile error: $e");
+      return false;
+    }
+  }
+
   // 3. LOGOUT
   Future<void> logout() async {
     try {
       await _auth.signOut();
+      await GoogleSignIn.instance.signOut();
       _logger.i("Logged out successfully");
     } catch (e) {
       _logger.e("Logout error: $e");

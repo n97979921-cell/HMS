@@ -1,5 +1,13 @@
 // lib/models/appointment_status.dart
-enum AppointmentStatus { requested, confirmed, inProgress, completed, cancelled, noShow }
+enum AppointmentStatus {
+  requested,
+  confirmed,
+  checkedIn,
+  inProgress,
+  completed,
+  cancelled,
+  noShow
+}
 
 enum AppointmentType { inPerson, videoCall, walkIn }
 

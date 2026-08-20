@@ -41,6 +41,7 @@ dependencies:
   intl: ^0.19.0
   url_launcher: ^6.3.2
   image_picker: ^1.0.7
+  google_sign_in: ^7.2.0
 
 dev_dependencies:
   flutter_test:
@@ -52,6 +53,10 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^3.0.0
+
+  # App ka launcher icon (jo phone ki home screen aur Google jaise
+  # system popups mein dikhta hai) apni Logo.png se generate karne ke liye.
+  flutter_launcher_icons: ^0.13.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -97,3 +102,10 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# App ka launcher icon Logo.png se generate karne ki settings.
+# Command: flutter pub run flutter_launcher_icons
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/Logo.png"

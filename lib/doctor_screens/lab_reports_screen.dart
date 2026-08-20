@@ -80,6 +80,8 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
     switch (status) {
       case LabTestStatus.pending:
         return _LabColors.pending;
+      case LabTestStatus.confirmed:
+        return const Color(0xFF7E57C2);
       case LabTestStatus.inProgress:
         return _LabColors.inProgress;
       case LabTestStatus.completed:
@@ -130,7 +132,8 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
           const SizedBox(width: 4),
           const Text(
             'Lab Reports',
-            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -140,9 +143,10 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
   Widget _buildFilterTabs() {
     final filters = <String, String?>{
       'All': null,
-      'Pending': 'pending',
+      'Confirmed': 'confirmed',
       'In Progress': 'inprogress',
       'Completed': 'completed',
+      'Cancelled': 'cancelled',
     };
 
     return Container(
@@ -151,7 +155,9 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6)
+        ],
       ),
       child: Row(
         children: filters.entries.map((entry) {
@@ -185,7 +191,8 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: _LabColors.primary));
+      return const Center(
+          child: CircularProgressIndicator(color: _LabColors.primary));
     }
     if (_errorMessage != null) {
       return Center(
@@ -194,14 +201,19 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: _LabColors.error, size: 40),
+              const Icon(Icons.error_outline,
+                  color: _LabColors.error, size: 40),
               const SizedBox(height: 12),
-              Text(_errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: _LabColors.textMuted)),
+              Text(_errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: _LabColors.textMuted)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadReports,
-                style: ElevatedButton.styleFrom(backgroundColor: _LabColors.primary),
-                child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: _LabColors.primary),
+                child:
+                    const Text('Retry', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -210,7 +222,8 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
     }
     if (_reports.isEmpty) {
       return const Center(
-        child: Text('No lab reports found', style: TextStyle(color: _LabColors.textMuted)),
+        child: Text('No lab reports found',
+            style: TextStyle(color: _LabColors.textMuted)),
       );
     }
     return RefreshIndicator(
@@ -234,7 +247,12 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
       decoration: BoxDecoration(
         color: _LabColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2))
+        ],
       ),
       child: Row(
         children: [
@@ -242,9 +260,19 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.patientName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                Text(item.patientName,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 15)),
                 const SizedBox(height: 2),
-                Text(item.testType, style: const TextStyle(color: _LabColors.textMuted, fontSize: 13)),
+                Text(item.testType,
+                    style: const TextStyle(
+                        color: _LabColors.textMuted, fontSize: 13)),
+                if (item.status == LabTestStatus.cancelled &&
+                    item.cancelReason != null) ...[
+                  const SizedBox(height: 2),
+                  Text('Reason: ${item.cancelReason}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                ],
               ],
             ),
           ),
@@ -259,21 +287,28 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                   ),
                 ),
               ),
-              icon: const Icon(Icons.remove_red_eye_outlined, size: 16, color: Colors.white),
-              label: const Text('View', style: TextStyle(color: Colors.white, fontSize: 12)),
+              icon: const Icon(Icons.remove_red_eye_outlined,
+                  size: 16, color: Colors.white),
+              label: const Text('View',
+                  style: TextStyle(color: Colors.white, fontSize: 12)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: color,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             )
           else
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20)),
               child: Text(
                 item.status.label,
-                style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                    color: color, fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ),
         ],
@@ -292,8 +327,10 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
       },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.science_outlined), label: 'Lab Reports'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.science_outlined), label: 'Lab Reports'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline), label: 'Profile'),
       ],
     );
   }

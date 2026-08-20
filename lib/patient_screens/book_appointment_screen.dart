@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
 import 'payment_upload_screen.dart';
 
 /// FIXES IS FILE MEIN:
@@ -50,9 +52,16 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
   List<String> _allTimes = []; // generated e.g. ["09:00","09:15",...]
   Set<String> _unavailableTimes = {}; // HELD or BOOKED for selected date
+  Set<String> _patientBookedTimes =
+      {}; // is date, patient ki apni doosri bookings
   String? _selectedTime;
 
   final _symptomsController = TextEditingController();
+  final _picker = ImagePicker();
+  // Optional: patient purani medical report attach kar sakta hai.
+  // Storage avoid karne ke liye base64 me Firestore me jaati hai
+  // (jaise payment screenshot) — schema: patientReportUrl → base64.
+  String? _reportBase64;
 
   @override
   void initState() {
@@ -161,6 +170,13 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
     final List<String> times = [];
     while (cursor.isBefore(endTime)) {
+      // Sirf tab add karo jab poora 15-min slot end-time ke andar
+      // fit ho jaye — warna aisa slot na bane jo doctor ki asal
+      // availability se bahar chala jaye (jaise 11:45 slot jab
+      // doctor sirf 11:50 tak available hai).
+      final slotEnd = cursor.add(const Duration(minutes: 15));
+      if (slotEnd.isAfter(endTime)) break;
+
       times.add(
           '${cursor.hour.toString().padLeft(2, '0')}:${cursor.minute.toString().padLeft(2, '0')}');
       cursor = cursor.add(const Duration(minutes: 15));
@@ -174,6 +190,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       _isLoadingSlots = true;
       _selectedTime = null;
       _unavailableTimes = {};
+      _patientBookedTimes = {};
     });
     try {
       final dateStr = _dateKey(_weekdays[_selectedDateIndex]);
@@ -192,8 +209,37 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         }
       }
 
+      // ── PATIENT SELF-COLLISION CHECK ──
+      // Isi patient ki, isی date ki, KISI BHI doctor ke saath
+      // (chahe alag department ho) Requested/Confirmed appointment
+      // ho to us time ko is patient ke liye disable karo — ek waqt
+      // pe do jagah nahi ho sakta.
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final Set<String> patientTimes = {};
+      if (uid != null) {
+        final patientApptSnap = await FirebaseFirestore.instance
+            .collection('appointments')
+            .where('patientId', isEqualTo: uid)
+            .where('status', whereIn: ['Requested', 'Confirmed']).get();
+
+        for (final apptDoc in patientApptSnap.docs) {
+          final apptSlotId = apptDoc.data()['slotId'];
+          if (apptSlotId == null) continue;
+          final apptSlotDoc = await FirebaseFirestore.instance
+              .collection('slots')
+              .doc(apptSlotId)
+              .get();
+          if (!apptSlotDoc.exists) continue;
+          final apptSlotData = apptSlotDoc.data()!;
+          if (apptSlotData['date'] == dateStr) {
+            patientTimes.add(apptSlotData['startTime']);
+          }
+        }
+      }
+
       setState(() {
         _unavailableTimes = taken;
+        _patientBookedTimes = patientTimes;
         _isLoadingSlots = false;
       });
     } catch (e) {
@@ -211,6 +257,30 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
   }
+
+  // ── Optional: attach a previous medical report (gallery only) ────
+  Future<void> _pickReport() async {
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1200,
+        maxHeight: 1200,
+        imageQuality: 65,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      if (bytes.lengthInBytes > 700 * 1024) {
+        _showError('Image too large. Please choose a smaller file.');
+        return;
+      }
+      setState(() => _reportBase64 = base64Encode(bytes));
+    } catch (e) {
+      _showError('Could not load report: $e');
+    }
+  }
+
+  void _removeReport() => setState(() => _reportBase64 = null);
 
   // ── Book: slot + appointment created atomically ───────────
   Future<void> _bookAppointment() async {
@@ -250,6 +320,33 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     num chargedFee = widget.consultationFee; // payment screen ko dene ke liye
 
     try {
+      // Patient collision-check: transaction se PEHLE karna hoga
+      // (Firestore transaction ke andar collection-query allowed
+      // nahi hoti, sirf .get() single-documents ki). Yeh guaranteed
+      // check hai, UI-check ke alawa ek aur safety-layer.
+      final patientApptSnap = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('patientId', isEqualTo: uid)
+          .where('status', whereIn: ['Requested', 'Confirmed']).get();
+
+      for (final apptDoc in patientApptSnap.docs) {
+        final apptSlotId = apptDoc.data()['slotId'];
+        if (apptSlotId == null) continue;
+        final apptSlotDoc = await FirebaseFirestore.instance
+            .collection('slots')
+            .doc(apptSlotId)
+            .get();
+        if (!apptSlotDoc.exists) continue;
+        final apptSlotData = apptSlotDoc.data()!;
+        if (apptSlotData['date'] == dateStr &&
+            apptSlotData['startTime'] == _selectedTime) {
+          _showError(
+              'You already have an appointment at this time on this date.');
+          setState(() => _isBooking = false);
+          return;
+        }
+      }
+
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         // 1. Check slot isn't already taken (re-verify inside transaction)
         final slotSnap = await transaction.get(slotRef);
@@ -289,7 +386,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           'symptoms': _symptomsController.text.trim().isEmpty
               ? null
               : _symptomsController.text.trim(),
-          'patientReportUrl': null,
+          'patientReportBase64': _reportBase64,
           'appointmentType': widget.appointmentType,
           'admissionRecommended': false,
           'consultationStartedAt': null,
@@ -412,6 +509,19 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 20),
+                          const Text('Attach previous report (optional)',
+                              style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1A2F3A))),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Share an old prescription or test result, if relevant.',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 10),
+                          _buildReportPicker(),
                         ],
                       ),
                     ),
@@ -557,8 +667,9 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         final time = _allTimes[index];
         // FIX 1: slot unavailable hai agar HELD/BOOKED hai
         // YA aaj ki date par time guzar chuka hai
-        final isAvailable =
-            !_unavailableTimes.contains(time) && !_isPastTime(time);
+        final isAvailable = !_unavailableTimes.contains(time) &&
+            !_isPastTime(time) &&
+            !_patientBookedTimes.contains(time);
         final isSelected = time == _selectedTime && isAvailable;
 
         return GestureDetector(
@@ -597,6 +708,64 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildReportPicker() {
+    if (_reportBase64 != null) {
+      return Column(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.memory(
+              base64Decode(_reportBase64!),
+              height: 160,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton.icon(
+                onPressed: _pickReport,
+                icon: const Icon(Icons.refresh, size: 16, color: _primary),
+                label: const Text('Change', style: TextStyle(color: _primary)),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: _removeReport,
+                icon: const Icon(Icons.close, size: 16, color: Colors.red),
+                label:
+                    const Text('Remove', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    return GestureDetector(
+      onTap: _pickReport,
+      child: Container(
+        width: double.infinity,
+        height: 100,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: _primary.withOpacity(0.4), width: 1.5),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.attach_file, size: 28, color: _primary.withOpacity(0.6)),
+            const SizedBox(height: 6),
+            const Text('Tap to attach a report',
+                style: TextStyle(fontSize: 12, color: Colors.black54)),
+          ],
+        ),
+      ),
     );
   }
 

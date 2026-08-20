@@ -36,8 +36,7 @@ class FirebaseDoctorRepository implements DoctorRepository {
       // The 'slots' collection stores 'date' as a plain string like
       // "2026-07-27", not a Firestore Timestamp — so we must compare
       // against that same string format instead of using a Timestamp range.
-      final dateString =
-          '${date.year.toString().padLeft(4, '0')}-'
+      final dateString = '${date.year.toString().padLeft(4, '0')}-'
           '${date.month.toString().padLeft(2, '0')}-'
           '${date.day.toString().padLeft(2, '0')}';
 
@@ -57,7 +56,8 @@ class FirebaseDoctorRepository implements DoctorRepository {
 
       final appointmentDocs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
       for (var i = 0; i < slotIds.length; i += 10) {
-        final chunk = slotIds.sublist(i, i + 10 > slotIds.length ? slotIds.length : i + 10);
+        final chunk = slotIds.sublist(
+            i, i + 10 > slotIds.length ? slotIds.length : i + 10);
         final snap = await _db
             .collection('appointments')
             .where('doctorId', isEqualTo: doctorId)
@@ -95,9 +95,13 @@ class FirebaseDoctorRepository implements DoctorRepository {
           patientId: patientId,
           patientName: patientNameById[patientId] ?? 'Unknown',
           slotTime: slotTimeById[slotId] ?? '',
-          status: AppointmentStatusX.fromString(data['status'] as String? ?? 'requested'),
-          appointmentType: AppointmentTypeX.fromString(data['appointmentType'] as String? ?? 'IN_PERSON'),
+          status: AppointmentStatusX.fromString(
+              data['status'] as String? ?? 'requested'),
+          appointmentType: AppointmentTypeX.fromString(
+              data['appointmentType'] as String? ?? 'IN_PERSON'),
           admissionRecommended: data['admissionRecommended'] as bool? ?? false,
+          symptoms: data['symptoms'] as String?,
+          patientReportBase64: data['patientReportBase64'] as String?,
         );
       }).toList();
     } on FirebaseException catch (e) {
@@ -141,7 +145,9 @@ class FirebaseDoctorRepository implements DoctorRepository {
           testId: doc.id,
           patientName: patientNameById[patientId] ?? 'Unknown',
           testType: (data['testType'] as String?) ?? '',
-          status: LabTestStatusX.fromString((data['status'] as String?) ?? 'Pending'),
+          status: LabTestStatusX.fromString(
+              (data['status'] as String?) ?? 'Pending'),
+          cancelReason: data['cancelReason'] as String?,
         );
       }).toList();
     } on FirebaseException catch (e) {
@@ -175,8 +181,9 @@ class FirebaseDoctorRepository implements DoctorRepository {
         doctorName: doctorName,
         reportDate: reportDate,
         testType: (data['testType'] as String?) ?? '',
-        status: LabTestStatusX.fromString((data['status'] as String?) ?? 'Pending'),
-        reportUrl: data['reportUrl'] as String?,
+        status:
+            LabTestStatusX.fromString((data['status'] as String?) ?? 'Pending'),
+        reportBase64: data['reportBase64'] as String?,
       );
     } on FirebaseException catch (e) {
       throw Exception('Failed to load report: ${e.message}');
@@ -190,17 +197,20 @@ class FirebaseDoctorRepository implements DoctorRepository {
       if (!userDoc.exists) throw Exception('Doctor not found');
       final userData = userDoc.data()!;
 
-      final profileDoc = await _db.collection('doctor_profiles').doc(doctorId).get();
+      final profileDoc =
+          await _db.collection('doctor_profiles').doc(doctorId).get();
       final profileData = profileDoc.data() ?? {};
 
       String departmentName = 'Not assigned';
       final departmentId = profileData['departmentId'] as String?;
       if (departmentId != null && departmentId.isNotEmpty) {
-        final deptDoc = await _db.collection('departments').doc(departmentId).get();
+        final deptDoc =
+            await _db.collection('departments').doc(departmentId).get();
         departmentName = (deptDoc.data()?['name'] as String?) ?? 'Not assigned';
       }
 
-      final settingsDoc = await _db.collection('doctor_settings').doc(doctorId).get();
+      final settingsDoc =
+          await _db.collection('doctor_settings').doc(doctorId).get();
       final settingsData = settingsDoc.data();
 
       return DoctorProfile(
@@ -378,8 +388,9 @@ class FirebaseDoctorRepository implements DoctorRepository {
         'patientId': patientId,
         'testType': testType,
         'status': 'Pending',
-        'reportUrl': null,
+        'reportBase64': null,
         'charge': charge,
+        'paymentStatus': null,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
@@ -399,7 +410,8 @@ class FirebaseDoctorRepository implements DoctorRepository {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } on FirebaseException catch (e) {
-      throw Exception('Failed to update admission recommendation: ${e.message}');
+      throw Exception(
+          'Failed to update admission recommendation: ${e.message}');
     }
   }
 }

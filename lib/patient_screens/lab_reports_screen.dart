@@ -1,19 +1,16 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 
+/// PATIENT — LAB REPORTS
+///
 /// SCHEMA COMPLIANCE:
 /// - lab_tests where patientId == uid
-/// - Sirf status/testType/charge/paymentStatus dikhta hai —
-///   "Normal/High" jaise result-interpretation fields schema mein
-///   NAHI hain, sirf reportUrl hai jo patient khol sakta hai
-/// - Report "Open" sirf tab jab status == Completed && reportUrl != null
-///
-/// ⚠️ PACKAGE REQUIRED: pubspec.yaml mein add karo:
-///   url_launcher: ^6.2.0
-/// phir `flutter pub get` chalao.
+/// - Report Storage avoid karne ke liye base64 me Firestore me
+///   (reportBase64, na ke reportUrl) — jaise payment screenshot.
+/// - Report "View" sirf tab jab status == Completed && reportBase64 != null
 class LabReportsScreen extends StatefulWidget {
   const LabReportsScreen({super.key});
 
@@ -68,12 +65,13 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
           'testId': doc.id,
           'testType': data['testType'] ?? '',
           'status': data['status'] ?? 'Pending',
-          'reportUrl': data['reportUrl'],
+          'reportBase64': data['reportBase64'],
           'charge': data['charge'] ?? 0,
           'paymentStatus': data['paymentStatus'],
           'doctorName': doctorDoc.data()?['name'] ?? 'Doctor',
           'dateLabel': dateLabel,
           'createdAt': createdAt,
+          'cancelReason': data['cancelReason'],
         });
       }
 
@@ -95,15 +93,40 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
     }
   }
 
-  Future<void> _openReport(String url) async {
-    try {
-      final uri = Uri.parse(url);
-      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-        _showError('Could not open the report');
-      }
-    } catch (e) {
-      _showError('Could not open the report');
-    }
+  // Full-screen base64 report viewer (zoom/pan) — jaise payment screenshot
+  void _viewReport(String base64Str) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 5.0,
+                child: Image.memory(base64Decode(base64Str)),
+              ),
+            ),
+            Positioned(
+              top: 16,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 22),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showError(String msg) {
@@ -161,7 +184,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child:
@@ -185,7 +208,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.science_outlined,
-              size: 64, color: _primary.withOpacity(0.3)),
+              size: 64, color: _primary.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
           const Text('No lab tests yet',
               style: TextStyle(
@@ -200,8 +223,10 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
   Widget _testCard(Map<String, dynamic> test) {
     final status = test['status'] as String;
     final statusColors = _statusColor(status);
-    final reportUrl = test['reportUrl'];
-    final canOpen = status == 'Completed' && reportUrl != null;
+    final String? reportBase64 = test['reportBase64'];
+    final canView = status == 'Completed' &&
+        reportBase64 != null &&
+        reportBase64.isNotEmpty;
     final isPaid = test['paymentStatus'] == 'Paid';
 
     return Container(
@@ -212,7 +237,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2))
         ],
@@ -226,7 +251,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _primary.withOpacity(0.1),
+                  color: _primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.science_outlined,
@@ -243,7 +268,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1A2F3A))),
                     const SizedBox(height: 4),
-                    Text('Requested by ${test['doctorName']}',
+                    Text('Requested by Dr. ${test['doctorName']}',
                         style: const TextStyle(
                             fontSize: 11, color: Colors.black54)),
                     const SizedBox(height: 2),
@@ -271,38 +296,68 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
           const SizedBox(height: 12),
           const Divider(height: 1),
           const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                isPaid
-                    ? 'Rs. ${test['charge']} — Paid'
-                    : 'Rs. ${test['charge']} — Pay at reception',
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isPaid ? _primary : const Color(0xFFB8860B)),
-              ),
-              if (canOpen)
-                ElevatedButton.icon(
-                  onPressed: () => _openReport(reportUrl),
-                  icon: const Icon(Icons.remove_red_eye_outlined,
-                      size: 14, color: Colors.white),
-                  label: const Text('Open report',
-                      style: TextStyle(color: Colors.white, fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _primaryDark,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20)),
+          if (canView) ...[
+            GestureDetector(
+              onTap: () => _viewReport(reportBase64),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(
+                      base64Decode(reportBase64),
+                      height: 140,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 140,
+                        color: const Color(0xFFF0F0F0),
+                        alignment: Alignment.center,
+                        child: const Text('Could not load report',
+                            style: TextStyle(color: Colors.grey)),
+                      ),
+                    ),
                   ),
-                )
-              else
-                const Text('Report not ready',
-                    style: TextStyle(fontSize: 11, color: Colors.grey)),
-            ],
-          ),
+                  Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.zoom_in,
+                          color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          if (status != 'Cancelled')
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  isPaid
+                      ? 'Rs. ${test['charge']} — Paid'
+                      : 'Rs. ${test['charge']} — Pay at reception',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isPaid ? _primary : const Color(0xFFB8860B)),
+                ),
+                if (!canView)
+                  const Text('Report not ready',
+                      style: TextStyle(fontSize: 11, color: Colors.grey)),
+              ],
+            ),
+          if (status == 'Cancelled' && test['cancelReason'] != null) ...[
+            const SizedBox(height: 6),
+            Text('Reason: ${test['cancelReason']}',
+                style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          ],
         ],
       ),
     );

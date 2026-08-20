@@ -140,12 +140,13 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
       await FirebaseFirestore.instance
           .collection('patient_profiles')
           .doc(uid)
-          .update({
+          .set({
+        'patientId': uid,
         'age': int.tryParse(_ageController.text.trim()) ?? 0,
         'bloodGroup': nullIfEmpty(_bloodGroupController.text),
         'allergies': nullIfEmpty(_allergiesController.text),
         'chronicConditions': nullIfEmpty(_chronicController.text),
-      });
+      }, SetOptions(merge: true));
 
       _showSnack('Profile updated successfully');
     } catch (e) {
@@ -298,10 +299,31 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                     _cardWrap([
                       _FieldLabel('Blood Group'),
                       const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _bloodGroupController,
-                        decoration: _inputDecoration(Icons.bloodtype_outlined,
-                            hint: 'e.g. O+, A-, B+'),
+                      DropdownButtonFormField<String>(
+                        value: _bloodGroupController.text.isEmpty
+                            ? null
+                            : _bloodGroupController.text,
+                        decoration: _inputDecoration(Icons.bloodtype_outlined),
+                        hint: const Text('Select blood group',
+                            style: TextStyle(
+                                color: Color(0xFFB0B7C3), fontSize: 13)),
+                        items: const [
+                          'A+',
+                          'A-',
+                          'B+',
+                          'B-',
+                          'AB+',
+                          'AB-',
+                          'O+',
+                          'O-'
+                        ]
+                            .map((bg) =>
+                                DropdownMenuItem(value: bg, child: Text(bg)))
+                            .toList(),
+                        onChanged: (value) {
+                          setState(
+                              () => _bloodGroupController.text = value ?? '');
+                        },
                       ),
                       const SizedBox(height: 16),
                       _FieldLabel('Allergies'),

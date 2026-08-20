@@ -10,7 +10,7 @@ class LabTestDetail {
   final DateTime? reportDate;
   final String testType;
   final LabTestStatus status;
-  final String? reportUrl;
+  final String? reportBase64;
 
   LabTestDetail({
     required this.testId,
@@ -19,6 +19,6 @@ class LabTestDetail {
     required this.reportDate,
     required this.testType,
     required this.status,
-    required this.reportUrl,
+    required this.reportBase64,
   });
 }

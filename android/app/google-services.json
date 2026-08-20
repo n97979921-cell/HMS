@@ -12,7 +12,28 @@
           "package_name": "com.example.hospital_management_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "904098371260-57ha61nd6ni7d14jt1vrptv361329006.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.hospital_management_app",
+            "certificate_hash": "afa5a825c59af674c6a988c32523318259233ee7"
+          }
+        },
+        {
+          "client_id": "904098371260-pf73t6fuqe4208o3c4m67vd32pbvm8cs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.hospital_management_app",
+            "certificate_hash": "2d4312c6053ef9124ba370ac302c5b1acf42d10b"
+          }
+        },
+        {
+          "client_id": "904098371260-h7ds81cbguoji0ae7d1cfujj9unpuhaq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBPEQi9SC1ZvJuRYXCtqaJ4MaCu4mX6HLc"
@@ -20,7 +41,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "904098371260-h7ds81cbguoji0ae7d1cfujj9unpuhaq.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "904098371260-qdip7hcnqsermu9qhigh0gg7s2uukq8m.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.hospitalManagementApp"
+              }
+            }
+          ]
         }
       }
     }

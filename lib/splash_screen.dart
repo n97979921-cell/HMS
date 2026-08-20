@@ -55,66 +55,71 @@ class _SplashScreenState extends State<SplashScreen>
       // ✅ EXACT IMAGE COLOR: White background
       backgroundColor: Colors.white,
 
-      body: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) {
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(flex: 2),
-
-              // Logo
-              FadeTransition(
-                opacity: _fadeAnim,
-                child: ScaleTransition(
-                  scale: _scaleAnim,
-                  child: Image.asset(
-                    'assets/Logo.png',
-                    width: 280,
-                    height: 280,
-                    fit: BoxFit.contain,
+      body: SafeArea(
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Logo
+                  FadeTransition(
+                    opacity: _fadeAnim,
+                    child: ScaleTransition(
+                      scale: _scaleAnim,
+                      child: Image.asset(
+                        'assets/Logo.png',
+                        width: 220,
+                        height: 220,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
-                ),
-              ),
 
-              const SizedBox(height: 40),
+                  const SizedBox(height: 40),
 
-              // ✅ EXACT IMAGE COLOR: Dark teal text (image jaisa)
-              const Text(
-                'FAMILY WELL',
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A4A4A),   // Dark teal - exact image color
-                  letterSpacing: 3,
-                ),
-              ),
-              const Text(
-                'CARE HOSPITAL',
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A4A4A),   // Dark teal - exact image color
-                  letterSpacing: 3,
-                ),
-              ),
+                  // ✅ EXACT IMAGE COLOR: Dark teal text (image jaisa)
+                  const Text(
+                    'FAMILY WELL',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A4A4A), // Dark teal
+                      letterSpacing: 3,
+                    ),
+                  ),
+                  const Text(
+                    'CARE HOSPITAL',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A4A4A), // Dark teal
+                      letterSpacing: 3,
+                    ),
+                  ),
 
-              const Spacer(flex: 3),
+                  const SizedBox(height: 70),
 
-              // ✅ EXACT IMAGE COLOR: Medium dark teal for tagline
-              const Text(
-                'CONNECT EVERY CORNER OF CARE',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2A5C5C),   // Medium dark teal - exact image color
-                  letterSpacing: 2.5,
-                ),
-              ),
-              const SizedBox(height: 60),
-            ],
-          );
-        },
+                  // ✅ EXACT IMAGE COLOR: Medium dark teal for tagline
+                  const Text(
+                    'CONNECT EVERY CORNER OF CARE',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2A5C5C), // Medium dark teal
+                      letterSpacing: 2.5,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
