@@ -91,6 +91,7 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
         departmentId: _isDoctor
             ? (_selectedDepartmentId ?? '')
             : '', // ← YEH LINE ADD KAR
+        license: _isDoctor ? _licenceController.text.trim() : '',
       );
 
       if (inviteCode != null) {

@@ -340,7 +340,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           _sectionCard('Contact Information', [
             _infoRow(Icons.email_outlined, 'Email', profile.email),
             _infoRow(Icons.phone_outlined, 'Phone', profile.phone),
-            _infoRow(Icons.badge_outlined, 'CNIC', profile.cnic),
           ]),
           const SizedBox(height: 16),
           _sectionCard('Professional Details', [

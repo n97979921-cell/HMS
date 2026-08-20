@@ -6,7 +6,6 @@ class DoctorProfile {
   final String name;
   final String email;
   final String phone;
-  final String cnic;
   final String specialization;
   final String license;
   final String departmentName;
@@ -18,7 +17,6 @@ class DoctorProfile {
     required this.name,
     required this.email,
     required this.phone,
-    required this.cnic,
     required this.specialization,
     required this.license,
     required this.departmentName,
