@@ -517,6 +517,24 @@ class _ManageTestPricesScreenState extends State<ManageTestPricesScreen> {
             child: ElevatedButton(
               onPressed: () async {
                 if (nameController.text.trim().isEmpty) return;
+
+                final existing = await _firestore
+                    .collection('test_type_prices')
+                    .doc(nameController.text.trim())
+                    .get();
+                if (existing.exists) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content:
+                            Text('This test already exists. Use Edit instead.'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                  return;
+                }
+
                 final price = double.tryParse(priceController.text.trim()) ?? 0;
                 await _firestore
                     .collection('test_type_prices')

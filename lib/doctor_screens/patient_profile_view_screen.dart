@@ -44,8 +44,13 @@ class _PatientProfileViewScreenState extends State<PatientProfileViewScreen> {
       _errorMessage = null;
     });
     try {
-      final result = await widget.repository.getPatientProfile(widget.patientId);
-      if (mounted) setState(() { _profile = result; _isLoading = false; });
+      final result =
+          await widget.repository.getPatientProfile(widget.patientId);
+      if (mounted)
+        setState(() {
+          _profile = result;
+          _isLoading = false;
+        });
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -104,7 +109,8 @@ class _PatientProfileViewScreenState extends State<PatientProfileViewScreen> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator(color: _PPColors.primary));
+      return const Center(
+          child: CircularProgressIndicator(color: _PPColors.primary));
     }
     if (_errorMessage != null || _profile == null) {
       return Center(
@@ -121,8 +127,10 @@ class _PatientProfileViewScreenState extends State<PatientProfileViewScreen> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadProfile,
-                style: ElevatedButton.styleFrom(backgroundColor: _PPColors.primary),
-                child: const Text('Retry', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: _PPColors.primary),
+                child:
+                    const Text('Retry', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -150,11 +158,15 @@ class _PatientProfileViewScreenState extends State<PatientProfileViewScreen> {
               ),
               const SizedBox(height: 12),
               Text(profile.name,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 2),
               Text(
-                profile.patientType == 'WALK_IN' ? 'Walk-in Patient' : 'Registered Patient',
-                style: const TextStyle(color: _PPColors.textMuted, fontSize: 13),
+                profile.patientType == 'WALK_IN'
+                    ? 'Walk-in Patient'
+                    : 'Registered Patient',
+                style:
+                    const TextStyle(color: _PPColors.textMuted, fontSize: 13),
               ),
             ],
           ),
@@ -164,13 +176,13 @@ class _PatientProfileViewScreenState extends State<PatientProfileViewScreen> {
           _infoRow(Icons.email_outlined, 'Email',
               profile.email.isNotEmpty ? profile.email : 'Not available'),
           _infoRow(Icons.phone_outlined, 'Phone', profile.phone),
-          _infoRow(Icons.badge_outlined, 'CNIC', profile.cnic),
         ]),
         const SizedBox(height: 16),
         _sectionCard('Basic Info', [
           _infoRow(Icons.cake_outlined, 'Age',
               profile.age != null ? '${profile.age} years' : 'Not recorded'),
-          _infoRow(Icons.wc_outlined, 'Gender', profile.gender ?? 'Not recorded'),
+          _infoRow(
+              Icons.wc_outlined, 'Gender', profile.gender ?? 'Not recorded'),
         ]),
         const SizedBox(height: 16),
         _sectionCard('Medical Info', [
@@ -193,13 +205,18 @@ class _PatientProfileViewScreenState extends State<PatientProfileViewScreen> {
         color: _PPColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(title,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 12),
           ...children,
         ],
@@ -219,9 +236,13 @@ class _PatientProfileViewScreenState extends State<PatientProfileViewScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: const TextStyle(color: _PPColors.textMuted, fontSize: 12)),
+                Text(label,
+                    style: const TextStyle(
+                        color: _PPColors.textMuted, fontSize: 12)),
                 const SizedBox(height: 2),
-                Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w500)),
               ],
             ),
           ),

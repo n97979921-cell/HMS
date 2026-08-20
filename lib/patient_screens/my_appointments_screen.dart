@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'appointment_detail_screen.dart';
 import '../services/notification_service.dart';
+import 'feedback_screen.dart';
 
 /// FIXES IS FILE MEIN:
 /// 1. _cancelAppointment: Firestore rule — transaction mein SAB reads
@@ -147,8 +148,18 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
           }
         }
 
+        bool hasFeedback = false;
+        if (data['status'] == 'Completed') {
+          final feedbackDoc = await FirebaseFirestore.instance
+              .collection('feedback')
+              .doc(doc.id)
+              .get();
+          hasFeedback = feedbackDoc.exists;
+        }
+
         result.add({
           'appointmentId': doc.id,
+          'doctorId': data['doctorId'],
           'doctorName': doctorDoc.data()?['name'] ?? 'Doctor',
           'specialization': profileDoc.exists
               ? (profileDoc.data()?['specialization'] ?? '')
@@ -158,6 +169,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
           'appointmentType': data['appointmentType'] ?? '',
           'status': data['status'] ?? '',
           'consultationFee': data['consultationFee'] ?? 0,
+          'hasFeedback': hasFeedback,
         });
       }
 
@@ -518,6 +530,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     final statusColors = _statusColor(appt['status']);
     final canCancel =
         appt['status'] == 'Requested' || appt['status'] == 'Confirmed';
+    final isCompleted = appt['status'] == 'Completed';
 
     return GestureDetector(
       onTap: () async {
@@ -616,6 +629,62 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                       style: TextStyle(color: Colors.red, fontSize: 12)),
                 ),
               ),
+            ],
+            if (isCompleted) ...[
+              const SizedBox(height: 10),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              if (appt['hasFeedback'] == true)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCEFE9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.star, size: 15, color: _primary),
+                      SizedBox(width: 6),
+                      Text('Feedback submitted',
+                          style: TextStyle(
+                              color: _primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FeedbackScreen(
+                            appointmentId: appt['appointmentId'],
+                            doctorId: appt['doctorId'] ?? '',
+                            doctorName: appt['doctorName'],
+                            specialization: appt['specialization'],
+                          ),
+                        ),
+                      );
+                      _loadAppointments(); // refresh to show "submitted" state
+                    },
+                    icon: const Icon(Icons.star_outline,
+                        size: 16, color: _primary),
+                    label: const Text('Give Feedback',
+                        style: TextStyle(color: _primary, fontSize: 12)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: _primary),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
             ],
           ],
         ),
