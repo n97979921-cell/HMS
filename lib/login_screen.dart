@@ -6,6 +6,7 @@ import 'screens/admin_dashboard_screen.dart';
 import 'patient_screens/patient_home_screen.dart';
 import 'doctor_screens/doctor_home_screen.dart';
 import 'receptionist_screens/receptionist_dashboard_screen.dart';
+import 'labstaff_screens/lab_staff_dashboard_screen.dart';
 
 /// LOGIN — meri fixed auth_service ke format ke saath.
 /// login() ab {'success': bool, 'user'/'error': ...} deta hai.
@@ -95,7 +96,9 @@ class _LoginScreenState extends State<LoginScreen> {
       case 'doctor':
         destination = const DoctorHomeScreen();
         break;
-      // labstaff — jab uska dashboard banega, yahan add karo
+      case 'labstaff':
+        destination = const LabStaffDashboardScreen();
+        break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Dashboard coming soon!')),
@@ -212,7 +215,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(color: Colors.black54, fontSize: 13),
                       ),
                       const SizedBox(height: 22),
-
                       const _FieldLabel('Email'),
                       const SizedBox(height: 6),
                       _inputField(
@@ -224,12 +226,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           if (v == null || v.isEmpty) {
                             return 'Email is required';
                           }
-                          if (!v.contains('@')) return 'Enter a valid email';
+                          final emailRegex =
+                              RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                          if (!emailRegex.hasMatch(v)) {
+                            return 'Enter a valid email';
+                          }
                           return null;
                         },
                       ),
                       const SizedBox(height: 16),
-
                       const _FieldLabel('Password'),
                       const SizedBox(height: 6),
                       _inputField(
@@ -256,7 +261,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                       const SizedBox(height: 8),
-
                       Align(
                         alignment: Alignment.centerRight,
                         child: GestureDetector(
@@ -276,7 +280,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 18),
-
                       SizedBox(
                         width: double.infinity,
                         height: 54,
@@ -309,13 +312,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-
                       const _OrDivider(),
                       const SizedBox(height: 20),
-
                       _GoogleButton(
                         isLoading: _isGoogleLoading,
-                        onPressed: _isGoogleLoading ? null : _handleGoogleSignIn,
+                        onPressed:
+                            _isGoogleLoading ? null : _handleGoogleSignIn,
                       ),
                     ],
                   ),

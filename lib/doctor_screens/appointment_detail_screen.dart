@@ -10,6 +10,7 @@ import 'request_lab_test_screen.dart';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/notification_service.dart';
+import 'package:http/http.dart' as http;
 
 class _DetailColors {
   static const primary = Color(0xFF1F8A70);
@@ -145,11 +146,39 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     }
   }
 
-  String get _roomUrl =>
-      'https://meet.jit.si/FamilyWellCare-${widget.appointment.appointmentId}';
+  // ── APNI DETAILS YAHAN DAALEIN (jaise server.js mein daali thi) ──
+  static const String _jaasAppId =
+      'vpaas-magic-cookie-b97ea521398a41ffbf90f00437e433a7';
+  // Emulator ke liye 'localhost' theek hai. Physical phone par test
+  // karte waqt, isko apne laptop ka LAN IP se replace karein
+  // (jaise 'http://192.168.1.5:3000').
+  static const String _tokenServerUrl = 'https://jitsi-jwt-server-3.bonto.run';
+
+  String get _roomName => 'FamilyWellCare-${widget.appointment.appointmentId}';
+
+  Future<String?> _fetchToken() async {
+    try {
+      final uri = Uri.parse(
+        '$_tokenServerUrl/token?room=$_roomName&name=Dr.${widget.doctorId}&moderator=true',
+      );
+      final response = await http.get(uri);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body)['token'] as String;
+      }
+    } catch (_) {
+      // token server na chal raha ho to bhi neeche fallback hai
+    }
+    return null;
+  }
 
   Future<void> _openJitsi() async {
-    final uri = Uri.parse(_roomUrl);
+    final token = await _fetchToken();
+
+    final roomUrl = token != null
+        ? 'https://8x8.vc/$_jaasAppId/$_roomName?jwt=$token'
+        : 'https://meet.jit.si/$_roomName'; // token na mile to purana tareeqa
+
+    final uri = Uri.parse(roomUrl);
     final launched = await launchUrl(
       uri,
       mode: LaunchMode.platformDefault,

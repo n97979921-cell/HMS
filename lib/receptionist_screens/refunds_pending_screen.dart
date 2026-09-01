@@ -47,25 +47,73 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
       for (final doc in snap.docs) {
         final data = doc.data();
 
-        // Patient ka naam
+        // Patient ka naam aur phone
         String patientName = 'Patient';
+        String patientPhone = '';
         try {
           final userDoc = await FirebaseFirestore.instance
               .collection('users')
               .doc(data['patientId'])
               .get();
           patientName = userDoc.data()?['name'] ?? 'Patient';
+          patientPhone = userDoc.data()?['phone'] ?? '';
         } catch (_) {}
+
+// Doctor name aur slot time
+        String doctorName = '';
+        String apptTime = '';
+        try {
+          final apptDoc = await FirebaseFirestore.instance
+              .collection('appointments')
+              .doc(data['appointmentId'])
+              .get();
+          if (apptDoc.exists) {
+            final doctorId = apptDoc.data()?['doctorId'];
+            if (doctorId != null) {
+              final doctorDoc = await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(doctorId)
+                  .get();
+              doctorName = doctorDoc.data()?['name'] ?? '';
+            }
+            final slotId = apptDoc.data()?['slotId'];
+            if (slotId != null) {
+              final slotDoc = await FirebaseFirestore.instance
+                  .collection('slots')
+                  .doc(slotId)
+                  .get();
+              final date = slotDoc.data()?['date'] ?? '';
+              final time = slotDoc.data()?['startTime'] ?? '';
+              apptTime = '$date $time';
+            }
+          }
+        } catch (_) {}
+
+        // Lab test name fetch karo
+        String testType = '';
+        if (data['type'] == 'Lab' && data['referenceId'] != null) {
+          try {
+            final labDoc = await FirebaseFirestore.instance
+                .collection('lab_tests')
+                .doc(data['referenceId'])
+                .get();
+            testType = labDoc.data()?['testType'] ?? '';
+          } catch (_) {}
+        }
 
         result.add({
           'paymentId': doc.id,
           'patientId': data['patientId'],
           'patientName': patientName,
+          'patientPhone': patientPhone,
+          'doctorName': doctorName,
+          'apptTime': apptTime,
           'amount': data['amount'] ?? 0,
           'refundAmount': data['refundAmount'],
           'status': data['status'],
           'paymentMethod': data['paymentMethod'] ?? 'Online',
           'type': data['type'] ?? 'Consultation',
+          'testType': testType,
         });
       }
 
@@ -271,9 +319,45 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1A2F3A))),
                     const SizedBox(height: 2),
+                    Text('Dr. ${refund['doctorName']}',
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.black54)),
+                    const SizedBox(height: 2),
                     Text('${refund['type']} · ${refund['paymentMethod']}',
                         style: const TextStyle(
                             fontSize: 12, color: Colors.black54)),
+                    if (refund['type'] == 'Lab') ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '${refund['testType']}',
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.black54),
+                      ),
+                    ],
+                    if (refund['type'] == 'Consultation') ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '${refund['apptTime']}',
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.black54),
+                      ),
+                    ],
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.phone,
+                            size: 12, color: Colors.black54),
+                        const SizedBox(width: 4),
+                        Text(
+                          refund['patientPhone'],
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF0D6B6B),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),

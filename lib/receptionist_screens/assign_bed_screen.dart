@@ -282,7 +282,7 @@ class _AssignBedScreenState extends State<AssignBedScreen> {
                                                   CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                    'Room ${bed['roomNumber']}',
+                                                    'Room ${bed['roomNumber']} — Bed ${bed['bedNumber']}',
                                                     style: const TextStyle(
                                                         fontWeight:
                                                             FontWeight.bold,

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 /// PATIENT — APPOINTMENT DETAIL SCREEN
 /// (lib/patient_screens/appointment_detail_screen.dart)
@@ -93,8 +95,28 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     }
   }
 
-  String get _roomUrl =>
-      'https://meet.jit.si/FamilyWellCare-${widget.appointmentId}';
+  // ── APNI DETAILS (Doctor wali file jaisi hi honi chahiye) ──
+  static const String _jaasAppId =
+      'vpaas-magic-cookie-b97ea521398a41ffbf90f00437e433a7';
+  static const String _tokenServerUrl = 'https://jitsi-jwt-server-3.bonto.run';
+
+  String get _roomName => 'FamilyWellCare-${widget.appointmentId}';
+
+  Future<String?> _fetchToken() async {
+    try {
+      final patientEmail = FirebaseAuth.instance.currentUser?.email ?? '';
+      final uri = Uri.parse(
+        '$_tokenServerUrl/token?room=$_roomName&name=$_doctorName-Patient&email=$patientEmail&moderator=false',
+      );
+      final response = await http.get(uri);
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body)['token'] as String;
+      }
+    } catch (_) {
+      // token server na chal raha ho to bhi neeche fallback hai
+    }
+    return null;
+  }
 
   Future<void> _joinCall() async {
     setState(() => _isJoining = true);
@@ -105,7 +127,12 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
           .doc(widget.appointmentId)
           .update({'patientJoinedAt': FieldValue.serverTimestamp()});
 
-      final uri = Uri.parse(_roomUrl);
+      final token = await _fetchToken();
+      final roomUrl = token != null
+          ? 'https://8x8.vc/$_jaasAppId/$_roomName?jwt=$token'
+          : 'https://meet.jit.si/$_roomName'; // token na mile to purana tareeqa
+
+      final uri = Uri.parse(roomUrl);
       final launched = await launchUrl(
         uri,
         mode: LaunchMode.platformDefault,
