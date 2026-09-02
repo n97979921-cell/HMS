@@ -184,11 +184,18 @@ class _UserCardState extends State<_UserCard> {
   String _startTime = '';
   String _endTime = '';
 
+  // ── NAYA: Fee state ──
+  bool _hasFeeSetting = false;
+  double _inPersonFee = 0;
+  double _walkInFee = 0;
+  double _videoCallFee = 0;
+
   @override
   void initState() {
     super.initState();
     if (widget.user['role'] == 'doctor') {
       _checkTiming();
+      _checkFee(); // NAYA
     }
   }
 
@@ -203,6 +210,24 @@ class _UserCardState extends State<_UserCard> {
           _hasTimingSetting = true;
           _startTime = doc.data()?['appointmentStartTime'] ?? '';
           _endTime = doc.data()?['appointmentEndTime'] ?? '';
+        });
+      }
+    } catch (e) {}
+  }
+
+  // ── NAYA: Doctor ki fee check karta hai ──
+  Future<void> _checkFee() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('doctor_consultation_fees')
+          .doc(widget.user['uid'])
+          .get();
+      if (doc.exists) {
+        setState(() {
+          _hasFeeSetting = true;
+          _inPersonFee = (doc.data()?['inPersonFee'] ?? 0).toDouble();
+          _walkInFee = (doc.data()?['walkInFee'] ?? 0).toDouble();
+          _videoCallFee = (doc.data()?['videoCallFee'] ?? 0).toDouble();
         });
       }
     } catch (e) {}
@@ -227,7 +252,6 @@ class _UserCardState extends State<_UserCard> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Start Time
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading:
@@ -260,7 +284,6 @@ class _UserCardState extends State<_UserCard> {
                 },
               ),
               const Divider(),
-              // End Time
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.access_time_filled_rounded,
@@ -293,7 +316,6 @@ class _UserCardState extends State<_UserCard> {
                 },
               ),
               const SizedBox(height: 8),
-              // Preview
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
@@ -360,6 +382,122 @@ class _UserCardState extends State<_UserCard> {
           ],
         ),
       ),
+    );
+  }
+
+  // ── NAYA: Set/Update Fee dialog — "Set Timing" jaisa hi pattern ──
+  void _showSetFeeDialog(BuildContext context) {
+    final inPersonController = TextEditingController(
+        text: _hasFeeSetting ? _inPersonFee.toStringAsFixed(0) : '');
+    final walkInController = TextEditingController(
+        text: _hasFeeSetting ? _walkInFee.toStringAsFixed(0) : '');
+    final videoCallController = TextEditingController(
+        text: _hasFeeSetting ? _videoCallFee.toStringAsFixed(0) : '');
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Set Consultation Fee',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.user['name'] ?? '',
+                  style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: primaryColor)),
+              const SizedBox(height: 16),
+              _feeField('In-Person Fee', inPersonController),
+              const SizedBox(height: 12),
+              _feeField('Walk-In Fee', walkInController),
+              const SizedBox(height: 12),
+              _feeField('Video Call Fee', videoCallController),
+              const SizedBox(height: 10),
+              Text(
+                'Suggested: Walk-in ≥ In-person ≥ Video call',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final inPerson =
+                  double.tryParse(inPersonController.text.trim()) ?? 0;
+              final walkIn = double.tryParse(walkInController.text.trim()) ?? 0;
+              final videoCall =
+                  double.tryParse(videoCallController.text.trim()) ?? 0;
+
+              await FirebaseFirestore.instance
+                  .collection('doctor_consultation_fees')
+                  .doc(widget.user['uid'])
+                  .set({
+                'doctorId': widget.user['uid'],
+                'inPersonFee': inPerson,
+                'walkInFee': walkIn,
+                'videoCallFee': videoCall,
+                'updatedBy': FirebaseAuth.instance.currentUser?.uid,
+                'updatedAt': DateTime.now(),
+              });
+
+              Navigator.pop(context);
+              _checkFee();
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Fee saved successfully!'),
+                  backgroundColor: primaryColor,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── NAYA: helper widget, ManageConsultationFeesScreen jaisa hi ──
+  Widget _feeField(String label, TextEditingController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            prefixText: 'Rs ',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: primaryColor),
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          ),
+        ),
+      ],
     );
   }
 
@@ -477,12 +615,17 @@ class _UserCardState extends State<_UserCard> {
     final bool isDoctor = widget.user['role'] == 'doctor';
     final AdminService adminService = AdminService();
 
+    // NAYA: doctor "incomplete" hai agar timing YA fee, dono mein se
+    // koi bhi missing ho — dono ke bina patient ko dikhta hi nahi.
+    final bool isIncomplete =
+        isDoctor && (!_hasTimingSetting || !_hasFeeSetting);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: isDoctor && !_hasTimingSetting
+        border: isIncomplete
             ? Border.all(color: const Color(0xFFF4B400), width: 1.5)
             : null,
         boxShadow: [
@@ -501,15 +644,13 @@ class _UserCardState extends State<_UserCard> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: isDoctor && !_hasTimingSetting
+                color: isIncomplete
                     ? const Color(0xFFFEF7E0)
                     : primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(widget.roleIcon,
-                  color: isDoctor && !_hasTimingSetting
-                      ? const Color(0xFFB8860B)
-                      : primaryColor,
+                  color: isIncomplete ? const Color(0xFFB8860B) : primaryColor,
                   size: 24),
             ),
             const SizedBox(width: 14),
@@ -564,6 +705,36 @@ class _UserCardState extends State<_UserCard> {
                             fontWeight: FontWeight.w500),
                       ),
                     ),
+                  // ── NAYA: Fee info ──
+                  if (isDoctor && _hasFeeSetting)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.payments_rounded,
+                              size: 12, color: primaryColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            'In: Rs ${_inPersonFee.toStringAsFixed(0)} · Walk: Rs ${_walkInFee.toStringAsFixed(0)} · Video: Rs ${_videoCallFee.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                                fontSize: 11,
+                                color: primaryColor,
+                                fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (isDoctor && !_hasFeeSetting)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Fee not set',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFFB8860B),
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -595,7 +766,6 @@ class _UserCardState extends State<_UserCard> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                   onSelected: (value) async {
-                    // Self-protection: admin can't deactivate/delete their own account
                     final currentUid = FirebaseAuth.instance.currentUser?.uid;
                     if ((value == 'deactivate' || value == 'delete') &&
                         widget.user['uid'] == currentUid) {
@@ -613,6 +783,9 @@ class _UserCardState extends State<_UserCard> {
                       _showEditDialog(context);
                     } else if (value == 'timing') {
                       _showSetTimingDialog(context);
+                    } else if (value == 'fee') {
+                      // NAYA
+                      _showSetFeeDialog(context);
                     } else if (value == 'deactivate') {
                       await adminService.deactivateUser(widget.user['uid']);
                       widget.onChanged();
@@ -641,7 +814,6 @@ class _UserCardState extends State<_UserCard> {
                         Text('Edit'),
                       ]),
                     ),
-                    // Set Timing — sirf doctor ke liye
                     if (isDoctor)
                       PopupMenuItem(
                         value: 'timing',
@@ -652,6 +824,17 @@ class _UserCardState extends State<_UserCard> {
                           Text(_hasTimingSetting
                               ? 'Update Timing'
                               : 'Set Timing'),
+                        ]),
+                      ),
+                    // ── NAYA: Set/Update Fee — sirf doctor ke liye ──
+                    if (isDoctor)
+                      PopupMenuItem(
+                        value: 'fee',
+                        child: Row(children: [
+                          const Icon(Icons.payments_rounded,
+                              color: primaryColor, size: 18),
+                          const SizedBox(width: 8),
+                          Text(_hasFeeSetting ? 'Update Fee' : 'Set Fee'),
                         ]),
                       ),
                     if (isActive)

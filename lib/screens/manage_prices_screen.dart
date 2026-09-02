@@ -61,19 +61,6 @@ class ManagePricesScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            // Consultation Fees Card
-            _PriceOptionCard(
-              icon: Icons.medical_services_rounded,
-              title: 'Consultation Fees',
-              subtitle: 'Set fees per department',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ManageConsultationFeesScreen(),
-                ),
-              ),
-            ),
           ],
         ),
       ),
