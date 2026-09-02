@@ -11,6 +11,8 @@ import 'payment_upload_screen.dart';
 /// 2. Live fee: checkout bar ab Firestore se load ki hui LIVE fee
 ///    dikhata hai (pehle purani widget.consultationFee dikhti thi,
 ///    lekin transaction naya rate charge karti thi — mismatch)
+/// 3. Fee ab PER-DOCTOR hai (doctor_consultation_fees), department-wide
+///    (department_consultation_fees) nahi — dono jagah update kiya.
 class BookAppointmentScreen extends StatefulWidget {
   final String doctorId;
   final String doctorName;
@@ -78,13 +80,13 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     super.dispose();
   }
 
-  // ── FIX 2: Live fee Firestore se load karo ────────────────
+  // ── FIX 2 + 3: Live fee Firestore se load karo — PER-DOCTOR ────
   // Taake screen wohi fee dikhaye jo transaction charge karegi.
   Future<void> _loadLiveFee() async {
     try {
       final feeDoc = await FirebaseFirestore.instance
-          .collection('department_consultation_fees')
-          .doc(widget.departmentId)
+          .collection('doctor_consultation_fees')
+          .doc(widget.doctorId)
           .get();
 
       if (feeDoc.exists && mounted) {
@@ -312,9 +314,10 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     final slotId = '${widget.doctorId}_${dateStr}_$timeKey';
 
     final slotRef = FirebaseFirestore.instance.collection('slots').doc(slotId);
+    // FIX 3: fee ab per-doctor collection se, department se nahi
     final feeRef = FirebaseFirestore.instance
-        .collection('department_consultation_fees')
-        .doc(widget.departmentId);
+        .collection('doctor_consultation_fees')
+        .doc(widget.doctorId);
     final apptRef = FirebaseFirestore.instance.collection('appointments').doc();
 
     num chargedFee = widget.consultationFee; // payment screen ko dene ke liye
@@ -358,7 +361,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         }
 
         // 2. Read live consultation fee — never trust a value
-        // fetched before the transaction started.
+        // fetched before the transaction started. Ab PER-DOCTOR.
         final feeSnap = await transaction.get(feeRef);
         num liveFee = widget.consultationFee;
         if (feeSnap.exists) {

@@ -199,13 +199,13 @@ class _WalkInScreenState extends State<WalkInScreen> {
         // In-person fee
         num fee = 0;
         final deptId = profileDoc.data()?['departmentId'] ?? '';
-        if (deptId != '') {
-          final feeDoc = await FirebaseFirestore.instance
-              .collection('department_consultation_fees')
-              .doc(deptId)
-              .get();
-          fee = feeDoc.data()?['inPersonFee'] ?? 0;
-        }
+
+        final feeDoc = await FirebaseFirestore.instance
+            .collection('doctor_consultation_fees')
+            .doc(doctorId)
+            .get();
+        fee = feeDoc.data()?['inPersonFee'] ?? 0;
+
         if (fee == 0) continue; // fee set nahi → skip (patient side jaisa rule)
 
         result.add({

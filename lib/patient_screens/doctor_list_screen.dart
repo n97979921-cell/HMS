@@ -25,7 +25,6 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
 
   bool _isLoading = true;
   List<Map<String, dynamic>> _doctors = [];
-  num _consultationFee = 0;
 
   @override
   void initState() {
@@ -36,37 +35,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
   Future<void> _loadDoctors() async {
     setState(() => _isLoading = true);
     try {
-      // ---- Department consultation fee ----
-      // Fee is department-wide, not per-doctor. Pick the correct
-      // fee field based on appointment type.
-      final feeDoc = await FirebaseFirestore.instance
-          .collection('department_consultation_fees')
-          .doc(widget.departmentId)
-          .get();
-
-      bool feeIsSet = false;
-      if (feeDoc.exists) {
-        final feeData = feeDoc.data()!;
-        _consultationFee = widget.appointmentType == 'VIDEO_CALL'
-            ? (feeData['videoCallFee'] ?? 0) as num
-            : (feeData['inPersonFee'] ?? 0) as num;
-        feeIsSet = _consultationFee > 0;
-      }
-
-      // Schema rule: fee must be set for this appointment type,
-      // otherwise no doctor in this department should be bookable.
-      if (!feeIsSet) {
-        setState(() {
-          _doctors = [];
-          _isLoading = false;
-        });
-        return;
-      }
-
       // ---- Doctors in this department ----
-      // Only show doctors who have doctor_settings configured —
-      // schema rule: "Doctor TAB dikhega jab doctor_settings mein
-      // us ka record exist kare."
       final profilesSnap = await FirebaseFirestore.instance
           .collection('doctor_profiles')
           .where('departmentId', isEqualTo: widget.departmentId)
@@ -77,14 +46,28 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
       for (final profileDoc in profilesSnap.docs) {
         final doctorId = profileDoc.id;
 
-        // Check doctor_settings exists — if not, skip this doctor.
+        // Rule 1: Timing set hai? Agar nahi -> doctor hidden.
         final settingsDoc = await FirebaseFirestore.instance
             .collection('doctor_settings')
             .doc(doctorId)
             .get();
         if (!settingsDoc.exists) continue;
 
-        // Fetch basic user info (name, phone).
+        // Rule 2: Fee set hai? (PER-DOCTOR ab, department se nahi)
+        // Agar nahi -> doctor hidden.
+        final feeDoc = await FirebaseFirestore.instance
+            .collection('doctor_consultation_fees')
+            .doc(doctorId)
+            .get();
+        if (!feeDoc.exists) continue;
+
+        final feeData = feeDoc.data()!;
+        final num fee = widget.appointmentType == 'VIDEO_CALL'
+            ? (feeData['videoCallFee'] ?? 0) as num
+            : (feeData['inPersonFee'] ?? 0) as num;
+        if (fee <= 0) continue; // fee 0/unset = doctor hidden
+
+        // Rule 3: User active hai?
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(doctorId)
@@ -112,7 +95,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
           'specialization': profileDoc.data()['specialization'] ?? '',
           'avgRating': avgRating,
           'reviewCount': feedbackSnap.docs.length,
-          'settings': settingsDoc.data(),
+          'consultationFee': fee, // har doctor ki apni fee
         });
       }
 
@@ -164,9 +147,6 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.fromLTRB(18, 18, 18, 80),
                             children: [
-                              // Fee info banner
-                              _buildFeeBanner(),
-                              const SizedBox(height: 14),
                               Text(
                                 'Available for ${_typeLabel.toLowerCase()}',
                                 style: const TextStyle(
@@ -229,33 +209,6 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
     );
   }
 
-  Widget _buildFeeBanner() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFDCEFE9),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.payments_outlined, color: _primary, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Consultation fee: Rs. $_consultationFee',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: _primary,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -285,6 +238,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
   Widget _doctorCard(Map<String, dynamic> doctor) {
     final avgRating = (doctor['avgRating'] as double);
     final reviewCount = doctor['reviewCount'] as int;
+    final num fee = doctor['consultationFee'] as num;
 
     return Container(
       width: double.infinity,
@@ -353,7 +307,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Rs. $_consultationFee',
+                'Rs. $fee',
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
@@ -370,7 +324,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                         doctorName: doctor['name'],
                         specialization: doctor['specialization'],
                         appointmentType: widget.appointmentType,
-                        consultationFee: _consultationFee,
+                        consultationFee: fee,
                         departmentId: widget.departmentId,
                       ),
                     ),

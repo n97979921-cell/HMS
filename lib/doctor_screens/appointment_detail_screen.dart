@@ -165,8 +165,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       if (response.statusCode == 200) {
         return jsonDecode(response.body)['token'] as String;
       }
-    } catch (_) {
-      // token server na chal raha ho to bhi neeche fallback hai
+    } catch (e) {
+      print('❌ TOKEN FETCH ERROR: $e');
     }
     return null;
   }

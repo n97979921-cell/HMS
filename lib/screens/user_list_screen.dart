@@ -441,6 +441,18 @@ class _UserCardState extends State<_UserCard> {
               final videoCall =
                   double.tryParse(videoCallController.text.trim()) ?? 0;
 
+// ── NAYA: Teeno fees zaroori hain, ek bhi 0/empty na ho ──
+              if (inPerson <= 0 || walkIn <= 0 || videoCall <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                        'Please set all three fees — In-Person, Walk-In, and Video Call.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return; // Save mat karo
+              }
+
               await FirebaseFirestore.instance
                   .collection('doctor_consultation_fees')
                   .doc(widget.user['uid'])
