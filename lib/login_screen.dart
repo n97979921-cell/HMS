@@ -1,3 +1,4 @@
+// lib/login_screen.dart
 import 'package:flutter/material.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
@@ -35,9 +36,10 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isGoogleLoading = false;
 
+  // Theme colors — matched to Admin Dashboard's green palette
   static const Color _navy = Color(0xFF1A2F5A);
-  static const Color _teal = Color(0xFF0D6B6B);
-  static const Color _bg = Color(0xFFF1F6F5);
+  static const Color _teal = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   @override
   void dispose() {
@@ -78,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Login Successful! Welcome 👋'),
-        backgroundColor: Color(0xFF1A6B6B),
+        backgroundColor: Color(0xFF1F8A70),
       ),
     );
 
@@ -125,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please sign up first to complete your profile.'),
-            backgroundColor: Color(0xFF1A6B6B),
+            backgroundColor: Color(0xFF1F8A70),
           ),
         );
       } else {
@@ -471,7 +473,7 @@ class _GoogleButton extends StatelessWidget {
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(
-                  color: Color(0xFF0D6B6B),
+                  color: Color(0xFF1F8A70),
                   strokeWidth: 2.5,
                 ),
               )

@@ -11,8 +11,8 @@ class ViewLabTestSummaryScreen extends StatefulWidget {
 }
 
 class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
-  static const Color _primary = Color(0xFF0D6B6B);
-  static const Color _bg = Color(0xFFF5F7FA);
+  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   final Map<String, String> _userNameCache = {};
 
@@ -209,7 +209,7 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
                       children: [
                         Container(
                           width: double.infinity,
-                          color: const Color(0xFFEFF6F6),
+                          color: const Color(0xFFDCEFE9),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
                           child: Text(
@@ -310,7 +310,7 @@ class _DropdownFilter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: isActive ? color.withOpacity(0.1) : const Color(0xFFF5F7FA),
+        color: isActive ? color.withOpacity(0.1) : const Color(0xFFF4F7F6),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isActive ? color : const Color(0xFFE5E7EB),
@@ -354,7 +354,7 @@ class _LabTestCard extends StatelessWidget {
     required this.statusIcon,
   });
 
-  static const Color _primary = Color(0xFF0D6B6B);
+  static const Color _primary = Color(0xFF1F8A70);
 
   String _formatDate(dynamic ts) {
     if (ts == null) return 'N/A';

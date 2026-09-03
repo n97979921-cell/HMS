@@ -8,7 +8,7 @@ import 'doctor_appointment_list_item.dart';
 import 'firebase_doctor_repository.dart';
 import 'doctor_profile_screen.dart';
 import '../services/notification_service.dart';
-import '../screens/notifications_screen.dart';
+import '../widgets/notification_bell_icon.dart';
 import 'lab_reports_screen.dart';
 
 /// DOCTOR HOME — aaj ke patients
@@ -247,6 +247,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         final apptSnap = await transaction.get(apptRef);
         if (!apptSnap.exists) return;
         final currentStatus = apptSnap.data()!['status'];
+
         // Double-check: sirf tab process karo jab abhi bhi wahi state ho
         if (newStatus == 'Cancelled' && currentStatus != 'Confirmed') return;
         if (newStatus == 'NoShow' && currentStatus != 'InProgress') return;
@@ -264,6 +265,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           });
         }
       });
+
       // ── NOTIFICATION: Video Missed → Receptionist ──
       final receptionistSnap = await FirebaseFirestore.instance
           .collection('users')
@@ -271,6 +273,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           .where('status', isEqualTo: 'active')
           .limit(1)
           .get();
+
       if (receptionistSnap.docs.isNotEmpty) {
         await NotificationService.send(
           userId: receptionistSnap.docs.first.id,
@@ -338,7 +341,6 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         child: Column(
           children: [
             _buildHeader(),
-            _buildLabReportsCard(),
             _buildDateNavigator(),
             _buildTabToggle(),
             Expanded(
@@ -364,6 +366,12 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           ],
         ),
       ),
+
+      // ─────────────────────────────────────────────
+      // BOTTOM NAVIGATION
+      // Home | Lab Reports | Profile
+      // ─────────────────────────────────────────────
+      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -386,73 +394,51 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Welcome,',
-                    style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const Text(
+                  'Welcome,',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   _isLoading ? 'Loading...' : _doctorName,
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                const Text('Your patients today',
-                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+                const Text(
+                  'Your patients today',
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
               ],
             ),
           ),
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.notifications_outlined,
-                  color: Colors.white, size: 20),
-            ),
-          ),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DoctorProfileScreen(
-                    repository: FirebaseDoctorRepository(),
-                    doctorId: FirebaseAuth.instance.currentUser?.uid ?? '',
-                  ),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.person_outline,
-                  color: Colors.white, size: 20),
-            ),
+
+          // Notification Bell with unread count
+          const NotificationBellIcon(
+            iconColor: Colors.white,
+            backgroundColor: Color(0x26FFFFFF),
+            size: 20,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLabReportsCard() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-      child: GestureDetector(
-        onTap: () {
+  // ─────────────────────────────────────────────
+  // BOTTOM NAVIGATION BAR
+  // ─────────────────────────────────────────────
+  Widget _buildBottomNav() {
+    return BottomNavigationBar(
+      currentIndex: 0,
+      onTap: (index) {
+        if (index == 0) {
+          // Already on Home
+          return;
+        } else if (index == 1) {
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -462,47 +448,39 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               ),
             ),
           );
-        },
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2)),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD9ECF8),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                alignment: Alignment.center,
-                child: const Icon(Icons.science_outlined,
-                    color: Color(0xFF1565C0), size: 18),
+        } else if (index == 2) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DoctorProfileScreen(
+                repository: FirebaseDoctorRepository(),
+                doctorId: FirebaseAuth.instance.currentUser?.uid ?? '',
               ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text('Lab Reports',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A2F3A))),
-              ),
-              const Icon(Icons.chevron_right,
-                  color: Color(0xFF9CA3AF), size: 18),
-            ],
-          ),
+            ),
+          );
+        }
+      },
+      backgroundColor: Colors.white,
+      selectedItemColor: _primary,
+      unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed,
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home),
+          label: 'Home',
         ),
-      ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.science_outlined),
+          activeIcon: Icon(Icons.science),
+          label: 'Lab Reports',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          activeIcon: Icon(Icons.person),
+          label: 'Profile',
+        ),
+      ],
     );
   }
 
@@ -515,9 +493,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          )
         ],
       ),
       child: Row(
@@ -529,13 +508,21 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           ),
           Column(
             children: [
-              Text(_isToday(_selectedDate) ? 'Today' : 'Selected',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Color(0xFF1A2F3A))),
-              Text(_formatDate(_selectedDate),
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              Text(
+                _isToday(_selectedDate) ? 'Today' : 'Selected',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Color(0xFF1A2F3A),
+                ),
+              ),
+              Text(
+                _formatDate(_selectedDate),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                ),
+              ),
             ],
           ),
           IconButton(
@@ -555,7 +542,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+          )
         ],
       ),
       child: Row(
@@ -610,9 +600,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                 ? 'No patients waiting'
                 : 'No completed consultations',
             style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF6B7280)),
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF6B7280),
+            ),
           ),
           const SizedBox(height: 6),
           Text(
@@ -620,7 +611,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                 ? 'Patients appear here after check-in (or when confirmed, for video calls)'
                 : 'Completed consultations will appear here',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF9CA3AF),
+            ),
           ),
         ],
       ),
@@ -637,11 +631,13 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         : isWalkIn
             ? const Color(0xFFB8860B)
             : _primary;
+
     final String typeLabel = isVideo
         ? 'Video'
         : isWalkIn
             ? 'Walk-in'
             : 'In-person';
+
     final IconData typeIcon = isVideo
         ? Icons.videocam_outlined
         : isWalkIn
@@ -671,8 +667,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                   orElse: () => AppointmentStatus.checkedIn,
                 ),
                 appointmentType: AppointmentTypeX.fromString(
-                    appt['appointmentType'] ?? 'IN_PERSON'),
-                admissionRecommended: appt['admissionRecommended'] ?? false,
+                  appt['appointmentType'] ?? 'IN_PERSON',
+                ),
+                admissionRecommended:
+                    appt['admissionRecommended'] ?? false,
                 symptoms: appt['symptoms'],
                 patientReportBase64: appt['patientReportBase64'],
               ),
@@ -691,54 +689,79 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            )
           ],
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
               decoration: BoxDecoration(
                 color: const Color(0xFFDCEFE9),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(appt['startTime'],
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, color: _primaryDark)),
+              child: Text(
+                appt['startTime'],
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: _primaryDark,
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(appt['patientName'],
-                      style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A2F3A))),
+                  Text(
+                    appt['patientName'],
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A2F3A),
+                    ),
+                  ),
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Icon(typeIcon, size: 13, color: badgeColor),
+                      Icon(
+                        typeIcon,
+                        size: 13,
+                        color: badgeColor,
+                      ),
                       const SizedBox(width: 4),
-                      Text(typeLabel,
-                          style: TextStyle(fontSize: 12, color: badgeColor)),
+                      Text(
+                        typeLabel,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: badgeColor,
+                        ),
+                      ),
                       if (isVideo && appt['status'] == 'InProgress') ...[
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFD9534F),
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text('LIVE',
-                              style: TextStyle(
-                                  fontSize: 9,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold)),
+                          child: const Text(
+                            'LIVE',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
                     ],
@@ -746,7 +769,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF)),
+            const Icon(
+              Icons.chevron_right,
+              color: Color(0xFF9CA3AF),
+            ),
           ],
         ),
       ),

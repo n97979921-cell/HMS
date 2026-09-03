@@ -14,8 +14,9 @@ class ReportsOverviewTab extends StatefulWidget {
 }
 
 class _ReportsOverviewTabState extends State<ReportsOverviewTab> {
-  static const Color _primary = Color(0xFF0D6B6B);
-  static const Color _bg = Color(0xFFF5F7FA);
+  // Theme colors — matched to Admin Dashboard's green palette
+  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   // true = Daily tab selected, false = Monthly tab selected
   bool _isDaily = true;
@@ -431,7 +432,7 @@ class _ToggleButton extends StatelessWidget {
     required this.onTap,
   });
 
-  static const Color _primary = Color(0xFF0D6B6B);
+  static const Color _primary = Color(0xFF1F8A70);
 
   @override
   Widget build(BuildContext context) {
@@ -440,7 +441,7 @@ class _ToggleButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isActive ? _primary : const Color(0xFFF5F7FA),
+          color: isActive ? _primary : const Color(0xFFF4F7F6),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Text(
@@ -462,7 +463,7 @@ class _AppointmentsCard extends StatelessWidget {
 
   const _AppointmentsCard({required this.data});
 
-  static const Color _primary = Color(0xFF0D6B6B);
+  static const Color _primary = Color(0xFF1F8A70);
 
   @override
   Widget build(BuildContext context) {
@@ -582,7 +583,7 @@ class _TypeChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D6B6B).withOpacity(0.08),
+        color: const Color(0xFF1F8A70).withOpacity(0.08),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -590,7 +591,7 @@ class _TypeChip extends StatelessWidget {
         style: const TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF0D6B6B),
+          color: Color(0xFF1F8A70),
         ),
       ),
     );
@@ -602,7 +603,7 @@ class _RevenueCard extends StatelessWidget {
 
   const _RevenueCard({required this.data});
 
-  static const Color _primary = Color(0xFF0D6B6B);
+  static const Color _primary = Color(0xFF1F8A70);
 
   @override
   Widget build(BuildContext context) {
@@ -673,7 +674,7 @@ class _RevenueCard extends StatelessWidget {
                   children: [
                     Expanded(
                       flex: (consultationPct * 1000).round().clamp(1, 1000),
-                      child: Container(color: const Color(0xFF0D6B6B)),
+                      child: Container(color: const Color(0xFF1F8A70)),
                     ),
                     Expanded(
                       flex: (labPct * 1000).round().clamp(1, 1000),
@@ -693,7 +694,7 @@ class _RevenueCard extends StatelessWidget {
               runSpacing: 4,
               children: [
                 _LegendDot(
-                    color: const Color(0xFF0D6B6B),
+                    color: const Color(0xFF1F8A70),
                     label:
                         'Consultation ${(consultationPct * 100).toStringAsFixed(0)}%'),
                 _LegendDot(
@@ -785,7 +786,7 @@ class _PatientStatsCard extends StatelessWidget {
 
   const _PatientStatsCard({required this.data});
 
-  static const Color _primary = Color(0xFF0D6B6B);
+  static const Color _primary = Color(0xFF1F8A70);
 
   @override
   Widget build(BuildContext context) {

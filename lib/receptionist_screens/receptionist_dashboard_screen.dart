@@ -8,7 +8,7 @@ import 'lab_payments_screen.dart';
 import 'admissions_screen.dart';
 import 'refunds_pending_screen.dart';
 import 'receptionist_profile_screen.dart';
-import '../screens/notifications_screen.dart';
+import '../widgets/notification_bell_icon.dart';
 
 /// RECEPTIONIST DASHBOARD — professional layout
 ///
@@ -47,8 +47,10 @@ class _ReceptionistDashboardScreenState
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid != null) {
-        final userDoc =
-            await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .get();
         _receptionistName = userDoc.data()?['name'] ?? 'Receptionist';
       }
 
@@ -61,6 +63,7 @@ class _ReceptionistDashboardScreenState
       final today = DateTime.now();
       final dateStr =
           '${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
       final slotsSnap = await FirebaseFirestore.instance
           .collection('slots')
           .where('date', isEqualTo: dateStr)
@@ -99,11 +102,14 @@ class _ReceptionistDashboardScreenState
                 const SizedBox(height: 16),
                 _buildStatChips(),
                 const SizedBox(height: 20),
-                const Text('Quick actions',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF6B7280))),
+                const Text(
+                  'Quick actions',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
                 const SizedBox(height: 10),
                 _buildActionGrid(),
                 const SizedBox(height: 10),
@@ -117,7 +123,8 @@ class _ReceptionistDashboardScreenState
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const AdmissionsScreen()),
+                        builder: (_) => const AdmissionsScreen(),
+                      ),
                     );
                     _loadData();
                   },
@@ -134,7 +141,8 @@ class _ReceptionistDashboardScreenState
                     await Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const RefundsPendingScreen()),
+                        builder: (_) => const RefundsPendingScreen(),
+                      ),
                     );
                     _loadData();
                   },
@@ -165,44 +173,45 @@ class _ReceptionistDashboardScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Reception desk',
-                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+                const Text(
+                  'Reception desk',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   _isLoading ? 'Loading...' : _receptionistName,
                   style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold),
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.notifications_outlined,
-                  color: Colors.white, size: 20),
-            ),
+
+          // Notification Bell
+          // Uses the existing reusable NotificationBellIcon.
+          // Unread notifications will show a red count badge.
+          const NotificationBellIcon(
+            iconColor: Colors.white,
+            backgroundColor: Color(0x26FFFFFF),
+            size: 20,
           ),
+
           const SizedBox(width: 10),
+
           GestureDetector(
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (_) => const ReceptionistProfileScreen()),
+                  builder: (_) => const ReceptionistProfileScreen(),
+                ),
               );
             },
             child: Container(
@@ -211,8 +220,11 @@ class _ReceptionistDashboardScreenState
                 color: Colors.white.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.person_outline,
-                  color: Colors.white, size: 20),
+              child: const Icon(
+                Icons.person_outline,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
           ),
         ],
@@ -223,11 +235,23 @@ class _ReceptionistDashboardScreenState
   Widget _buildStatChips() {
     return Row(
       children: [
-        _statChip('Pending', _pendingPayments, const Color(0xFFB8860B)),
+        _statChip(
+          'Pending',
+          _pendingPayments,
+          const Color(0xFFB8860B),
+        ),
         const SizedBox(width: 8),
-        _statChip('Today', _todayAppointments, _primary),
+        _statChip(
+          'Today',
+          _todayAppointments,
+          _primary,
+        ),
         const SizedBox(width: 8),
-        _statChip('Refunds', _pendingRefunds, const Color(0xFFD9534F)),
+        _statChip(
+          'Refunds',
+          _pendingRefunds,
+          const Color(0xFFD9534F),
+        ),
       ],
     );
   }
@@ -241,9 +265,10 @@ class _ReceptionistDashboardScreenState
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 6,
-                offset: const Offset(0, 2)),
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         child: Column(
@@ -251,14 +276,20 @@ class _ReceptionistDashboardScreenState
             Text(
               _isLoading ? '—' : '$count',
               style: TextStyle(
-                  fontSize: 20, fontWeight: FontWeight.w700, color: color),
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
             const SizedBox(height: 2),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF9CA3AF))),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF9CA3AF),
+              ),
+            ),
           ],
         ),
       ),
@@ -284,7 +315,9 @@ class _ReceptionistDashboardScreenState
           onTap: () async {
             await Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const VerifyPaymentsScreen()),
+              MaterialPageRoute(
+                builder: (_) => const VerifyPaymentsScreen(),
+              ),
             );
             _loadData();
           },
@@ -299,7 +332,8 @@ class _ReceptionistDashboardScreenState
             await Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) => const AppointmentsTodayScreen()),
+                builder: (_) => const AppointmentsTodayScreen(),
+              ),
             );
             _loadData();
           },
@@ -313,7 +347,9 @@ class _ReceptionistDashboardScreenState
           onTap: () async {
             await Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const WalkInScreen()),
+              MaterialPageRoute(
+                builder: (_) => const WalkInScreen(),
+              ),
             );
             _loadData();
           },
@@ -327,7 +363,9 @@ class _ReceptionistDashboardScreenState
           onTap: () async {
             await Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const LabPaymentsScreen()),
+              MaterialPageRoute(
+                builder: (_) => const LabPaymentsScreen(),
+              ),
             );
             _loadData();
           },
@@ -354,9 +392,10 @@ class _ReceptionistDashboardScreenState
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 6,
-                offset: const Offset(0, 2)),
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         child: Column(
@@ -373,33 +412,50 @@ class _ReceptionistDashboardScreenState
                     borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
-                  child: Icon(icon, color: iconColor, size: 18),
+                  child: Icon(
+                    icon,
+                    color: iconColor,
+                    size: 18,
+                  ),
                 ),
                 if (badge > 0)
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFD9534F),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text('$badge',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600)),
+                    child: Text(
+                      '$badge',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
               ],
             ),
             const Spacer(),
-            Text(title,
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A2F3A))),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1A2F3A),
+              ),
+            ),
             const SizedBox(height: 2),
-            Text(subtitle,
-                style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF9CA3AF),
+              ),
+            ),
           ],
         ),
       ),
@@ -426,9 +482,10 @@ class _ReceptionistDashboardScreenState
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 6,
-                offset: const Offset(0, 2)),
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         child: Row(
@@ -441,40 +498,61 @@ class _ReceptionistDashboardScreenState
                 borderRadius: BorderRadius.circular(10),
               ),
               alignment: Alignment.center,
-              child: Icon(icon, color: iconColor, size: 18),
+              child: Icon(
+                icon,
+                color: iconColor,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1A2F3A))),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1A2F3A),
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFF9CA3AF))),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF9CA3AF),
+                    ),
+                  ),
                 ],
               ),
             ),
             if (badge > 0)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFD9534F),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text('$badge',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600)),
+                child: Text(
+                  '$badge',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             const SizedBox(width: 6),
-            const Icon(Icons.chevron_right, color: Color(0xFF9CA3AF), size: 18),
+            const Icon(
+              Icons.chevron_right,
+              color: Color(0xFF9CA3AF),
+              size: 18,
+            ),
           ],
         ),
       ),

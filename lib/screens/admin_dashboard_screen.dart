@@ -11,6 +11,7 @@ import 'view_payment_records_screen.dart';
 import 'view_feedback_screen.dart';
 import 'reports_screen.dart';
 import 'admin_profile_screen.dart';
+import '../widgets/notification_bell_icon.dart';
 
 /// ADMIN DASHBOARD — UI/UX redesign only, ALL logic unchanged.
 ///
@@ -47,6 +48,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   bool _isLoading = true;
   int _selectedIndex = 0;
 
+  // Logged-in admin name
+  String _adminName = 'Admin';
+
   // Theme colors — matched to app-wide green (Receptionist/Doctor)
   static const Color primaryColor = Color(0xFF1F8A70);
   static const Color primaryDark = Color(0xFF0D6B5A);
@@ -57,6 +61,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     _loadStats();
+    _loadAdminName();
+  }
+
+  // ── LOAD LOGGED-IN ADMIN NAME ──
+  Future<void> _loadAdminName() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+
+      if (uid == null) return;
+
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get();
+
+      if (!mounted) return;
+
+      setState(() {
+        _adminName = userDoc.data()?['name'] ?? 'Admin';
+      });
+    } catch (_) {
+      // Keep default name as Admin if loading fails
+    }
   }
 
   // ── UNCHANGED LOGIC ──
@@ -81,8 +108,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
       final appointments = await _firestore
           .collection('appointments')
-          .where('createdAt', isGreaterThanOrEqualTo: startOfDay)
-          .where('createdAt', isLessThan: endOfDay)
+          .where(
+            'createdAt',
+            isGreaterThanOrEqualTo: startOfDay,
+          )
+          .where(
+            'createdAt',
+            isLessThan: endOfDay,
+          )
           .get();
 
       final payments = await _firestore
@@ -91,6 +124,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           .get();
 
       double revenue = 0;
+
       for (var doc in payments.docs) {
         revenue += (doc.data()['amount'] ?? 0).toDouble();
       }
@@ -110,8 +144,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // ── UNCHANGED LOGIC ──
   void _logout() async {
     await FirebaseAuth.instance.signOut();
+
     if (mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        '/',
+        (route) => false,
+      );
     }
   }
 
@@ -121,6 +159,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       key: _scaffoldKey,
       backgroundColor: bgColor,
       drawer: _buildDrawer(),
+
       // No AppBar — header card inside the body carries menu/bell now
       body: SafeArea(
         child: RefreshIndicator(
@@ -133,19 +172,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(),
+
                 const SizedBox(height: 20),
-                const Text('Overview',
-                    style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF6B7280))),
+
+                const Text(
+                  'Overview',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+
                 const SizedBox(height: 10),
+
                 _isLoading
                     ? const Padding(
                         padding: EdgeInsets.symmetric(vertical: 40),
                         child: Center(
-                            child:
-                                CircularProgressIndicator(color: primaryColor)),
+                          child: CircularProgressIndicator(
+                            color: primaryColor,
+                          ),
+                        ),
                       )
                     : GridView.count(
                         crossAxisCount: 2,
@@ -162,6 +210,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             iconBg: const Color(0xFFD9ECF8),
                             iconColor: const Color(0xFF1565C0),
                           ),
+
                           _statCard(
                             title: 'Total patients',
                             value: '$_totalPatients',
@@ -169,6 +218,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             iconBg: const Color(0xFFDCEFE9),
                             iconColor: primaryColor,
                           ),
+
                           _statCard(
                             title: "Today's appointments",
                             value: '$_todayAppointments',
@@ -176,9 +226,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             iconBg: const Color(0xFFFCEFD8),
                             iconColor: const Color(0xFFB8860B),
                           ),
+
                           _statCard(
                             title: 'Total revenue',
-                            value: 'Rs ${_totalRevenue.toStringAsFixed(0)}',
+                            value:
+                                'Rs ${_totalRevenue.toStringAsFixed(0)}',
                             icon: Icons.payments_outlined,
                             iconBg: const Color(0xFFFDE6E0),
                             iconColor: const Color(0xFFD9534F),
@@ -190,13 +242,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ),
       ),
+
       bottomNavigationBar: _buildBottomNav(),
     );
   }
 
-  // Header card — replaces the old AppBar. Hamburger (left, opens
-  // Drawer) + bell (right) live here now. Same _scaffoldKey.openDrawer()
-  // call as before — only its visual position changed.
+  // Header card — replaces the old AppBar.
+  // Hamburger (left, opens Drawer) + notification bell (right)
+  // live here now.
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
@@ -219,43 +272,53 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 color: Colors.white.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child:
-                  const Icon(Icons.menu_rounded, color: Colors.white, size: 20),
+              child: const Icon(
+                Icons.menu_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
           ),
+
           const SizedBox(width: 14),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text('Welcome back',
-                    style: TextStyle(color: Colors.white70, fontSize: 12)),
-                SizedBox(height: 4),
-                Text('Admin',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold)),
+              children: [
+                const Text(
+                  'Welcome back',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  _adminName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
-          GestureDetector(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('Notifications coming soon'),
-                backgroundColor: primaryColor,
-                behavior: SnackBarBehavior.floating,
-              ));
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.notifications_outlined,
-                  color: Colors.white, size: 20),
-            ),
+
+          // ─────────────────────────────────────────────
+          // NOTIFICATION BELL
+          // Existing notification system is used here.
+          // Unread notifications will automatically show
+          // red count badge on the bell.
+          // ─────────────────────────────────────────────
+          const NotificationBellIcon(
+            iconColor: Colors.white,
+            backgroundColor: Color(0x26FFFFFF),
+            size: 20,
           ),
         ],
       ),
@@ -278,9 +341,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2)),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Column(
@@ -294,17 +358,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               borderRadius: BorderRadius.circular(9),
             ),
             alignment: Alignment.center,
-            child: Icon(icon, color: iconColor, size: 16),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 16,
+            ),
           ),
+
           const Spacer(),
-          Text(value,
-              style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A2F3A))),
+
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1A2F3A),
+            ),
+          ),
+
           const SizedBox(height: 2),
-          Text(title,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF9CA3AF),
+            ),
+          ),
         ],
       ),
     );
@@ -317,12 +397,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         if (index == 1) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const ManageUsersScreen()),
+            MaterialPageRoute(
+              builder: (_) => const ManageUsersScreen(),
+            ),
           );
         } else if (index == 2) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AdminProfileScreen()),
+            MaterialPageRoute(
+              builder: (_) => const AdminProfileScreen(),
+            ),
           );
         } else {
           setState(() => _selectedIndex = index);
@@ -333,11 +417,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       unselectedItemColor: Colors.grey,
       type: BottomNavigationBarType.fixed,
       items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline), label: 'Users'),
+          icon: Icon(Icons.home_outlined),
+          label: 'Home',
+        ),
         BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline), label: 'Profile'),
+          icon: Icon(Icons.people_outline),
+          label: 'Users',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          label: 'Profile',
+        ),
       ],
     );
   }
@@ -359,32 +450,47 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.local_hospital_rounded,
-                        color: Colors.white, size: 28),
+                    child: const Icon(
+                      Icons.local_hospital_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
                   ),
+
                   const SizedBox(width: 12),
+
                   const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Family Well Care',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700)),
-                      Text('Hospital',
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 12)),
+                      Text(
+                        'Family Well Care',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        'Hospital',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
+
             const Divider(color: Colors.white24),
+
             _drawerItem(
               icon: Icons.dashboard_rounded,
               title: 'Dashboard',
               onTap: () => Navigator.pop(context),
             ),
+
             _drawerItem(
               icon: Icons.business_rounded,
               title: 'Manage Departments',
@@ -393,10 +499,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const ManageDepartmentsScreen()),
+                    builder: (_) => const ManageDepartmentsScreen(),
+                  ),
                 );
               },
             ),
+
             _drawerItem(
               icon: Icons.attach_money_rounded,
               title: 'Manage Prices',
@@ -404,10 +512,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ManagePricesScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ManagePricesScreen(),
+                  ),
                 );
               },
             ),
+
             _drawerItem(
               icon: Icons.bed_rounded,
               title: 'Manage Rooms/Beds',
@@ -415,10 +526,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ManageRoomsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ManageRoomsScreen(),
+                  ),
                 );
               },
             ),
+
             _drawerItem(
               icon: Icons.calendar_month_rounded,
               title: 'View Appointments',
@@ -427,10 +541,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const ViewAppointmentsScreen()),
+                    builder: (_) => const ViewAppointmentsScreen(),
+                  ),
                 );
               },
             ),
+
             _drawerItem(
               icon: Icons.biotech_rounded,
               title: 'View Lab Test Summary',
@@ -439,10 +555,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const ViewLabTestSummaryScreen()),
+                    builder: (_) => const ViewLabTestSummaryScreen(),
+                  ),
                 );
               },
             ),
+
             _drawerItem(
               icon: Icons.receipt_long_rounded,
               title: 'View Billing Records',
@@ -451,10 +569,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => const ViewPaymentRecordsScreen()),
+                    builder: (_) => const ViewPaymentRecordsScreen(),
+                  ),
                 );
               },
             ),
+
             _drawerItem(
               icon: Icons.bar_chart_rounded,
               title: 'View Reports',
@@ -462,10 +582,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ReportsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ReportsScreen(),
+                  ),
                 );
               },
             ),
+
             _drawerItem(
               icon: Icons.star_rounded,
               title: 'View Feedback',
@@ -473,10 +596,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const ViewFeedbackScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const ViewFeedbackScreen(),
+                  ),
                 );
               },
             ),
+
             const SizedBox(height: 10),
           ],
         ),
@@ -491,8 +617,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     bool isLogout = false,
   }) {
     return ListTile(
-      leading: Icon(icon,
-          color: isLogout ? Colors.red[300] : Colors.white, size: 22),
+      leading: Icon(
+        icon,
+        color: isLogout ? Colors.red[300] : Colors.white,
+        size: 22,
+      ),
       title: Text(
         title,
         style: TextStyle(

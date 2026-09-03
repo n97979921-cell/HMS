@@ -10,8 +10,8 @@ class ViewAppointmentsScreen extends StatefulWidget {
 }
 
 class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
-  static const Color _primary = Color(0xFF0D6B6B);
-  static const Color _bg = Color(0xFFF5F7FA);
+  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   // Cache for user names so we don't re-fetch same user repeatedly
   final Map<String, String> _userNameCache = {};
@@ -212,7 +212,7 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
                           decoration: BoxDecoration(
                             color: _selectedDate != null
                                 ? _primary.withOpacity(0.1)
-                                : const Color(0xFFF5F7FA),
+                                : const Color(0xFFF4F7F6),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                               color: _selectedDate != null
@@ -370,7 +370,7 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
                       children: [
                         Container(
                           width: double.infinity,
-                          color: const Color(0xFFEFF6F6),
+                          color: const Color(0xFFDCEFE9),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
                           child: Text(
@@ -476,7 +476,7 @@ class _DropdownFilter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: isActive ? color.withOpacity(0.1) : const Color(0xFFF5F7FA),
+        color: isActive ? color.withOpacity(0.1) : const Color(0xFFF4F7F6),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isActive ? color : const Color(0xFFE5E7EB),
@@ -523,7 +523,7 @@ class _AppointmentCard extends StatelessWidget {
     required this.typeLabel,
   });
 
-  static const Color _primary = Color(0xFF0D6B6B);
+  static const Color _primary = Color(0xFF1F8A70);
 
   String _formatDate(dynamic ts) {
     if (ts == null) return 'N/A';

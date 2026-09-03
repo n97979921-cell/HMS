@@ -10,8 +10,8 @@ class ViewFeedbackScreen extends StatefulWidget {
 }
 
 class _ViewFeedbackScreenState extends State<ViewFeedbackScreen> {
-  static const Color _primary = Color(0xFF0D6B6B);
-  static const Color _bg = Color(0xFFF5F7FA);
+  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   final Map<String, String> _userNameCache = {};
 
@@ -235,7 +235,7 @@ class _FeedbackCard extends StatelessWidget {
 
   const _FeedbackCard({required this.feedback});
 
-  static const Color _primary = Color(0xFF0D6B6B);
+  static const Color _primary = Color(0xFF1F8A70);
 
   String _formatDate(dynamic ts) {
     if (ts == null) return 'N/A';
@@ -354,7 +354,7 @@ class _FeedbackCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F7FA),
+                color: const Color(0xFFF4F7F6),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(

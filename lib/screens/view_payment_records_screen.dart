@@ -11,8 +11,9 @@ class ViewPaymentRecordsScreen extends StatefulWidget {
 }
 
 class _ViewPaymentRecordsScreenState extends State<ViewPaymentRecordsScreen> {
-  static const Color _primary = Color(0xFF0D6B6B);
-  static const Color _bg = Color(0xFFF5F7FA);
+  // Theme colors — matched to Admin Dashboard's green palette
+  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   final Map<String, String> _userNameCache = {};
 
@@ -310,7 +311,7 @@ class _ViewPaymentRecordsScreenState extends State<ViewPaymentRecordsScreen> {
                       children: [
                         Container(
                           width: double.infinity,
-                          color: const Color(0xFFEFF6F6),
+                          color: const Color(0xFFDCEFE9),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
                           child: Text(
@@ -434,7 +435,7 @@ class _DropdownFilter extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: isActive ? color.withOpacity(0.1) : const Color(0xFFF5F7FA),
+        color: isActive ? color.withOpacity(0.1) : const Color(0xFFF4F7F6),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isActive ? color : const Color(0xFFE5E7EB),
@@ -481,7 +482,7 @@ class _PaymentGroupCard extends StatelessWidget {
     required this.typeIcon,
   });
 
-  static const Color _primary = Color(0xFF0D6B6B);
+  static const Color _primary = Color(0xFF1F8A70);
 
   String _formatDate(dynamic ts) {
     if (ts == null) return 'N/A';
@@ -638,7 +639,7 @@ class _PaymentGroupCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F7FA),
+              color: const Color(0xFFF4F7F6),
               borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(16),
                 bottomRight: Radius.circular(16),
