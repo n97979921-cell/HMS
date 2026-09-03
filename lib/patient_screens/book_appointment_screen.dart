@@ -12,7 +12,7 @@ import 'payment_upload_screen.dart';
 ///    dikhata hai (pehle purani widget.consultationFee dikhti thi,
 ///    lekin transaction naya rate charge karti thi — mismatch)
 /// 3. Fee ab PER-DOCTOR hai (doctor_consultation_fees), department-wide
-///    (department_consultation_fees) nahi — dono jagah update kiya.
+///     nahi — dono jagah update kiya.
 class BookAppointmentScreen extends StatefulWidget {
   final String doctorId;
   final String doctorName;
