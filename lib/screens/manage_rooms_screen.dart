@@ -5,8 +5,9 @@ import 'rooms_list_screen.dart';
 class ManageRoomsScreen extends StatelessWidget {
   const ManageRoomsScreen({super.key});
 
-  static const Color _primary = Color(0xFF0D6E6E);
-  static const Color _bg = Color(0xFFF5F7FA);
+  // Theme colors — matched to Admin Dashboard's green palette
+  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   static const List<Map<String, dynamic>> _roomTypes = [
     {
@@ -21,7 +22,7 @@ class ManageRoomsScreen extends StatelessWidget {
       'label': 'General',
       'subtitle': 'General Ward',
       'icon': Icons.bed_outlined,
-      'color': Color(0xFF0D6E6E),
+      'color': Color(0xFF1F8A70),
     },
     {
       'type': 'Private',

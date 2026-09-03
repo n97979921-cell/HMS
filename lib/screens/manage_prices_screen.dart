@@ -7,8 +7,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class ManagePricesScreen extends StatelessWidget {
   const ManagePricesScreen({super.key});
 
-  static const Color primaryColor = Color(0xFF0D6B6B);
-  static const Color bgColor = Color(0xFFBDD8D8);
+  static const Color primaryColor = Color(0xFF1F8A70);
+  static const Color bgColor = Color(0xFFF4F7F6);
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +74,7 @@ class _PriceOptionCard extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
 
-  static const Color primaryColor = Color(0xFF0D6B6B);
+  static const Color primaryColor = Color(0xFF1F8A70);
 
   const _PriceOptionCard({
     required this.icon,
@@ -156,8 +156,8 @@ class ManageRoomPricesScreen extends StatefulWidget {
 class _ManageRoomPricesScreenState extends State<ManageRoomPricesScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  static const Color primaryColor = Color(0xFF0D6B6B);
-  static const Color bgColor = Color(0xFFBDD8D8);
+  static const Color primaryColor = Color(0xFF1F8A70);
+  static const Color bgColor = Color(0xFFF4F7F6);
 
   // Fixed room types
   final List<String> _roomTypes = ['ICU', 'General', 'Private'];
@@ -411,8 +411,8 @@ class ManageTestPricesScreen extends StatefulWidget {
 class _ManageTestPricesScreenState extends State<ManageTestPricesScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  static const Color primaryColor = Color(0xFF0D6B6B);
-  static const Color bgColor = Color(0xFFBDD8D8);
+  static const Color primaryColor = Color(0xFF1F8A70);
+  static const Color bgColor = Color(0xFFF4F7F6);
 
   List<Map<String, dynamic>> _tests = [];
   bool _isLoading = true;
@@ -805,3 +805,4 @@ class _ManageTestPricesScreenState extends State<ManageTestPricesScreen> {
     );
   }
 }
+

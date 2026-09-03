@@ -247,6 +247,19 @@ class AuthService {
         'success': false,
         'error': 'Google sign-in failed. Please try again.'
       };
+    } on FirebaseAuthException catch (e) {
+      _logger.e("Google sign-in FirebaseAuth error: ${e.code}");
+      if (e.code == 'account-exists-with-different-credential') {
+        return {
+          'success': false,
+          'error':
+              'This email is already registered with a password. Please log in using your email and password instead.'
+        };
+      }
+      return {
+        'success': false,
+        'error': 'Google sign-in failed. Please try again.'
+      };
     } catch (e) {
       _logger.e("Google sign-in error: $e");
       return {

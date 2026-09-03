@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -25,6 +26,14 @@ import '../services/notification_service.dart';
 /// kar payi na reject). Sirf 2 actions (Confirm nahi — slot ja chuka):
 ///   - Refund  → payment: Refunded (full) — screenshot asli tha
 ///   - Reject  → payment: Rejected (koi refund) — screenshot fake tha
+///
+/// ✅ REAL-TIME (Rule 2): Data `payments` + `appointments` + `users` +
+/// `slots` se milkar banta hai, is liye poori screen StreamBuilder mein
+/// convert NAHI ki. Iski jagah ek lightweight listener `payments`
+/// collection ko sunta hai (status == 'Pending' filter ke saath) —
+/// jaise hi patient screenshot upload kare (nayi Pending payment ban
+/// jaye), ya koi payment yahan se process ho (status badle), list
+/// khud-ba-khud dobara load ho jaati hai.
 class VerifyPaymentsScreen extends StatefulWidget {
   const VerifyPaymentsScreen({super.key});
 
@@ -44,10 +53,34 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
   List<Map<String, dynamic>> _pending = [];
   List<Map<String, dynamic>> _expired = [];
 
+  // Real-time listener — sirf `payments` collection ko sunta hai
+  // (status == 'Pending' filter ke saath).
+  StreamSubscription<QuerySnapshot>? _paymentsSub;
+
   @override
   void initState() {
     super.initState();
-    _loadAndProcess();
+    _setupRealtimeListener();
+  }
+
+  @override
+  void dispose() {
+    _paymentsSub?.cancel();
+    super.dispose();
+  }
+
+  void _setupRealtimeListener() {
+    // Pehla event hi initial load ka kaam kar deta hai, is liye alag
+    // se _loadAndProcess() call karne ki zaroorat nahi.
+    _paymentsSub = FirebaseFirestore.instance
+        .collection('payments')
+        .where('status', isEqualTo: 'Pending')
+        .snapshots()
+        .listen((_) {
+      _loadAndProcess();
+    }, onError: (_) {
+      setState(() => _isLoading = false);
+    });
   }
 
   // ── Load: pehle 24hr-expired appointments process karo, phir list ──
@@ -122,6 +155,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
         }
       }
 
+      if (!mounted) return;
       setState(() {
         _pending = pendingResult;
         _expired = expiredResult;
@@ -137,6 +171,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
         ));
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       _showError('Error loading payments: $e');
     }

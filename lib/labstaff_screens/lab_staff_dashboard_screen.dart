@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,6 +14,14 @@ import '../screens/notifications_screen.dart';
 /// Tabs: "Pending" (Confirmed — kaam shuru karna hai) |
 ///       "In Progress" (chal raha hai) |
 ///       "Completed" (report ban chuki)
+///
+/// ✅ REAL-TIME (Rule 2): Data `lab_tests` + `users` (patient/doctor
+/// naam) se milkar banta hai, is liye poori screen StreamBuilder mein
+/// convert NAHI ki. Iski jagah ek lightweight listener `lab_tests`
+/// collection ko sunta hai (teeno relevant statuses ek sath —
+/// Confirmed/In Progress/Completed), taake tab badalne par listener
+/// dobara banane ki zaroorat na pade. Jab bhi kuch badle, purana
+/// `_loadData()` khud-ba-khud dobara call ho jaata hai.
 class LabStaffDashboardScreen extends StatefulWidget {
   const LabStaffDashboardScreen({super.key});
 
@@ -31,10 +40,35 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
 
   List<Map<String, dynamic>> _tests = [];
 
+  // Real-time listener — `lab_tests` collection ko sunta hai, teeno
+  // relevant statuses ke sath ek sath (chahe kisi bhi tab pe ho,
+  // koi bhi change ho to list refresh ho jaati hai).
+  StreamSubscription<QuerySnapshot>? _labTestsSub;
+
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _setupRealtimeListener();
+  }
+
+  @override
+  void dispose() {
+    _labTestsSub?.cancel();
+    super.dispose();
+  }
+
+  void _setupRealtimeListener() {
+    // Pehla event hi initial load ka kaam kar deta hai, is liye alag
+    // se _loadData() call karne ki zaroorat nahi.
+    _labTestsSub = FirebaseFirestore.instance
+        .collection('lab_tests')
+        .where('status', whereIn: ['Confirmed', 'In Progress', 'Completed'])
+        .snapshots()
+        .listen((_) {
+      _loadData();
+    }, onError: (_) {
+      setState(() => _isLoading = false);
+    });
   }
 
   Future<void> _loadData() async {
@@ -80,11 +114,13 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
         });
       }
 
+      if (!mounted) return;
       setState(() {
         _tests = result;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       _showError('Error loading tests: $e');
     }

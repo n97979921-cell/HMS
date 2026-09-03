@@ -17,8 +17,8 @@ class DepartmentDoctorsScreen extends StatefulWidget {
 }
 
 class _DepartmentDoctorsScreenState extends State<DepartmentDoctorsScreen> {
-  static const Color primaryColor = Color(0xFF0D6B6B);
-  static const Color bgColor = Color(0xFFBDD8D8);
+  static const Color primaryColor = Color(0xFF1F8A70);
+  static const Color bgColor = Color(0xFFF4F7F6);
 
   bool _isLoading = true;
   List<Map<String, dynamic>> _doctors = [];
@@ -152,7 +152,7 @@ class _DepartmentDoctorsScreenState extends State<DepartmentDoctorsScreen> {
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: isActive
-                                  ? const Color(0xFFE0F0F0)
+                                  ? const Color(0xFFDCEFE9)
                                   : const Color(0xFFFCE8E6),
                               borderRadius: BorderRadius.circular(20),
                             ),

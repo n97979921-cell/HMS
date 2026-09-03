@@ -12,8 +12,9 @@ class LabSummaryTab extends StatefulWidget {
 }
 
 class _LabSummaryTabState extends State<LabSummaryTab> {
-  static const Color _primary = Color(0xFF0D6B6B);
-  static const Color _bg = Color(0xFFF5F7FA);
+  // Theme colors — matched to Admin Dashboard's green palette
+  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   DateTime _selectedMonth = DateTime.now();
   bool _isLoading = true;

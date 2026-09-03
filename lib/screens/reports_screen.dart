@@ -20,7 +20,9 @@ class ReportsScreen extends StatefulWidget {
 
 class _ReportsScreenState extends State<ReportsScreen>
     with SingleTickerProviderStateMixin {
-  static const Color _primary = Color(0xFF0D6B6B);
+  // Theme colors — matched to Admin Dashboard's green palette
+  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   late TabController _tabController;
 
@@ -39,7 +41,7 @@ class _ReportsScreenState extends State<ReportsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: _bg,
       appBar: AppBar(
         backgroundColor: _primary,
         elevation: 0,

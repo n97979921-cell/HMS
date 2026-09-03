@@ -11,8 +11,8 @@ class BedOccupancyTab extends StatefulWidget {
 }
 
 class _BedOccupancyTabState extends State<BedOccupancyTab> {
-  static const Color _primary = Color(0xFF0D6B6B);
-  static const Color _bg = Color(0xFFF5F7FA);
+  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   static const List<String> _roomTypes = ['ICU', 'General', 'Private'];
 
@@ -96,7 +96,7 @@ class _BedOccupancyTabState extends State<BedOccupancyTab> {
       case 'ICU':
         return const Color(0xFFDB4437);
       case 'General':
-        return const Color(0xFF0D6B6B);
+        return _primary;
       case 'Private':
         return const Color(0xFF1A73E8);
       default:

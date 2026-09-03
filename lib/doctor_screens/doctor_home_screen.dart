@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -26,6 +27,14 @@ import 'lab_reports_screen.dart';
 ///   InProgress (Start hua) + patientJoinedAt null + slot-time se 5+ min
 ///     → NoShow + HALF refund (patient ki galti)
 ///   InProgress + patientJoinedAt set → chhuo mat, consultation chal rahi
+///
+/// ✅ REAL-TIME (Rule 2): Data kai collections (slots + appointments +
+/// users) se milkar banta hai, is liye poori screen StreamBuilder mein
+/// convert NAHI ki. Iski jagah ek lightweight listener sirf
+/// `appointments` collection ko sunta hai (doctorId filter ke saath) —
+/// yahin par status-changes (check-in, complete, video start) hote hain.
+/// Jab bhi kuch badle, purana `_loadData()` khud-ba-khud dobara call ho
+/// jata hai — poora load-logic bilkul waisa hi hai jaisa pehle tha.
 class DoctorHomeScreen extends StatefulWidget {
   const DoctorHomeScreen({super.key});
 
@@ -46,10 +55,41 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
   List<Map<String, dynamic>> _appointments = [];
 
+  // Real-time listener — sirf `appointments` collection ko sunta hai
+  // (doctorId filter ke saath), taake naya check-in, video-start, ya
+  // status-change hote hi _loadData() khud-ba-khud dobara chal jaye.
+  StreamSubscription<QuerySnapshot>? _appointmentsSub;
+
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _setupRealtimeListener();
+  }
+
+  @override
+  void dispose() {
+    _appointmentsSub?.cancel();
+    super.dispose();
+  }
+
+  void _setupRealtimeListener() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    // Pehla event hi initial load ka kaam kar deta hai, is liye alag
+    // se _loadData() call karne ki zaroorat nahi.
+    _appointmentsSub = FirebaseFirestore.instance
+        .collection('appointments')
+        .where('doctorId', isEqualTo: uid)
+        .snapshots()
+        .listen((_) {
+      _loadData();
+    }, onError: (_) {
+      setState(() => _isLoading = false);
+    });
   }
 
   String _dateStr(DateTime d) =>
@@ -161,6 +201,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       result.sort((a, b) =>
           (a['startTime'] as String).compareTo(b['startTime'] as String));
 
+      if (!mounted) return;
       setState(() {
         _appointments = result;
         _isLoading = false;
@@ -175,6 +216,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         ));
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       _showError('Error loading appointments: $e');
     }

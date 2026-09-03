@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'assign_bed_screen.dart';
@@ -13,6 +14,15 @@ import 'assign_bed_screen.dart';
 ///   koi Occupied bed is appointmentId ko point nahi karta (abhi admit nahi) AND
 ///   koi Paid Room-type payment is appointmentId ke liye nahi (pehle
 ///   discharge ho chuka to dobara pending mein nahi aana chahiye)
+///
+/// ✅ REAL-TIME (Rule 2 — SABSE ZAROORI SCREEN): Data `appointments` +
+/// `beds` + `payments` + `users` se milkar banta hai, is liye poori
+/// screen StreamBuilder mein convert NAHI ki. Iski jagah ek lightweight
+/// listener `appointments` collection ko sunta hai
+/// (admissionRecommended == true filter ke saath). Jab bhi doctor
+/// "Recommend Admission" ON kare, receptionist ko TURANT pata chal
+/// jaata hai — patient bed ke liye wait kar raha hota hai, delay
+/// acceptable nahi.
 class AdmissionPendingScreen extends StatefulWidget {
   const AdmissionPendingScreen({super.key});
 
@@ -27,10 +37,35 @@ class _AdmissionPendingScreenState extends State<AdmissionPendingScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _pending = [];
 
+  // Real-time listener — `appointments` collection ko sunta hai
+  // (admissionRecommended == true filter ke saath). Yehi wo trigger
+  // hai jo doctor ke "Recommend Admission" ON karte hi fire hota hai.
+  StreamSubscription<QuerySnapshot>? _appointmentsSub;
+
   @override
   void initState() {
     super.initState();
-    _load();
+    _setupRealtimeListener();
+  }
+
+  @override
+  void dispose() {
+    _appointmentsSub?.cancel();
+    super.dispose();
+  }
+
+  void _setupRealtimeListener() {
+    // Pehla event hi initial load ka kaam kar deta hai, is liye alag
+    // se _load() call karne ki zaroorat nahi.
+    _appointmentsSub = FirebaseFirestore.instance
+        .collection('appointments')
+        .where('admissionRecommended', isEqualTo: true)
+        .snapshots()
+        .listen((_) {
+      _load();
+    }, onError: (_) {
+      setState(() => _isLoading = false);
+    });
   }
 
   Future<void> _load() async {
@@ -93,11 +128,13 @@ class _AdmissionPendingScreenState extends State<AdmissionPendingScreen> {
         });
       }
 
+      if (!mounted) return;
       setState(() {
         _pending = result;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       _showError('Error loading admissions: $e');
     }

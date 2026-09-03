@@ -29,7 +29,7 @@ class DoctorPerformanceDetailSheet extends StatefulWidget {
 
 class _DoctorPerformanceDetailSheetState
     extends State<DoctorPerformanceDetailSheet> {
-  static const Color _primary = Color(0xFF0D6B6B);
+  static const Color _primary = Color(0xFF1F8A70);
 
   bool _isLoading = true;
   Map<String, dynamic> _detail = {};
@@ -133,7 +133,7 @@ class _DoctorPerformanceDetailSheetState
 
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFF5F7FA),
+        color: Color(0xFFF4F7F6),
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(

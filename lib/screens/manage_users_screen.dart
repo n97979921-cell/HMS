@@ -1,11 +1,13 @@
+// lib/screens/manage_users_screen.dart
 import 'package:flutter/material.dart';
 import 'user_list_screen.dart';
 
 class ManageUsersScreen extends StatelessWidget {
   const ManageUsersScreen({super.key});
 
-  static const Color primaryColor = Color(0xFF0D6B6B);
-  static const Color bgColor = Color(0xFFBDD8D8);
+  // Theme colors — matched to Admin Dashboard's green palette
+  static const Color primaryColor = Color(0xFF1F8A70);
+  static const Color bgColor = Color(0xFFF4F7F6);
 
   @override
   Widget build(BuildContext context) {
@@ -88,8 +90,8 @@ class _RoleCard extends StatelessWidget {
   final String role;
   final IconData icon;
 
-  static const Color primaryColor = Color(0xFF0D6B6B);
-  static const Color lightColor = Color(0xFFE0F0F0);
+  static const Color primaryColor = Color(0xFF1F8A70);
+  static const Color lightColor = Color(0xFFDCEFE9);
 
   const _RoleCard({
     required this.title,

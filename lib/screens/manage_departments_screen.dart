@@ -13,8 +13,9 @@ class ManageDepartmentsScreen extends StatefulWidget {
 class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  static const Color primaryColor = Color(0xFF0D6B6B);
-  static const Color bgColor = Color(0xFFBDD8D8);
+  static const Color primaryColor = Color(0xFF1F8A70);
+  static const Color primaryDark = Color(0xFF0D6B5A);
+  static const Color bgColor = Color(0xFFF4F7F6);
 
   List<Map<String, dynamic>> _departments = [];
   bool _isLoading = true;
@@ -242,27 +243,36 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                                     ],
                                   ),
                                 ),
-                                PopupMenuButton<String>(
-                                  icon: const Icon(Icons.more_vert_rounded,
-                                      color: Color(0xFF6B7280), size: 20),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                  onSelected: (value) {
-                                    if (value == 'edit') {
-                                      _showEditDialog(dept);
-                                    }
-                                  },
-                                  itemBuilder: (_) => [
-                                    const PopupMenuItem(
-                                      value: 'edit',
-                                      child: Row(children: [
-                                        Icon(Icons.edit_rounded,
-                                            color: primaryColor, size: 18),
-                                        SizedBox(width: 8),
-                                        Text('Edit'),
-                                      ]),
+                                // Purana PopupMenuButton (3 dots) hata kar
+                                // seedha "Edit" button lagaya — baaqi admin
+                                // screens ke pattern se match karne ke liye.
+                                GestureDetector(
+                                  onTap: () => _showEditDialog(dept),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: primaryColor.withOpacity(0.1),
+                                      borderRadius:
+                                          BorderRadius.circular(10),
                                     ),
-                                  ],
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.edit_rounded,
+                                            color: primaryColor, size: 16),
+                                        SizedBox(width: 6),
+                                        Text(
+                                          'Edit',
+                                          style: TextStyle(
+                                            color: primaryColor,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -292,7 +302,7 @@ class _DepartmentDialog extends StatelessWidget {
     this.isEditMode = false,
   });
 
-  static const Color primaryColor = Color(0xFF0D6B6B);
+  static const Color primaryColor = Color(0xFF1F8A70);
 
   @override
   Widget build(BuildContext context) {

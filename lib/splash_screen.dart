@@ -52,8 +52,8 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // ✅ EXACT IMAGE COLOR: White background
-      backgroundColor: Colors.white,
+      // ✅ Admin dashboard ke bgColor se match kiya (0xFFF4F7F6)
+      backgroundColor: const Color(0xFFF4F7F6),
 
       body: SafeArea(
         child: Center(

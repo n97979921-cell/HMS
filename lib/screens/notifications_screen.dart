@@ -10,6 +10,11 @@ import 'package:intl/intl.dart';
 /// se seedha `NotificationsScreen()` navigate ho sakti hai.
 ///
 /// Tap karne par isRead: true ho jata hai. Type ke hisaab se icon.
+///
+/// ✅ REAL-TIME: Ab StreamBuilder use karta hai — sirf ek collection
+/// (`notifications`) se data aata hai, is liye poori screen real-time
+/// bana di gayi hai (Rule 1). Naya notification aate hi list khud
+/// update ho jayegi, refresh karne ki zaroorat nahi.
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
@@ -21,56 +26,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   static const Color _primary = Color(0xFF1F8A70);
   static const Color _primaryDark = Color(0xFF0D6B5A);
 
-  bool _isLoading = true;
-  List<Map<String, dynamic>> _notifications = [];
+  late final Stream<QuerySnapshot> _notificationsStream;
 
   @override
   void initState() {
     super.initState();
-    _loadNotifications();
-  }
 
-  Future<void> _loadNotifications() async {
-    setState(() => _isLoading = true);
-    try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid == null) {
-        setState(() => _isLoading = false);
-        return;
-      }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
 
-      final snap = await FirebaseFirestore.instance
-          .collection('notifications')
-          .where('userId', isEqualTo: uid)
-          .get();
-
-      final result = snap.docs.map((doc) {
-        final data = doc.data();
-        return {
-          'notificationId': doc.id,
-          'type': data['type'] ?? '',
-          'referenceId': data['referenceId'],
-          'message': data['message'] ?? '',
-          'isRead': data['isRead'] ?? false,
-          'createdAt': data['createdAt'],
-        };
-      }).toList();
-
-      // Newest first
-      result.sort((a, b) {
-        final aTs = a['createdAt'];
-        final bTs = b['createdAt'];
-        if (aTs is! Timestamp || bTs is! Timestamp) return 0;
-        return bTs.compareTo(aTs);
-      });
-
-      setState(() {
-        _notifications = result;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
+    // Agar uid null ho (edge case) to ek khali stream de dete hain
+    // taake StreamBuilder crash na ho, sirf "no notifications" dikhe.
+    _notificationsStream = uid == null
+        ? const Stream.empty()
+        : FirebaseFirestore.instance
+            .collection('notifications')
+            .where('userId', isEqualTo: uid)
+            .snapshots();
   }
 
   Future<void> _markAsRead(String notificationId) async {
@@ -79,12 +50,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           .collection('notifications')
           .doc(notificationId)
           .update({'isRead': true});
-      setState(() {
-        final n = _notifications.firstWhere(
-            (n) => n['notificationId'] == notificationId,
-            orElse: () => {});
-        if (n.isNotEmpty) n['isRead'] = true;
-      });
+      // StreamBuilder khud-ba-khud UI update kar dega jab Firestore
+      // mein change ho jayega — koi manual setState() ki zaroorat nahi.
     } catch (_) {
       // Silent — read-status miss hone se koi bara nuqsan nahi
     }
@@ -146,23 +113,60 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           children: [
             _buildHeader(),
             Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : _notifications.isEmpty
-                      ? _buildEmpty()
-                      : RefreshIndicator(
-                          onRefresh: _loadNotifications,
-                          color: _primary,
-                          child: ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                            itemCount: _notifications.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 10),
-                            itemBuilder: (ctx, i) => _card(_notifications[i]),
-                          ),
-                        ),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _notificationsStream,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: _primary),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return const Center(
+                      child: Text(
+                        'Something went wrong. Please try again.',
+                        style: TextStyle(color: Color(0xFF6B7280)),
+                      ),
+                    );
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+
+                  final notifications = docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return {
+                      'notificationId': doc.id,
+                      'type': data['type'] ?? '',
+                      'referenceId': data['referenceId'],
+                      'message': data['message'] ?? '',
+                      'isRead': data['isRead'] ?? false,
+                      'createdAt': data['createdAt'],
+                    };
+                  }).toList();
+
+                  // Newest first — client-side sort (Firestore composite
+                  // index se bachne ke liye, chhoti list ke liye kaafi hai).
+                  notifications.sort((a, b) {
+                    final aTs = a['createdAt'];
+                    final bTs = b['createdAt'];
+                    if (aTs is! Timestamp || bTs is! Timestamp) return 0;
+                    return bTs.compareTo(aTs);
+                  });
+
+                  if (notifications.isEmpty) {
+                    return _buildEmpty();
+                  }
+
+                  return ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+                    itemCount: notifications.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    itemBuilder: (ctx, i) => _card(notifications[i]),
+                  );
+                },
+              ),
             ),
           ],
         ),

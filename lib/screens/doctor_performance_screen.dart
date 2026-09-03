@@ -1,3 +1,4 @@
+// lib/screens/doctor_performance_tab.dart (ya jo bhi iska actual filename hai)
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -13,8 +14,10 @@ class DoctorPerformanceTab extends StatefulWidget {
 }
 
 class _DoctorPerformanceTabState extends State<DoctorPerformanceTab> {
-  static const Color _primary = Color(0xFF0D6B6B);
-  static const Color _bg = Color(0xFFF5F7FA);
+  // Theme colors — matched to Admin Dashboard's green palette
+  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
+  static const Color _headerTint = Color(0xFFDCEFE9);
 
   DateTime _selectedMonth = DateTime.now();
   bool _isLoading = true;
@@ -189,7 +192,7 @@ class _DoctorPerformanceTabState extends State<DoctorPerformanceTab> {
           // Table header
           if (!_isLoading && _doctorStats.isNotEmpty)
             Container(
-              color: const Color(0xFFEFF6F6),
+              color: _headerTint,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: const Row(
                 children: [
@@ -294,7 +297,7 @@ class _DoctorRow extends StatelessWidget {
 
   const _DoctorRow({required this.doctor, required this.onTap});
 
-  static const Color _primary = Color(0xFF0D6B6B);
+  static const Color _primary = Color(0xFF1F8A70);
 
   @override
   Widget build(BuildContext context) {

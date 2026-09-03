@@ -1,3 +1,4 @@
+// lib/screens/user_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../Services/admin_service.dart';
@@ -21,16 +22,42 @@ class UserListScreen extends StatefulWidget {
 class _UserListScreenState extends State<UserListScreen> {
   final AdminService _adminService = AdminService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final TextEditingController _searchController = TextEditingController();
+
   List<Map<String, dynamic>> _users = [];
+  List<Map<String, dynamic>> _filteredUsers = [];
   bool _isLoading = true;
 
-  static const Color primaryColor = Color(0xFF0D6B6B);
-  static const Color bgColor = Color(0xFFBDD8D8);
+  // Theme colors — matched to Admin Dashboard's green palette
+  static const Color primaryColor = Color(0xFF1F8A70);
+  static const Color bgColor = Color(0xFFF4F7F6);
 
   @override
   void initState() {
     super.initState();
     _loadUsers();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text.trim().toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredUsers = _users;
+      } else {
+        _filteredUsers = _users.where((user) {
+          final name = (user['name'] ?? '').toString().toLowerCase();
+          return name.contains(query);
+        }).toList();
+      }
+    });
   }
 
   Future<void> _loadUsers() async {
@@ -42,6 +69,12 @@ class _UserListScreenState extends State<UserListScreen> {
           .where('status', whereIn: ['active', 'inactive']).get();
       setState(() {
         _users = snap.docs.map((d) => d.data()).toList();
+        _filteredUsers = _searchController.text.trim().isEmpty
+            ? _users
+            : _users.where((user) {
+                final name = (user['name'] ?? '').toString().toLowerCase();
+                return name.contains(_searchController.text.trim().toLowerCase());
+              }).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -117,46 +150,95 @@ class _UserListScreenState extends State<UserListScreen> {
         backgroundColor: primaryColor,
         child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: primaryColor))
-          : _users.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(_roleIcon,
-                          size: 64, color: primaryColor.withOpacity(0.3)),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No ${widget.title} yet',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF6B7280),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search by name...',
+                  hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+                  prefixIcon: const Icon(Icons.search_rounded, color: primaryColor),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.close_rounded, color: Color(0xFF9CA3AF)),
+                          onPressed: () => _searchController.clear(),
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                : _filteredUsers.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _users.isEmpty ? _roleIcon : Icons.search_off_rounded,
+                              size: 64,
+                              color: primaryColor.withOpacity(0.3),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _users.isEmpty
+                                  ? 'No ${widget.title} yet'
+                                  : 'No results found',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF6B7280),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _users.isEmpty
+                                  ? 'Tap + to send an invite'
+                                  : 'Try a different name',
+                              style: const TextStyle(fontSize: 14, color: primaryColor),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadUsers,
+                        color: primaryColor,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                          itemCount: _filteredUsers.length,
+                          itemBuilder: (context, index) {
+                            return _UserCard(
+                              user: _filteredUsers[index],
+                              roleIcon: _roleIcon,
+                              onChanged: _loadUsers,
+                            );
+                          },
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Tap + to send an invite',
-                        style: TextStyle(fontSize: 14, color: primaryColor),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadUsers,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _users.length,
-                    itemBuilder: (context, index) {
-                      return _UserCard(
-                        user: _users[index],
-                        roleIcon: _roleIcon,
-                        onChanged: _loadUsers,
-                      );
-                    },
-                  ),
-                ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -166,7 +248,7 @@ class _UserCard extends StatefulWidget {
   final IconData roleIcon;
   final VoidCallback onChanged;
 
-  static const Color primaryColor = Color(0xFF0D6B6B);
+  static const Color primaryColor = Color(0xFF1F8A70);
 
   const _UserCard({
     required this.user,
@@ -179,7 +261,7 @@ class _UserCard extends StatefulWidget {
 }
 
 class _UserCardState extends State<_UserCard> {
-  static const Color primaryColor = Color(0xFF0D6B6B);
+  static const Color primaryColor = Color(0xFF1F8A70);
   bool _hasTimingSetting = false;
   String _startTime = '';
   String _endTime = '';
@@ -687,7 +769,6 @@ class _UserCardState extends State<_UserCard> {
                     Text(widget.user['phone'],
                         style: const TextStyle(
                             fontSize: 12, color: Color(0xFF6B7280))),
-                  // Timing info
                   if (isDoctor && _hasTimingSetting)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
@@ -758,7 +839,7 @@ class _UserCardState extends State<_UserCard> {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: isActive
-                        ? const Color(0xFFE0F0F0)
+                        ? const Color(0xFFDCEFE9)
                         : const Color(0xFFFCE8E6),
                     borderRadius: BorderRadius.circular(20),
                   ),
@@ -918,8 +999,8 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
   List<Map<String, dynamic>> _deletedUsers = [];
   bool _isLoading = true;
 
-  static const Color primaryColor = Color(0xFF0D6B6B);
-  static const Color bgColor = Color(0xFFBDD8D8);
+  static const Color primaryColor = Color(0xFF1F8A70);
+  static const Color bgColor = Color(0xFFF4F7F6);
 
   @override
   void initState() {

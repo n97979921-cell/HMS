@@ -17,8 +17,9 @@ class RoomsListScreen extends StatefulWidget {
 }
 
 class _RoomsListScreenState extends State<RoomsListScreen> {
-  static const Color _primary = Color(0xFF0D6E6E);
-  static const Color _bg = Color(0xFFF5F7FA);
+  // Theme colors — matched to Admin Dashboard's green palette
+  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   final _formKey = GlobalKey<FormState>();
   final _roomNumberController = TextEditingController();
@@ -90,7 +91,7 @@ class _RoomsListScreenState extends State<RoomsListScreen> {
               prefixIcon: Icon(Icons.meeting_room_outlined,
                   color: widget.roomTypeColor, size: 20),
               filled: true,
-              fillColor: const Color(0xFFF5F7FA),
+              fillColor: const Color(0xFFF4F7F6),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: Color(0xFFE5E7EB)),

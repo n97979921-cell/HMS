@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,6 +22,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 ///       agar appointment time guzar gaya
 ///       → status: NoShow | slot: rehne do (waqt guzar chuka, delete
 ///         ka faida nahi) | payment: HalfRefunded (refundPaid:false)
+///
+/// ✅ REAL-TIME (Rule 2): Data `slots` + `appointments` + `users` se
+/// milkar banta hai, is liye poori screen StreamBuilder mein convert
+/// NAHI ki. Iski jagah ek lightweight listener `appointments`
+/// collection ko sunta hai (status filter: Confirmed/CheckedIn — yehi
+/// do states is screen ke liye relevant hain). Naya booking ho, ya
+/// koi check-in kare, list khud-ba-khud dobara load ho jaati hai.
 class AppointmentsTodayScreen extends StatefulWidget {
   const AppointmentsTodayScreen({super.key});
 
@@ -37,10 +45,37 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
   int _autoProcessed = 0; // kitni expired process huin (info ke liye)
   List<Map<String, dynamic>> _appointments = [];
 
+  // Real-time listener — `appointments` collection ko sunta hai
+  // (status Confirmed/CheckedIn filter ke saath, kyunke sirf yehi
+  // states is screen ke liye relevant hain). Jab bhi kuch badle
+  // (naya booking, naya check-in, ya koi appointment in states se
+  // bahar nikle), _loadAndProcess() khud-ba-khud dobara chal jaata hai.
+  StreamSubscription<QuerySnapshot>? _appointmentsSub;
+
   @override
   void initState() {
     super.initState();
-    _loadAndProcess();
+    _setupRealtimeListener();
+  }
+
+  @override
+  void dispose() {
+    _appointmentsSub?.cancel();
+    super.dispose();
+  }
+
+  void _setupRealtimeListener() {
+    // Pehla event hi initial load ka kaam kar deta hai, is liye alag
+    // se _loadAndProcess() call karne ki zaroorat nahi.
+    _appointmentsSub = FirebaseFirestore.instance
+        .collection('appointments')
+        .where('status', whereIn: ['Confirmed', 'CheckedIn'])
+        .snapshots()
+        .listen((_) {
+      _loadAndProcess();
+    }, onError: (_) {
+      setState(() => _isLoading = false);
+    });
   }
 
   String _todayStr() {
@@ -177,6 +212,7 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
         return ad.compareTo(bd);
       });
 
+      if (!mounted) return;
       setState(() {
         _appointments = list;
         _isLoading = false;
@@ -191,6 +227,7 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
         ));
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       _showError('Error loading appointments: $e');
     }

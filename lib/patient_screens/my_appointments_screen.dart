@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,6 +21,13 @@ import 'feedback_screen.dart';
 ///    Priority: status=='Confirmed' (Doctor never started) → FULL
 ///    refund, patientJoinedAt irrelevant. status=='InProgress' +
 ///    patientJoinedAt==null → HALF refund.
+/// 5. ✅ REAL-TIME (Rule 2): Data kai collections (appointments +
+///    users + doctor_profiles + slots) se milkar banta hai, is liye
+///    poori screen StreamBuilder mein convert NAHI ki. Iski jagah ek
+///    lightweight listener sirf `appointments` collection ko sunta
+///    hai (patientId filter ke saath) aur jab bhi kuch badle, purana
+///    `_loadAppointments()` khud-ba-khud dobara call kar deta hai —
+///    poora load-logic bilkul waisa hi hai jaisa pehle tha.
 class MyAppointmentsScreen extends StatefulWidget {
   const MyAppointmentsScreen({super.key});
 
@@ -47,10 +55,42 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
   int _autoProcessed = 0;
   List<Map<String, dynamic>> _appointments = [];
 
+  // Real-time listener — sirf `appointments` collection ko sunta hai,
+  // taake jab bhi kuch badle (naya appointment, status change, waghera)
+  // to _loadAppointments() khud-ba-khud dobara chal jaye.
+  StreamSubscription<QuerySnapshot>? _appointmentsSub;
+
   @override
   void initState() {
     super.initState();
-    _loadAppointments();
+    _setupRealtimeListener();
+  }
+
+  @override
+  void dispose() {
+    _appointmentsSub?.cancel();
+    super.dispose();
+  }
+
+  void _setupRealtimeListener() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    // Is listener ka pehla event hi initial load ka kaam kar deta hai,
+    // is liye alag se _loadAppointments() call karne ki zaroorat nahi.
+    _appointmentsSub = FirebaseFirestore.instance
+        .collection('appointments')
+        .where('patientId', isEqualTo: uid)
+        .snapshots()
+        .listen((_) {
+      _loadAppointments();
+    }, onError: (_) {
+      // Agar listener error de (jaise offline), purana data hi dikhta rahe.
+      setState(() => _isLoading = false);
+    });
   }
 
   Future<void> _loadAppointments() async {
@@ -182,6 +222,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         return bDate.compareTo(aDate);
       });
 
+      if (!mounted) return;
       setState(() {
         _appointments = result;
         _isLoading = false;
@@ -196,6 +237,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         ));
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       _showError('Error loading appointments: $e');
     }
@@ -373,6 +415,10 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
       });
 
       _showSuccess('Appointment cancelled');
+      // Real-time listener khud-ba-khud _loadAppointments() call kar
+      // dega jab Firestore mein change reflect hoga — manual call ki
+      // zaroorat nahi, lekin turant feel dene ke liye yahan bhi rakh
+      // sakte hain, koi nuqsan nahi.
       _loadAppointments();
     } catch (e) {
       _showError('Error cancelling: $e');

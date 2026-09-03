@@ -42,7 +42,9 @@ class _InviteSignupScreenState extends State<InviteSignupScreen> {
   Map<String, dynamic>? _inviteData; // validated invite ka data
   String? _errorMessage; // invalid/expired link ka message
 
-  static const Color _primary = Color(0xFF0D6B6B);
+  // Theme colors — matched to Admin Dashboard's green palette
+  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   @override
   void initState() {
@@ -164,7 +166,7 @@ class _InviteSignupScreenState extends State<InviteSignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFBDD8D8),
+      backgroundColor: _bg,
       appBar: AppBar(
         backgroundColor: _primary,
         elevation: 0,

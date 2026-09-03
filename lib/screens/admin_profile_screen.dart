@@ -10,8 +10,8 @@ class AdminProfileScreen extends StatefulWidget {
 }
 
 class _AdminProfileScreenState extends State<AdminProfileScreen> {
-  static const Color _primary = Color(0xFF0D6B6B);
-  static const Color _bg = Color(0xFFF5F7FA);
+  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -521,7 +521,7 @@ class _ChangePasswordSheet extends StatefulWidget {
 }
 
 class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
-  static const Color _primary = Color(0xFF0D6B6B);
+  static const Color _primary = Color(0xFF1F8A70);
 
   final _formKey = GlobalKey<FormState>();
   final _currentPasswordController = TextEditingController();

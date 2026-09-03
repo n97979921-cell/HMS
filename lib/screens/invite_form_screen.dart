@@ -1,3 +1,4 @@
+// lib/screens/invite_form_screen.dart
 import 'package:flutter/material.dart';
 import '../Services/invite_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -157,7 +158,7 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F7FA),
+                color: const Color(0xFFF4F7F6),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Column(
@@ -229,7 +230,7 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF4F7F6),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,

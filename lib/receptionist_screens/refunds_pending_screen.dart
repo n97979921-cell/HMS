@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,6 +13,13 @@ import '../services/notification_service.dart';
 ///
 /// - Refunded     = full refund dena hai
 /// - HalfRefunded = aadha refund dena hai (NoShow)
+///
+/// ✅ REAL-TIME (Rule 2): Data `payments` + `users` (patient naam) se
+/// milkar banta hai, is liye poori screen StreamBuilder mein convert
+/// NAHI ki. Iski jagah ek lightweight listener `payments` collection
+/// ko sunta hai (status Refunded/HalfRefunded + refundPaid == false
+/// filter ke saath). Naya refund-to-process aate hi list turant
+/// update ho jaati hai.
 class RefundsPendingScreen extends StatefulWidget {
   const RefundsPendingScreen({super.key});
 
@@ -27,10 +34,35 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _refunds = [];
 
+  // Real-time listener — `payments` collection ko sunta hai (status
+  // Refunded/HalfRefunded + refundPaid == false filter ke saath).
+  StreamSubscription<QuerySnapshot>? _paymentsSub;
+
   @override
   void initState() {
     super.initState();
-    _loadRefunds();
+    _setupRealtimeListener();
+  }
+
+  @override
+  void dispose() {
+    _paymentsSub?.cancel();
+    super.dispose();
+  }
+
+  void _setupRealtimeListener() {
+    // Pehla event hi initial load ka kaam kar deta hai, is liye alag
+    // se _loadRefunds() call karne ki zaroorat nahi.
+    _paymentsSub = FirebaseFirestore.instance
+        .collection('payments')
+        .where('status', whereIn: ['Refunded', 'HalfRefunded'])
+        .where('refundPaid', isEqualTo: false)
+        .snapshots()
+        .listen((_) {
+      _loadRefunds();
+    }, onError: (_) {
+      setState(() => _isLoading = false);
+    });
   }
 
   Future<void> _loadRefunds() async {
@@ -117,11 +149,13 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
         });
       }
 
+      if (!mounted) return;
       setState(() {
         _refunds = result;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       _showError('Error loading refunds: $e');
     }

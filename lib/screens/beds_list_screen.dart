@@ -20,7 +20,7 @@ class BedsListScreen extends StatefulWidget {
 }
 
 class _BedsListScreenState extends State<BedsListScreen> {
-  static const Color _bg = Color(0xFFF5F7FA);
+  static const Color _bg = Color(0xFFF4F7F6);
 
   bool _isAdding = false;
 
