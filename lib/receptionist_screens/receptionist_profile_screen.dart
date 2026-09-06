@@ -19,6 +19,7 @@ class _ReceptionistProfileScreenState extends State<ReceptionistProfileScreen> {
   static const Color _primary = Color(0xFF1F8A70);
   static const Color _primaryDark = Color(0xFF0D6B5A);
   static const Color _bg = Color(0xFFF4F7F6);
+  static const Color _error = Color(0xFFD9534F);
 
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -156,6 +157,12 @@ class _ReceptionistProfileScreenState extends State<ReceptionistProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _buildAvatarHeader(),
+                        const SizedBox(height: 16),
+                        // ── LOGOUT — moved up (right after avatar header,
+                        // above Personal Information) and made prominent:
+                        // filled red card with icon chip + shadow, instead
+                        // of the plain outlined button it used to be.
+                        _buildLogoutButton(),
                         const SizedBox(height: 24),
                         const Text('PERSONAL INFORMATION',
                             style: TextStyle(
@@ -250,31 +257,62 @@ class _ReceptionistProfileScreenState extends State<ReceptionistProfileScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 50,
-                          child: OutlinedButton.icon(
-                            onPressed: _logout,
-                            icon: const Icon(Icons.logout,
-                                color: Color(0xFFD9534F), size: 20),
-                            label: const Text('Log Out',
-                                style: TextStyle(
-                                    color: Color(0xFFD9534F),
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600)),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFFD9534F)),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14)),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
                 ),
               ),
             ),
+    );
+  }
+
+  // Prominent logout button — same _logout() call as before, only
+  // visual treatment upgraded (filled red card, icon chip, shadow)
+  // and moved higher up on the page.
+  Widget _buildLogoutButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _logout,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: _error,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: _error.withValues(alpha: 0.35),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.logout, color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Log Out',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

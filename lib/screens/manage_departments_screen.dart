@@ -243,36 +243,18 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
                                     ],
                                   ),
                                 ),
-                                // Purana PopupMenuButton (3 dots) hata kar
-                                // seedha "Edit" button lagaya — baaqi admin
-                                // screens ke pattern se match karne ke liye.
-                                GestureDetector(
-                                  onTap: () => _showEditDialog(dept),
-                                  child: Container(
+                                // Edit button — matched to Manage Prices' solid style
+                                ElevatedButton(
+                                  onPressed: () => _showEditDialog(dept),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10)),
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: primaryColor.withOpacity(0.1),
-                                      borderRadius:
-                                          BorderRadius.circular(10),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.edit_rounded,
-                                            color: primaryColor, size: 16),
-                                        SizedBox(width: 6),
-                                        Text(
-                                          'Edit',
-                                          style: TextStyle(
-                                            color: primaryColor,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                        horizontal: 16, vertical: 10),
                                   ),
+                                  child: const Text('Edit',
+                                      style: TextStyle(color: Colors.white)),
                                 ),
                               ],
                             ),

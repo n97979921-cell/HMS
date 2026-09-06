@@ -12,10 +12,10 @@ import '../widgets/notification_bell_icon.dart';
 
 /// RECEPTIONIST DASHBOARD — professional layout
 ///
-/// Header (gradient, name + bell + profile) → compact stat-chip row
-/// (Pending / Today / Refunds) → 2x2 quick-action grid (Verify, Check-in,
-/// Walk-in, Lab Payments) → 2 full-width cards (Admissions, Pending
-/// Refunds), consistent style — no mismatched card shapes.
+/// Header (gradient, name + bell) → compact stat-chip row
+/// (Pending / Today / Refunds) → 2-item quick-action grid (Walk-in,
+/// Lab Payments) → 2 full-width cards (Admissions, Pending
+/// Refunds) → bottom nav bar (Home, Appointments, Payments, Profile).
 class ReceptionistDashboardScreen extends StatefulWidget {
   const ReceptionistDashboardScreen({super.key});
 
@@ -35,6 +35,8 @@ class _ReceptionistDashboardScreenState
   int _pendingPayments = 0;
   int _todayAppointments = 0;
   int _pendingRefunds = 0;
+
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -152,6 +154,7 @@ class _ReceptionistDashboardScreenState
           ),
         ),
       ),
+      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -201,31 +204,6 @@ class _ReceptionistDashboardScreenState
             iconColor: Colors.white,
             backgroundColor: Color(0x26FFFFFF),
             size: 20,
-          ),
-
-          const SizedBox(width: 10),
-
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ReceptionistProfileScreen(),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.person_outline,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
           ),
         ],
       ),
@@ -305,39 +283,6 @@ class _ReceptionistDashboardScreenState
       crossAxisSpacing: 10,
       childAspectRatio: 1.05,
       children: [
-        _gridCard(
-          icon: Icons.payments_outlined,
-          iconBg: const Color(0xFFFCEFD8),
-          iconColor: const Color(0xFFB8860B),
-          title: 'Verify payments',
-          subtitle: 'Confirm bookings',
-          badge: _pendingPayments,
-          onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const VerifyPaymentsScreen(),
-              ),
-            );
-            _loadData();
-          },
-        ),
-        _gridCard(
-          icon: Icons.event_note_outlined,
-          iconBg: const Color(0xFFDCEFE9),
-          iconColor: _primary,
-          title: 'Appointments',
-          subtitle: 'Check-in patients',
-          onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const AppointmentsTodayScreen(),
-              ),
-            );
-            _loadData();
-          },
-        ),
         _gridCard(
           icon: Icons.person_add_alt_1_outlined,
           iconBg: const Color(0xFFEAE3F7),
@@ -556,6 +501,51 @@ class _ReceptionistDashboardScreenState
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildBottomNav() {
+    return BottomNavigationBar(
+      currentIndex: _selectedIndex,
+      selectedItemColor: _primary,
+      unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed,
+      onTap: (index) async {
+        if (index == 0) {
+          setState(() => _selectedIndex = 0);
+          return;
+        }
+        if (index == 1) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AppointmentsTodayScreen(),
+            ),
+          );
+        } else if (index == 2) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const VerifyPaymentsScreen(),
+            ),
+          );
+        } else if (index == 3) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const ReceptionistProfileScreen(),
+            ),
+          );
+        }
+        setState(() => _selectedIndex = 0);
+        _loadData();
+      },
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+        BottomNavigationBarItem(icon: Icon(Icons.event_note_outlined), label: 'Appointments'),
+        BottomNavigationBarItem(icon: Icon(Icons.payments_outlined), label: 'Payments'),
+        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+      ],
     );
   }
 }

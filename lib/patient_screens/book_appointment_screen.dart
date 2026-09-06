@@ -13,6 +13,9 @@ import 'payment_upload_screen.dart';
 ///    lekin transaction naya rate charge karti thi — mismatch)
 /// 3. Fee ab PER-DOCTOR hai (doctor_consultation_fees), department-wide
 ///     nahi — dono jagah update kiya.
+/// 4. IN_PERSON notice: agar appointmentType == 'IN_PERSON' hai to ek
+///    simple banner dikhta hai jo patient ko batata hai ke appointment
+///    time se 10 min pehle pohanchna hai, warna cancellation ho sakti hai.
 class BookAppointmentScreen extends StatefulWidget {
   final String doctorId;
   final String doctorName;
@@ -469,6 +472,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildDoctorCard(),
+                          // ── IN_PERSON ARRIVAL NOTICE ──
+                          // Sirf in-clinic (IN_PERSON) appointments ke
+                          // liye — video call ke liye "arrive" ka
+                          // concept nahi banta, is liye wahan nahi dikhta.
+                          if (widget.appointmentType == 'IN_PERSON') ...[
+                            const SizedBox(height: 14),
+                            _buildArrivalNotice(),
+                          ],
                           const SizedBox(height: 20),
                           const Text('Select date',
                               style: TextStyle(
@@ -592,6 +603,40 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           Text(
             '${widget.specialization} - ${widget.appointmentType == 'VIDEO_CALL' ? 'Video consult' : 'In-clinic visit'}',
             style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Simple, plain-English notice — only shown for IN_PERSON bookings.
+  // Purely informational; does not affect booking logic in any way.
+  Widget _buildArrivalNotice() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFCEFD8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFB8860B).withOpacity(0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.access_time_filled_rounded,
+              color: Color(0xFFB8860B), size: 20),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Please arrive 10 minutes before your appointment time. '
+              'Arriving late may result in your appointment being cancelled.',
+              style: TextStyle(
+                fontSize: 12.5,
+                color: Color(0xFF6B4E00),
+                height: 1.4,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),

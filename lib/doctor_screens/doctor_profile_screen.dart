@@ -210,47 +210,29 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ── Header ab Admin Profile jaisa standard AppBar hai (pehle
+    // custom gradient Container tha, sirf back-button + "Profile"
+    // text ke sath). Baaqi sab (logout button, uski jagah, poora
+    // baaqi UI) bilkul waisa hi hai.
     return Scaffold(
       backgroundColor: _ProfileColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(child: _buildBody()),
-          ],
+      appBar: AppBar(
+        backgroundColor: _ProfileColors.primary,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 16, 20, 24),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_ProfileColors.primary, _ProfileColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+        title: const Text(
+          'My Profile',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
           ),
-          const Text(
-            'Profile',
-            style: TextStyle(
-                color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-        ],
+        ),
       ),
+      body: SafeArea(child: _buildBody()),
     );
   }
 
@@ -346,6 +328,11 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 20),
+          // ── LOGOUT — moved up (right after profile summary) and made
+          // more prominent: bigger tap target, bold label, soft red
+          // shadow, and a circular icon chip instead of a plain icon.
+          _buildLogoutButton(),
           const SizedBox(height: 24),
           _sectionCard('Contact Information', [
             _infoRow(Icons.email_outlined, 'Email', profile.email),
@@ -389,22 +376,57 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _confirmLogout,
-              icon: const Icon(Icons.logout, color: Colors.white),
-              label:
-                  const Text('Logout', style: TextStyle(color: Colors.white)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _ProfileColors.error,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)),
-              ),
-            ),
-          ),
         ],
+      ),
+    );
+  }
+
+  // Prominent logout button — same _confirmLogout() call as before,
+  // only visual treatment upgraded (bigger, bolder, soft shadow, icon
+  // chip) and moved higher up in the page.
+  Widget _buildLogoutButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _confirmLogout,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: _ProfileColors.error,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: _ProfileColors.error.withOpacity(0.35),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.logout, color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Logout',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

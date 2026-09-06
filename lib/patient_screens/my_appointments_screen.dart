@@ -29,6 +29,9 @@ import 'patient_profile_screen.dart';
 ///    hai (patientId filter ke saath) aur jab bhi kuch badle, purana
 ///    `_loadAppointments()` khud-ba-khud dobara call kar deta hai —
 ///    poora load-logic bilkul waisa hi hai jaisa pehle tha.
+/// 6. NAYA — IN_PERSON ARRIVAL REMINDER: upcoming (Requested/Confirmed)
+///    in-clinic appointment cards par ek chhota reminder banner —
+///    patient ko yaad dilata hai ke 10 min pehle pohanchna hai.
 class MyAppointmentsScreen extends StatefulWidget {
   const MyAppointmentsScreen({super.key});
 
@@ -578,6 +581,11 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     final canCancel =
         appt['status'] == 'Requested' || appt['status'] == 'Confirmed';
     final isCompleted = appt['status'] == 'Completed';
+    // Reminder sirf in-clinic + abhi tak upcoming (cancel ho sakne
+    // wali) appointments par dikhta hai — completed/cancelled/noshow
+    // purani appointments par bewajah nahi.
+    final showArrivalReminder =
+        appt['appointmentType'] == 'IN_PERSON' && canCancel;
 
     return GestureDetector(
       onTap: () async {
@@ -663,6 +671,10 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                 ),
               ],
             ),
+            if (showArrivalReminder) ...[
+              const SizedBox(height: 10),
+              _buildArrivalReminder(),
+            ],
             if (canCancel) ...[
               const SizedBox(height: 10),
               const Divider(height: 1),
@@ -735,6 +747,39 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  // Simple, plain-English reminder — only shown on upcoming IN_PERSON
+  // appointment cards. Purely informational, no logic attached.
+  Widget _buildArrivalReminder() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFCEFD8),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFB8860B).withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.access_time_filled_rounded,
+              color: Color(0xFFB8860B), size: 16),
+          const SizedBox(width: 8),
+          const Expanded(
+            child: Text(
+              'Please arrive 10 minutes early, or your appointment may be cancelled.',
+              style: TextStyle(
+                fontSize: 11.5,
+                color: Color(0xFF6B4E00),
+                height: 1.3,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
