@@ -80,6 +80,7 @@ class _AssignBedScreenState extends State<AssignBedScreen> {
           return {
             'bedId': d.id,
             'roomNumber': roomNumberById[data['roomId']] ?? '',
+            'bedNumber': data['bedNumber'] ?? '',
             'pricePerHour': data['pricePerHour'] ?? 0,
           };
         }).toList();

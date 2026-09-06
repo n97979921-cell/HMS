@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/notification_service.dart';
+import 'package:flutter/services.dart';
 
 /// WALK-IN PATIENT SCREEN (Receptionist) — Phase 3
 ///
@@ -15,6 +16,33 @@ import '../services/notification_service.dart';
 ///  - Walk-in sirf AAJ ke slots par book hota hai (door-future nahi)
 ///  - "Booked" = cash li ja chuki (payment record Paid/Cash foran banta hai)
 ///  - Baad me appointment time par check-in na ho → HalfRefunded (Phase 4)
+// CNIC ko type karte waqt auto-format karta hai: 12345-1234567-1
+class _CnicInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    String digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length > 13) digits = digits.substring(0, 13);
+
+    String formatted = '';
+    for (int i = 0; i < digits.length; i++) {
+      if (i == 5 || i == 12) formatted += '-';
+      formatted += digits[i];
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+// CNIC valid hai ya nahi — dashes hata kar sirf digits count karo
+bool _isValidCnic(String value) {
+  final digits = value.replaceAll('-', '');
+  return RegExp(r'^\d{13}$').hasMatch(digits);
+}
+
 class WalkInScreen extends StatefulWidget {
   const WalkInScreen({super.key});
 
@@ -75,6 +103,10 @@ class _WalkInScreenState extends State<WalkInScreen> {
     final query = _searchController.text.trim();
     if (query.isEmpty) {
       _showError('Enter CNIC');
+      return;
+    }
+    if (!_isValidCnic(query)) {
+      _showError('Enter a valid 13-digit CNIC (e.g. 12345-1234567-1)');
       return;
     }
     setState(() => _isSearching = true);
@@ -530,8 +562,9 @@ class _WalkInScreenState extends State<WalkInScreen> {
         TextField(
           controller: _searchController,
           keyboardType: TextInputType.number,
+          inputFormatters: [_CnicInputFormatter()],
           decoration: InputDecoration(
-            hintText: 'CNIC (e.g. 3520212345671)',
+            hintText: 'CNIC (e.g. 12345-1234567-1)',
             prefixIcon: const Icon(Icons.search, color: _primary),
             filled: true,
             fillColor: Colors.white,
@@ -590,14 +623,14 @@ class _WalkInScreenState extends State<WalkInScreen> {
               keyboardType: TextInputType.phone,
               validator: (v) => v!.trim().isEmpty ? 'Phone required' : null),
           const SizedBox(height: 12),
-          _regField(_cnicController, 'CNIC', Icons.badge_outlined,
+          _regField(_cnicController, 'CNIC (e.g. 12345-1234567-1)',
+              Icons.badge_outlined,
               keyboardType: TextInputType.number,
-              validator: (v) => v!.trim().isEmpty ? 'CNIC required' : null),
-          const SizedBox(height: 12),
-          _regField(_ageController, 'Age', Icons.cake_outlined,
-              keyboardType: TextInputType.number, validator: (v) {
-            final age = int.tryParse(v!.trim());
-            if (age == null || age <= 0 || age > 120) return 'Valid age';
+              inputFormatters: [_CnicInputFormatter()], validator: (v) {
+            if (v == null || v.trim().isEmpty) return 'CNIC required';
+            if (!_isValidCnic(v.trim())) {
+              return 'Enter a valid 13-digit CNIC';
+            }
             return null;
           }),
           const SizedBox(height: 12),
@@ -648,11 +681,14 @@ class _WalkInScreenState extends State<WalkInScreen> {
   }
 
   Widget _regField(TextEditingController controller, String hint, IconData icon,
-      {TextInputType? keyboardType, String? Function(String?)? validator}) {
+      {TextInputType? keyboardType,
+      String? Function(String?)? validator,
+      List<TextInputFormatter>? inputFormatters}) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Icon(icon, color: _primary, size: 20),

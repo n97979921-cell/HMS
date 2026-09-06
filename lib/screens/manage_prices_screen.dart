@@ -805,4 +805,3 @@ class _ManageTestPricesScreenState extends State<ManageTestPricesScreen> {
     );
   }
 }
-

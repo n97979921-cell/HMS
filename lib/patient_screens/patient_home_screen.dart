@@ -52,8 +52,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       final apptSnap = await FirebaseFirestore.instance
           .collection('appointments')
           .where('patientId', isEqualTo: uid)
-          .where('status', whereIn: ['Requested', 'Confirmed'])
-          .get();
+          .where('status', whereIn: ['Requested', 'Confirmed']).get();
 
       Map<String, dynamic>? soonest;
       DateTime? soonestTime;
@@ -111,31 +110,31 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         final rating = (data['rating'] ?? 0) as num;
 
         if (doctorId != null) {
-          ratingsByDoctor
-              .putIfAbsent(doctorId, () => [])
-              .add(rating.toInt());
+          ratingsByDoctor.putIfAbsent(doctorId, () => []).add(rating.toInt());
         }
       }
 
       final List<Map<String, dynamic>> doctorRatings = [];
 
       for (final entry in ratingsByDoctor.entries) {
-        final avg =
-            entry.value.reduce((a, b) => a + b) / entry.value.length;
+        final avg = entry.value.reduce((a, b) => a + b) / entry.value.length;
 
         doctorRatings.add({
           'doctorId': entry.key,
           'avgRating': avg,
+          'reviewCount': entry.value.length,
         });
       }
 
       doctorRatings.sort(
-        (a, b) => (b['avgRating'] as double)
-            .compareTo(a['avgRating'] as double),
+        (a, b) =>
+            (b['avgRating'] as double).compareTo(a['avgRating'] as double),
       );
 
       final topRated = doctorRatings
-          .where((d) => (d['avgRating'] as double) >= 4.7)
+          .where((d) =>
+              (d['avgRating'] as double) >= 4.7 &&
+              (d['reviewCount'] as int) >= 5)
           .toList();
 
       final List<Map<String, dynamic>> resolvedTopDoctors = [];
@@ -154,15 +153,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         String specialization = '';
 
         if (profileDoc.exists) {
-          specialization =
-              profileDoc.data()?['specialization'] ?? '';
+          specialization = profileDoc.data()?['specialization'] ?? '';
         }
 
         resolvedTopDoctors.add({
           'name': doctorDoc.data()?['name'] ?? 'Doctor',
           'specialty': specialization,
-          'rating':
-              (entry['avgRating'] as double).toStringAsFixed(1),
+          'rating': (entry['avgRating'] as double).toStringAsFixed(1),
         });
       }
 
@@ -202,8 +199,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
     if (apptDay == today) {
       return 'Today, $timeLabel';
-    } else if (apptDay ==
-        today.add(const Duration(days: 1))) {
+    } else if (apptDay == today.add(const Duration(days: 1))) {
       return 'Tomorrow, $timeLabel';
     } else {
       return '${DateFormat('d MMM').format(dt)}, $timeLabel';
@@ -241,15 +237,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 onRefresh: _loadHomeData,
                 color: _primary,
                 child: SingleChildScrollView(
-                  physics:
-                      const AlwaysScrollableScrollPhysics(),
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 18,
                     vertical: 16,
                   ),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildGreetingCard(),
                       const SizedBox(height: 16),
@@ -310,8 +304,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Hello,',
@@ -366,8 +359,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         ],
       ),
       child: Row(
-        mainAxisAlignment:
-            MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Text(
             'Need assistance?',
@@ -412,8 +404,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   }
 
   Widget _buildAppointmentCard() {
-    final dt =
-        _nextAppointment!['dateTime'] as DateTime;
+    final dt = _nextAppointment!['dateTime'] as DateTime;
 
     return Container(
       width: double.infinity,
@@ -449,8 +440,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
                   'Next appointment',
@@ -506,8 +496,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
-      physics:
-          const NeverScrollableScrollPhysics(),
+      physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
       childAspectRatio: 1.5,
@@ -521,8 +510,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    const DepartmentListScreen(
+                builder: (_) => const DepartmentListScreen(
                   appointmentType: 'VIDEO_CALL',
                 ),
               ),
@@ -538,8 +526,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    const DepartmentListScreen(
+                builder: (_) => const DepartmentListScreen(
                   appointmentType: 'IN_PERSON',
                 ),
               ),
@@ -555,8 +542,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    const LabReportsScreen(),
+                builder: (_) => const LabReportsScreen(),
               ),
             );
           },
@@ -570,8 +556,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    const PrescriptionsScreen(),
+                builder: (_) => const PrescriptionsScreen(),
               ),
             );
           },
@@ -596,8 +581,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
               icon,
@@ -653,8 +637,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             ),
             const SizedBox(width: 10),
             const Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Billing',
@@ -685,8 +668,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _topDoctors.length,
-        separatorBuilder: (_, __) =>
-            const SizedBox(width: 12),
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (ctx, i) {
           final doc = _topDoctors[i];
 
@@ -705,13 +687,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               ],
             ),
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
                   radius: 22,
-                  backgroundColor:
-                      _primary.withOpacity(0.15),
+                  backgroundColor: _primary.withOpacity(0.15),
                   child: const Icon(
                     Icons.person,
                     color: _primary,
@@ -727,8 +707,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     color: Color(0xFF1A2F3A),
                   ),
                   maxLines: 1,
-                  overflow:
-                      TextOverflow.ellipsis,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   doc['specialty'],
@@ -737,8 +716,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     color: Colors.black54,
                   ),
                   maxLines: 1,
-                  overflow:
-                      TextOverflow.ellipsis,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -774,16 +752,14 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  const MyAppointmentsScreen(),
+              builder: (_) => const MyAppointmentsScreen(),
             ),
           );
         } else if (index == 2) {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  const PatientProfileScreen(),
+              builder: (_) => const PatientProfileScreen(),
             ),
           );
         } else {
