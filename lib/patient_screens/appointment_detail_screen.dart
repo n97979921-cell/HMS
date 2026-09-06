@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 
 /// PATIENT — APPOINTMENT DETAIL SCREEN
 /// (lib/patient_screens/appointment_detail_screen.dart)
@@ -36,11 +37,32 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   Map<String, dynamic>? _appt;
   Map<String, dynamic>? _slot;
   String _doctorName = '';
-
+  StreamSubscription<DocumentSnapshot>? _apptSub;
   @override
   void initState() {
     super.initState();
     _load();
+    _listenToAppointment();
+  }
+
+  // Real-time listener — sirf is appointment document ko sunta hai.
+  // Doctor koi action le (Start/Complete/NoShow), yahan turant
+  // reflect ho jayega — patient ko manually refresh nahi karna padega.
+  void _listenToAppointment() {
+    _apptSub = FirebaseFirestore.instance
+        .collection('appointments')
+        .doc(widget.appointmentId)
+        .snapshots()
+        .listen((doc) {
+      if (!mounted || !doc.exists) return;
+      setState(() => _appt = doc.data());
+    });
+  }
+
+  @override
+  void dispose() {
+    _apptSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -80,7 +102,11 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   bool get _isVideoCall => _appt?['appointmentType'] == 'VIDEO_CALL';
   bool get _isInProgress => _appt?['status'] == 'InProgress';
 
-  // Slot-time se 5 min pehle se allow
+  // Patient pehle ek dafa join kar chuka — matlab yeh ab rejoin hai.
+  bool get _hasJoinedBefore => _appt?['patientJoinedAt'] != null;
+
+  // SIRF pehli baar join karne ke liye window: slot-time se 5 min
+  // pehle se 5 min baad tak. Rejoin par yeh window lagu NAHI hoti.
   bool get _isWithinJoinWindow {
     if (_slot == null) return false;
     try {
@@ -89,10 +115,20 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       final slotDt = DateTime(date.year, date.month, date.day,
           int.parse(timeParts[0]), int.parse(timeParts[1]));
       final windowStart = slotDt.subtract(const Duration(minutes: 5));
-      return DateTime.now().isAfter(windowStart);
+      final windowEnd = slotDt.add(const Duration(minutes: 5));
+      final now = DateTime.now();
+      return now.isAfter(windowStart) && now.isBefore(windowEnd);
     } catch (_) {
       return false;
     }
+  }
+
+  // Final decision: agar patient pehle join kar chuka hai aur
+  // consultation abhi InProgress hai → rejoin hamesha allowed
+  // (koi window nahi). Warna sirf window ke andar.
+  bool get _canJoinNow {
+    if (_isInProgress && _hasJoinedBefore) return true;
+    return _isWithinJoinWindow;
   }
 
   // ── APNI DETAILS (Doctor wali file jaisi hi honi chahiye) ──
@@ -195,7 +231,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 
     // Confirmed YA InProgress — patient apna independent 5-min window
     // follow karta hai, doctor ke start karne ka intezaar nahi karta.
-    final canJoin = _isWithinJoinWindow;
+    final canJoin = _canJoinNow;
     return Container(
       margin: const EdgeInsets.only(top: 16),
       child: Column(

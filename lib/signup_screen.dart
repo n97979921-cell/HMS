@@ -124,8 +124,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (result['isNewUser'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-                'Signed in with Google! Please complete your profile.'),
+            content:
+                Text('Signed in with Google! Please complete your profile.'),
             backgroundColor: Color(0xFF1F8A70),
           ),
         );
@@ -220,7 +220,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         style: TextStyle(color: Colors.black54, fontSize: 13),
                       ),
                       const SizedBox(height: 20),
-
                       const _FieldLabel('Full Name'),
                       const SizedBox(height: 6),
                       _field(_nameController, 'Enter your full name',
@@ -232,7 +231,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       }),
                       const SizedBox(height: 14),
-
                       const _FieldLabel('Email Address'),
                       const SizedBox(height: 6),
                       _field(_emailController, 'name@example.com',
@@ -244,11 +242,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       }),
                       const SizedBox(height: 14),
-
                       const _FieldLabel('Password'),
                       const SizedBox(height: 6),
-                      _field(
-                          _passwordController, 'Create a password', Icons.lock_outline,
+                      _field(_passwordController, 'Create a password',
+                          Icons.lock_outline,
                           obscureText: _obscurePassword,
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -268,7 +265,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       }),
                       const SizedBox(height: 14),
-
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -278,8 +274,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               children: [
                                 const _FieldLabel('Age'),
                                 const SizedBox(height: 6),
-                                _field(_ageController, 'Age',
-                                    Icons.cake_outlined,
+                                _field(
+                                    _ageController, 'Age', Icons.cake_outlined,
                                     keyboardType: TextInputType.number,
                                     validator: (v) {
                                   if (v == null || v.isEmpty) {
@@ -305,11 +301,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     Icons.phone_outlined,
                                     keyboardType: TextInputType.phone,
                                     validator: (v) {
-                                  if (v == null || v.isEmpty) {
+                                  if (v == null || v.isEmpty)
                                     return 'Phone required';
-                                  }
-                                  if (v.length < 10) {
-                                    return 'Enter valid phone number';
+                                  final digitsOnly = v.replaceAll('-', '');
+                                  if (!RegExp(r'^03\d{9}$')
+                                      .hasMatch(digitsOnly)) {
+                                    return 'Enter valid Pakistani number (03XXXXXXXXX)';
                                   }
                                   return null;
                                 }),
@@ -319,7 +316,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ],
                       ),
                       const SizedBox(height: 14),
-
                       const _FieldLabel('CNIC'),
                       const SizedBox(height: 6),
                       _field(_cnicController, 'XXXXX-XXXXXXX-X',
@@ -337,7 +333,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       }),
                       const SizedBox(height: 14),
-
                       const _FieldLabel('Gender'),
                       const SizedBox(height: 6),
                       DropdownButtonFormField<String>(
@@ -346,8 +341,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             v == null ? 'Please select gender' : null,
                         decoration: InputDecoration(
                           hintText: 'Select gender',
-                          hintStyle: const TextStyle(
-                              color: Colors.grey, fontSize: 14),
+                          hintStyle:
+                              const TextStyle(color: Colors.grey, fontSize: 14),
                           prefixIcon: const Icon(Icons.person_pin_outlined,
                               color: _teal, size: 20),
                           filled: true,
@@ -379,8 +374,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               vertical: 16, horizontal: 16),
                         ),
                         items: const [
-                          DropdownMenuItem(
-                              value: 'Male', child: Text('Male')),
+                          DropdownMenuItem(value: 'Male', child: Text('Male')),
                           DropdownMenuItem(
                               value: 'Female', child: Text('Female')),
                           DropdownMenuItem(
@@ -389,7 +383,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         onChanged: (v) => setState(() => _selectedGender = v),
                       ),
                       const SizedBox(height: 22),
-
                       SizedBox(
                         width: double.infinity,
                         height: 54,
@@ -420,10 +413,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-
                       const _OrDivider(),
                       const SizedBox(height: 20),
-
                       _GoogleButton(
                         isLoading: _isGoogleLoading,
                         onPressed:

@@ -4,6 +4,7 @@ import 'doctor_repository.dart';
 import 'lab_test_status.dart';
 import 'lab_test_list_item.dart';
 import 'report_detail_screen.dart';
+import 'doctor_profile_screen.dart';
 
 class _LabColors {
   static const primary = Color(0xFF1F8A70);
@@ -323,7 +324,20 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
       unselectedItemColor: _LabColors.textMuted,
       type: BottomNavigationBarType.fixed,
       onTap: (index) {
-        if (index == 0) Navigator.pop(context);
+        if (index == 0) {
+          Navigator.pop(context);
+        } else if (index == 2) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DoctorProfileScreen(
+                repository: widget.repository,
+                doctorId: widget.doctorId,
+              ),
+            ),
+          );
+        }
+        // index == 1 → already yahin hain, kuch mat karo
       },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),

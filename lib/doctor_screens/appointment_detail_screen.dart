@@ -112,11 +112,12 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   /// string, jaise "15:00") — is liye dateLabel se date parse karke
   /// poora DateTime banate hain. Agar parse fail ho (unlikely), fail-open
   /// karte hain (button active rakhte hain) taake doctor block na ho.
-  bool get _isWithinJoinWindow {
+  // Slot-time nikalne ka helper — dono naye getters is par depend karte
+  // hain, is liye alag nikal liya (pehle _isWithinJoinWindow ke andar
+  // hi tha).
+  DateTime? get _slotDateTime {
     try {
       final timeParts = widget.appointment.slotTime.split(':');
-      // dateLabel format: "10 Aug 2026" — parse karo asal appointment
-      // date nikalne ke liye, "aaj" assume mat karo.
       final dateParts = widget.dateLabel.split(' ');
       const months = {
         'Jan': 1,
@@ -135,15 +136,31 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       final day = int.parse(dateParts[0]);
       final month = months[dateParts[1]]!;
       final year = int.parse(dateParts[2]);
-
-      final slotDateTime = DateTime(
+      return DateTime(
           year, month, day, int.parse(timeParts[0]), int.parse(timeParts[1]));
-      final now = DateTime.now();
-      final windowStart = slotDateTime.subtract(const Duration(minutes: 5));
-      return now.isAfter(windowStart);
     } catch (_) {
-      return true; // fail-open
+      return null;
     }
+  }
+
+  // Doctor ka "Start Consultation" — sirf pehli baar ke liye window:
+  // slot-time se 5 min pehle se 5 min baad tak.
+  bool get _isWithinJoinWindow {
+    final slotDateTime = _slotDateTime;
+    if (slotDateTime == null) return true; // fail-open
+    final now = DateTime.now();
+    final windowStart = slotDateTime.subtract(const Duration(minutes: 5));
+    final windowEnd = slotDateTime.add(const Duration(minutes: 5));
+    return now.isAfter(windowStart) && now.isBefore(windowEnd);
+  }
+
+  // "Patient Didn't Join" button — sirf window guzarne ke BAAD enable,
+  // taake doctor jaldi mein ghalat na dabaye.
+  bool get _isPastNoShowWindow {
+    final slotDateTime = _slotDateTime;
+    if (slotDateTime == null) return false;
+    final windowEnd = slotDateTime.add(const Duration(minutes: 5));
+    return DateTime.now().isAfter(windowEnd);
   }
 
   // ── APNI DETAILS YAHAN DAALEIN (jaise server.js mein daali thi) ──
@@ -260,6 +277,11 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   /// join nahi hua. Manual foran-wala option (lazy-check bhi hai list
   /// screen mein, yeh us se pehle ka fast-path hai agar doctor khud
   /// dekh le ke patient nahi aaya). → NoShow + HALF refund.
+  /// Doctor manually confirm karta hai ke patient nahi aaya (window
+  /// guzarne ke baad hi enable hota hai). Status aur payment DONO ek
+  /// hi transaction mein update hote hain — is se lazy-check jaisi
+  /// reliability milti hai, aur payment kabhi 'Paid' pe atki nahi
+  /// rehti (jo purani version ka bug tha).
   Future<void> _markPatientDidNotJoin() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -287,29 +309,96 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     if (confirm != true) return;
 
     setState(() => _isMarkingNoShow = true);
+    bool alreadyJoined = false;
     try {
-      await widget.repository.updateAppointmentStatus(
-        appointmentId: widget.appointment.appointmentId,
-        status: 'NoShow',
-      );
-      // NOTE: refund-status update repository ke through nahi ho raha
-      // (DoctorRepository mein payment update ka method nahi hai — yeh
-      // jaan-boojh kar hai, payment sirf receptionist-side se touch hoti
-      // hai). Lazy-check list-screen mein isko HalfRefunded set kar dega
-      // agli load par. Yahan sirf appointment-status set kar rahe hain.
-      if (mounted) {
-        setState(() {
-          _currentStatus = AppointmentStatus.noShow;
-          _isMarkingNoShow = false;
+      final apptRef = FirebaseFirestore.instance
+          .collection('appointments')
+          .doc(widget.appointment.appointmentId);
+
+      // Payment reference PEHLE nikalo (Firestore transaction ke andar
+      // collection-query allowed nahi hoti, sirf single-doc .get()).
+      final paySnap = await FirebaseFirestore.instance
+          .collection('payments')
+          .where('appointmentId', isEqualTo: widget.appointment.appointmentId)
+          .where('status', isEqualTo: 'Paid')
+          .limit(1)
+          .get();
+      final payRef =
+          paySnap.docs.isNotEmpty ? paySnap.docs.first.reference : null;
+      final payAmount = paySnap.docs.isNotEmpty
+          ? (paySnap.docs.first.data()['amount'] ?? 0)
+          : 0;
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        // Fresh read — safety-check: kahin isi waqt patient join na
+        // kar chuka ho (race-condition se bachao).
+        final apptSnap = await transaction.get(apptRef);
+        if (!apptSnap.exists) throw Exception('Appointment not found');
+
+        final data = apptSnap.data()!;
+        if (data['status'] != 'InProgress') {
+          throw Exception('Appointment is no longer in progress.');
+        }
+        if (data['patientJoinedAt'] != null) {
+          alreadyJoined = true;
+          return; // abort — patient already join kar chuka
+        }
+
+        transaction.update(apptRef, {
+          'status': 'NoShow',
+          'updatedAt': FieldValue.serverTimestamp(),
         });
+
+        if (payRef != null) {
+          transaction.update(payRef, {
+            'status': 'HalfRefunded',
+            'refundAmount': payAmount / 2,
+            'refundPaid': false,
+          });
+        }
+      });
+
+      if (!mounted) return;
+
+      if (alreadyJoined) {
+        setState(() => _isMarkingNoShow = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Marked as no-show'),
-            backgroundColor: Color(0xFFB8860B),
+            content:
+                Text('Patient has already joined — cannot mark as no-show.'),
+            backgroundColor: _DetailColors.error,
           ),
         );
-        Navigator.pop(context, true); // list refresh ho
+        return;
       }
+
+      // ── NOTIFICATION: Video Missed → Receptionist ──
+      final receptionistSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'receptionist')
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get();
+      if (receptionistSnap.docs.isNotEmpty) {
+        await NotificationService.send(
+          userId: receptionistSnap.docs.first.id,
+          type: 'VideoConsultation',
+          referenceId: widget.appointment.appointmentId,
+          message: 'A patient missed their video consultation.',
+        );
+      }
+
+      setState(() {
+        _currentStatus = AppointmentStatus.noShow;
+        _isMarkingNoShow = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Marked as no-show — half refund queued'),
+          backgroundColor: Color(0xFFB8860B),
+        ),
+      );
+      Navigator.pop(context, true); // list refresh ho
     } catch (e) {
       if (mounted) {
         setState(() => _isMarkingNoShow = false);
@@ -481,6 +570,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     }
 
     if (_isInProgress) {
+      final canMarkNoShow = _isPastNoShowWindow;
       return Column(
         children: [
           SizedBox(
@@ -496,6 +586,17 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30)),
               ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // ── Advisory note: agar patient nahi aaya, call end karo ──
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              'If the patient hasn\'t joined, please end the call within '
+              '5 minutes of the appointment time to avoid an unfair charge.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: _DetailColors.textMuted),
             ),
           ),
           const SizedBox(height: 12),
@@ -524,7 +625,9 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: _isMarkingNoShow ? null : _markPatientDidNotJoin,
+              onPressed: (_isMarkingNoShow || !canMarkNoShow)
+                  ? null
+                  : _markPatientDidNotJoin,
               icon: _isMarkingNoShow
                   ? const SizedBox(
                       width: 16,
@@ -533,8 +636,12 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                           color: Color(0xFFB8860B), strokeWidth: 2))
                   : const Icon(Icons.person_off_outlined,
                       color: Color(0xFFB8860B), size: 18),
-              label: const Text('Patient Didn\'t Join',
-                  style: TextStyle(color: Color(0xFFB8860B))),
+              label: Text(
+                canMarkNoShow
+                    ? 'Patient Didn\'t Join'
+                    : 'Available 5 min after appointment time',
+                style: const TextStyle(color: Color(0xFFB8860B)),
+              ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Color(0xFFB8860B)),
                 padding: const EdgeInsets.symmetric(vertical: 14),

@@ -310,12 +310,17 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
               _buildLabel('Phone Number'),
               _buildField(
                 controller: _phoneController,
-                hint: 'Enter phone number',
+                hint: '03XXXXXXXXX',
                 icon: Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
-                validator: (v) => v!.isEmpty ? 'Phone is required' : null,
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Phone is required';
+                  if (!RegExp(r'^03\d{9}$').hasMatch(v.trim())) {
+                    return 'Enter valid Pakistani number (03XXXXXXXXX)';
+                  }
+                  return null;
+                },
               ),
-
               // Doctor-specific fields
               if (_isDoctor) ...[
                 const SizedBox(height: 16),

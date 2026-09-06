@@ -125,6 +125,16 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                           final name = nameController.text.trim();
                           final phone = phoneController.text.trim();
                           if (name.isEmpty || phone.isEmpty) return;
+                          if (!RegExp(r'^03\d{9}$').hasMatch(phone)) {
+                            setDialogState(() {});
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'Enter valid Pakistani number (03XXXXXXXXX)'),
+                                  backgroundColor: _ProfileColors.error),
+                            );
+                            return;
+                          }
 
                           setDialogState(() => isSaving = true);
                           try {

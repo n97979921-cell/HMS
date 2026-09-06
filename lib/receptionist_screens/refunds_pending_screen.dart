@@ -59,10 +59,10 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
         .where('refundPaid', isEqualTo: false)
         .snapshots()
         .listen((_) {
-      _loadRefunds();
-    }, onError: (_) {
-      setState(() => _isLoading = false);
-    });
+          _loadRefunds();
+        }, onError: (_) {
+          setState(() => _isLoading = false);
+        });
   }
 
   Future<void> _loadRefunds() async {

@@ -238,6 +238,7 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
         transaction.update(testRef, {
           'status': 'Cancelled',
           'cancelReason': _reasonController.text.trim(),
+          'cancelledBy': 'Lab',
           'updatedAt': FieldValue.serverTimestamp(),
         });
 
@@ -249,7 +250,28 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
           });
         }
       });
+      final apptDoc = await FirebaseFirestore.instance
+          .collection('appointments')
+          .doc(_test!['appointmentId'])
+          .get();
+      final apptType = apptDoc.data()?['appointmentType'] ?? 'IN_PERSON';
 
+      await NotificationService.send(
+        userId: _test!['doctorId'] ?? '',
+        type: 'Lab',
+        referenceId: widget.testId,
+        message: 'Lab test cancelled for $_patientName: ${_test!['testType']}.',
+      );
+
+      if (apptType != 'WALK_IN') {
+        await NotificationService.send(
+          userId: _test!['patientId'] ?? '',
+          type: 'Lab',
+          referenceId: widget.testId,
+          message:
+              'Your lab test (${_test!['testType']}) was cancelled by lab. Reason: ${_reasonController.text.trim()}',
+        );
+      }
       if (!mounted) return;
       _showSuccess('Test cancelled — refund added to pending list');
       Navigator.pop(context, true);

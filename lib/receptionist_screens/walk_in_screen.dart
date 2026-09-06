@@ -620,8 +620,13 @@ class _WalkInScreenState extends State<WalkInScreen> {
               validator: (v) => v!.trim().isEmpty ? 'Name required' : null),
           const SizedBox(height: 12),
           _regField(_phoneController, 'Phone', Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
-              validator: (v) => v!.trim().isEmpty ? 'Phone required' : null),
+              keyboardType: TextInputType.phone, validator: (v) {
+            if (v == null || v.trim().isEmpty) return 'Phone required';
+            if (!RegExp(r'^03\d{9}$').hasMatch(v.trim())) {
+              return 'Enter valid Pakistani number (03XXXXXXXXX)';
+            }
+            return null;
+          }),
           const SizedBox(height: 12),
           _regField(_cnicController, 'CNIC (e.g. 12345-1234567-1)',
               Icons.badge_outlined,

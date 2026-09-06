@@ -1,6 +1,7 @@
 // lib/screens/manage_users_screen.dart
 import 'package:flutter/material.dart';
 import 'user_list_screen.dart';
+import 'admin_profile_screen.dart';
 
 class ManageUsersScreen extends StatelessWidget {
   const ManageUsersScreen({super.key});
@@ -80,6 +81,32 @@ class ManageUsersScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 1, // "Users" tab selected dikhega
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.pop(context); // Home wapis
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminProfileScreen()),
+            );
+          }
+          // index == 1 → already yahin hain
+        },
+        backgroundColor: Colors.white,
+        selectedItemColor: primaryColor,
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined), label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.people_outline), label: 'Users'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline), label: 'Profile'),
+        ],
       ),
     );
   }

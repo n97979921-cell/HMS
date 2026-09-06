@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'appointment_detail_screen.dart';
 import '../services/notification_service.dart';
 import 'feedback_screen.dart';
+import 'patient_profile_screen.dart';
 
 /// FIXES IS FILE MEIN:
 /// 1. _cancelAppointment: Firestore rule — transaction mein SAB reads
@@ -761,7 +762,15 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     return BottomNavigationBar(
       currentIndex: _currentNavIndex,
       onTap: (index) {
-        if (index != 1) Navigator.pop(context);
+        if (index == 0) {
+          Navigator.pop(context); // Home pehle se stack mein hai
+        } else if (index == 2) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PatientProfileScreen()),
+          );
+        }
+        // index == 1 → already yahin hain, kuch mat karo
       },
       backgroundColor: Colors.white,
       selectedItemColor: _primary,

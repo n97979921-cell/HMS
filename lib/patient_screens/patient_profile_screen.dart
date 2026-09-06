@@ -251,8 +251,14 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                         controller: _nameController,
                         decoration:
                             _inputDecoration(Icons.person_outline_rounded),
-                        validator: (v) =>
-                            v!.trim().isEmpty ? 'Name is required' : null,
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty)
+                            return 'Phone is required';
+                          if (!RegExp(r'^03\d{9}$').hasMatch(v.trim())) {
+                            return 'Enter valid Pakistani number (03XXXXXXXXX)';
+                          }
+                          return null;
+                        },
                         onChanged: (_) => setState(() {}),
                       ),
                       const SizedBox(height: 16),
