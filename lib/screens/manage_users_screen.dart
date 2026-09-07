@@ -17,21 +17,29 @@ class ManageUsersScreen extends StatelessWidget {
         'title': 'Doctors',
         'role': 'doctor',
         'icon': Icons.medical_services_rounded,
+        'cardColor': const Color(0xFFD9ECF8),
+        'iconColor': const Color(0xFF1565C0),
       },
       {
         'title': 'Admins',
         'role': 'admin',
         'icon': Icons.admin_panel_settings_rounded,
+        'cardColor': const Color(0xFFE3DFF5),
+        'iconColor': const Color(0xFF7E57C2),
       },
       {
         'title': 'Receptionists',
         'role': 'receptionist',
         'icon': Icons.support_agent_rounded,
+        'cardColor': const Color(0xFFFDE6E0),
+        'iconColor': const Color(0xFFD9534F),
       },
       {
         'title': 'Lab Staff',
         'role': 'labstaff',
         'icon': Icons.biotech_rounded,
+        'cardColor': const Color(0xFFFCEFD8),
+        'iconColor': const Color(0xFFB8860B),
       },
     ];
 
@@ -75,6 +83,8 @@ class ManageUsersScreen extends StatelessWidget {
                     title: role['title'] as String,
                     role: role['role'] as String,
                     icon: role['icon'] as IconData,
+                    cardColor: role['cardColor'] as Color,
+                    iconColor: role['iconColor'] as Color,
                   );
                 },
               ),
@@ -116,14 +126,15 @@ class _RoleCard extends StatelessWidget {
   final String title;
   final String role;
   final IconData icon;
-
-  static const Color primaryColor = Color(0xFF1F8A70);
-  static const Color lightColor = Color(0xFFDCEFE9);
+  final Color cardColor;
+  final Color iconColor;
 
   const _RoleCard({
     required this.title,
     required this.role,
     required this.icon,
+    required this.cardColor,
+    required this.iconColor,
   });
 
   @override
@@ -139,15 +150,8 @@ class _RoleCard extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardColor,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: primaryColor.withOpacity(0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
         ),
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -158,10 +162,10 @@ class _RoleCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: lightColor,
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(icon, color: primaryColor, size: 28),
+                child: Icon(icon, color: iconColor, size: 28),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,11 +179,11 @@ class _RoleCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
+                  Text(
                     'Tap to view',
                     style: TextStyle(
                       fontSize: 12,
-                      color: primaryColor,
+                      color: iconColor,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

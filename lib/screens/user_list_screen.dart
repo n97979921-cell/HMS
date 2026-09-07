@@ -733,6 +733,7 @@ class _UserCardState extends State<_UserCard> {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               width: 50,
@@ -754,6 +755,7 @@ class _UserCardState extends State<_UserCard> {
                 children: [
                   Text(
                     widget.user['name'] ?? 'Unknown',
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -762,11 +764,13 @@ class _UserCardState extends State<_UserCard> {
                   ),
                   const SizedBox(height: 3),
                   Text(widget.user['email'] ?? '',
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                           fontSize: 12, color: Color(0xFF6B7280))),
                   if (widget.user['phone'] != null &&
                       widget.user['phone'] != '')
                     Text(widget.user['phone'],
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                             fontSize: 12, color: Color(0xFF6B7280))),
                   if (isDoctor && _hasTimingSetting)
@@ -777,12 +781,15 @@ class _UserCardState extends State<_UserCard> {
                           const Icon(Icons.access_time_rounded,
                               size: 12, color: primaryColor),
                           const SizedBox(width: 4),
-                          Text(
-                            '$_startTime - $_endTime',
-                            style: const TextStyle(
-                                fontSize: 11,
-                                color: primaryColor,
-                                fontWeight: FontWeight.w500),
+                          Expanded(
+                            child: Text(
+                              '$_startTime - $_endTime',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: primaryColor,
+                                  fontWeight: FontWeight.w500),
+                            ),
                           ),
                         ],
                       ),
@@ -803,16 +810,24 @@ class _UserCardState extends State<_UserCard> {
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.payments_rounded,
-                              size: 12, color: primaryColor),
+                          const Padding(
+                            padding: EdgeInsets.only(top: 1),
+                            child: Icon(Icons.payments_rounded,
+                                size: 12, color: primaryColor),
+                          ),
                           const SizedBox(width: 4),
-                          Text(
-                            'In: Rs ${_inPersonFee.toStringAsFixed(0)} · Walk: Rs ${_walkInFee.toStringAsFixed(0)} · Video: Rs ${_videoCallFee.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                                fontSize: 11,
-                                color: primaryColor,
-                                fontWeight: FontWeight.w500),
+                          Expanded(
+                            child: Text(
+                              'In: Rs ${_inPersonFee.toStringAsFixed(0)} · Walk: Rs ${_walkInFee.toStringAsFixed(0)} · Video: Rs ${_videoCallFee.toStringAsFixed(0)}',
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: primaryColor,
+                                  fontWeight: FontWeight.w500),
+                            ),
                           ),
                         ],
                       ),
@@ -833,6 +848,7 @@ class _UserCardState extends State<_UserCard> {
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
                   padding:
@@ -1090,6 +1106,7 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
                               children: [
                                 Text(
                                   user['name'] ?? 'Unknown',
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700,
@@ -1097,6 +1114,7 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
                                   ),
                                 ),
                                 Text(user['email'] ?? '',
+                                    overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
                                         fontSize: 12,
                                         color: Color(0xFF6B7280))),

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'walk_in_screen.dart';
+import 'receptionist_profile_screen.dart';
 
 /// APPOINTMENTS TODAY — CHECK-IN + LAZY AUTO-CANCEL (Phase 4)
 ///
@@ -441,6 +443,7 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -637,6 +640,47 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
           ],
         ],
       ),
+    );
+  }
+
+  // Bottom nav — Home / Appointments / Walk-in / Profile.
+  // Hum abhi "Appointments" tab par hain, is liye currentIndex: 1.
+  // - Home: seedha dashboard tak wapis (popUntil root)
+  // - Appointments: already yahan hain, kuch nahi hota
+  // - Walk-in: WalkInScreen par switch (pushReplacement)
+  // - Profile: ReceptionistProfileScreen push
+  Widget _buildBottomNav() {
+    return BottomNavigationBar(
+      currentIndex: 1,
+      selectedItemColor: _primary,
+      unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed,
+      onTap: (index) {
+        if (index == 1) return; // already on Appointments
+        if (index == 0) {
+          Navigator.popUntil(context, (route) => route.isFirst);
+        } else if (index == 2) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const WalkInScreen()),
+          );
+        } else if (index == 3) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const ReceptionistProfileScreen()),
+          );
+        }
+      },
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.event_note_outlined), label: 'Appointments'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.person_add_alt_1_outlined), label: 'Walk-in'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline), label: 'Profile'),
+      ],
     );
   }
 }

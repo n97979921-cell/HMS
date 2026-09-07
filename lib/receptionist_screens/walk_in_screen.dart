@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/notification_service.dart';
 import 'package:flutter/services.dart';
+import 'appointments_today_screen.dart';
+import 'receptionist_profile_screen.dart';
 
 /// WALK-IN PATIENT SCREEN (Receptionist) — Phase 3
 ///
@@ -16,6 +18,15 @@ import 'package:flutter/services.dart';
 ///  - Walk-in sirf AAJ ke slots par book hota hai (door-future nahi)
 ///  - "Booked" = cash li ja chuki (payment record Paid/Cash foran banta hai)
 ///  - Baad me appointment time par check-in na ho → HalfRefunded (Phase 4)
+///
+/// ✅ UI-ONLY CHANGE: Ab dashboard jaisi hi bottom nav bar add ki hai
+/// (Home / Appointments / Walk-in / Profile) — "Walk-in" tab hamesha
+/// highlighted rehta hai jab is screen par hon. Search/Register/Book
+/// ka koi logic nahi chhua.
+///
+/// ✅ UI-ONLY CHANGE: Confirm walk-in booking dialog mein "Back" button
+/// ab "Cash received — Book" jaisa hi oval/pill-shaped outlined button
+/// hai (pehle plain TextButton tha) — koi logic nahi badla.
 // CNIC ko type karte waqt auto-format karta hai: 12345-1234567-1
 class _CnicInputFormatter extends TextInputFormatter {
   @override
@@ -343,14 +354,29 @@ class _WalkInScreenState extends State<WalkInScreen> {
             'Doctor: ${doctor['name']}\n'
             'Today at $_selectedTime\n\n'
             'Cash received: Rs. $fee?'),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.pop(context, false),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _primary,
+              side: const BorderSide(color: _primary),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30)),
+            ),
             child: const Text('Back'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: _primary),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _primary,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30)),
+            ),
             child: const Text('Cash received — Book',
                 style: TextStyle(color: Colors.white)),
           ),
@@ -498,6 +524,10 @@ class _WalkInScreenState extends State<WalkInScreen> {
           ],
         ),
       ),
+      // ── Dashboard jaisi bottom nav bar — "Walk-in" tab yahan
+      // hamesha selected/highlighted rehta hai. Koi search/register/
+      // book logic isse touch nahi hota.
+      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
@@ -865,6 +895,52 @@ class _WalkInScreenState extends State<WalkInScreen> {
             ),
           ),
         ],
+      ],
+    );
+  }
+
+  // ── Bottom nav — dashboard jaisi hi. "Walk-in" is screen par
+  // hamesha selected hai (currentIndex: 2). Home = wapis dashboard
+  // (pop), Appointments/Profile = navigate, Walk-in tap = no-op
+  // (already yahan hain).
+  Widget _buildBottomNav() {
+    return BottomNavigationBar(
+      currentIndex: 2,
+      selectedItemColor: _primary,
+      unselectedItemColor: Colors.grey,
+      type: BottomNavigationBarType.fixed,
+      onTap: (index) async {
+        if (index == 2) return; // already on Walk-in
+
+        if (index == 0) {
+          // Dashboard seedha neeche stack mein hai (yahan se push hua
+          // tha), is liye pop hi Home par wapis le jata hai.
+          Navigator.pop(context);
+          return;
+        }
+        if (index == 1) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AppointmentsTodayScreen(),
+            ),
+          );
+        } else if (index == 3) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const ReceptionistProfileScreen(),
+            ),
+          );
+        }
+      },
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.event_note_outlined), label: 'Appointments'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.person_add_alt_1_outlined), label: 'Walk-in'),
+        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
       ],
     );
   }

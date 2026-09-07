@@ -25,9 +25,10 @@ import '../widgets/notification_bell_icon.dart';
 ///    used elsewhere (Patient/Receptionist), same 3 items + same
 ///    navigation logic as before.
 ///  - Stat cards: same 4 values (_totalDoctors, _totalPatients,
-///    _todayAppointments, _totalRevenue), same _loadStats() logic,
-///    only the card's visual style updated to match Receptionist's
-///    grid-card look (colored icon chip).
+///    _todayAppointments, _totalRevenue), same _loadStats() logic.
+///    Style updated to match the Patient dashboard's full-colour
+///    card look (whole card tinted, icon in a small white chip)
+///    instead of a white card with just a coloured icon chip.
 ///  - Drawer: same items, same navigation, only re-themed to match
 ///    the app's green palette instead of the old teal.
 class AdminDashboardScreen extends StatefulWidget {
@@ -55,7 +56,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   static const Color primaryColor = Color(0xFF1F8A70);
   static const Color primaryDark = Color(0xFF0D6B5A);
   static const Color bgColor = Color(0xFFF4F7F6);
-  static const Color cardColor = Colors.white;
 
   @override
   void initState() {
@@ -207,7 +207,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             title: 'Total doctors',
                             value: '$_totalDoctors',
                             icon: Icons.medical_services_outlined,
-                            iconBg: const Color(0xFFD9ECF8),
+                            cardColor: const Color(0xFFD9ECF8),
                             iconColor: const Color(0xFF1565C0),
                           ),
 
@@ -215,16 +215,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             title: 'Total patients',
                             value: '$_totalPatients',
                             icon: Icons.people_outline,
-                            iconBg: const Color(0xFFDCEFE9),
-                            iconColor: primaryColor,
+                            cardColor: const Color(0xFFE3DFF5),
+                            iconColor: const Color(0xFF7E57C2),
                           ),
 
                           _statCard(
                             title: "Today's appointments",
                             value: '$_todayAppointments',
                             icon: Icons.calendar_today_outlined,
-                            iconBg: const Color(0xFFFCEFD8),
-                            iconColor: const Color(0xFFB8860B),
+                            cardColor: const Color(0xFFFDE6E0),
+                            iconColor: const Color(0xFFD9534F),
                           ),
 
                           _statCard(
@@ -232,8 +232,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             value:
                                 'Rs ${_totalRevenue.toStringAsFixed(0)}',
                             icon: Icons.payments_outlined,
-                            iconBg: const Color(0xFFFDE6E0),
-                            iconColor: const Color(0xFFD9534F),
+                            cardColor: const Color(0xFFFCEFD8),
+                            iconColor: const Color(0xFFB8860B),
                           ),
                         ],
                       ),
@@ -326,26 +326,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // Stat card — same 4 numeric values as before, re-styled to match
-  // Receptionist's grid-card look (colored icon chip, not tinted card).
+  // the Patient dashboard's full-colour card look: the whole card is
+  // tinted with `cardColor`, and the icon sits in a small white chip
+  // on top instead of a white card with just a coloured icon chip.
   Widget _statCard({
     required String title,
     required String value,
     required IconData icon,
-    required Color iconBg,
+    required Color cardColor,
     required Color iconColor,
   }) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cardColor,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -354,7 +349,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: iconBg,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(9),
             ),
             alignment: Alignment.center,
@@ -382,7 +377,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             title,
             style: const TextStyle(
               fontSize: 11,
-              color: Color(0xFF9CA3AF),
+              color: Color(0xFF5B6B76),
             ),
           ),
         ],

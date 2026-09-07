@@ -13,9 +13,17 @@ import '../widgets/notification_bell_icon.dart';
 /// RECEPTIONIST DASHBOARD — professional layout
 ///
 /// Header (gradient, name + bell) → compact stat-chip row
-/// (Pending / Today / Refunds) → 2-item quick-action grid (Walk-in,
-/// Lab Payments) → 2 full-width cards (Admissions, Pending
-/// Refunds) → bottom nav bar (Home, Appointments, Payments, Profile).
+/// (Pending / Today / Refunds) → 2-item quick-action grid (Verify
+/// Payments, Lab Payments) → 2 full-width cards (Admissions, Pending
+/// Refunds) → bottom nav bar (Home, Appointments, Walk-in, Profile).
+///
+/// ✅ UI-ONLY CHANGE: Saare "Quick action" style cards (Verify
+/// payments, Lab payments, Admissions, Pending refunds) ab EK JAISE
+/// full-color tinted background use karte hain (jaisa Patient
+/// dashboard ke "Our services" cards mein hai) — pehle sirf upar
+/// wale 2 grid-cards rangeen the, neeche wale 2 list-cards plain
+/// white the sirf icon-chip rangeen thi. Koi logic, koi navigation,
+/// koi data change nahi hua — sirf colors/background style.
 class ReceptionistDashboardScreen extends StatefulWidget {
   const ReceptionistDashboardScreen({super.key});
 
@@ -117,7 +125,7 @@ class _ReceptionistDashboardScreenState
                 const SizedBox(height: 10),
                 _buildListCard(
                   icon: Icons.bed_outlined,
-                  iconBg: const Color(0xFFEAE3F7),
+                  cardBg: const Color(0xFFEAE3F7),
                   iconColor: const Color(0xFF7E57C2),
                   title: 'Admissions',
                   subtitle: 'Assign and release beds',
@@ -134,7 +142,7 @@ class _ReceptionistDashboardScreenState
                 const SizedBox(height: 10),
                 _buildListCard(
                   icon: Icons.currency_exchange_outlined,
-                  iconBg: const Color(0xFFFDE6E0),
+                  cardBg: const Color(0xFFFDE6E0),
                   iconColor: const Color(0xFFD9534F),
                   title: 'Pending refunds',
                   subtitle: 'Pay and mark done',
@@ -274,6 +282,8 @@ class _ReceptionistDashboardScreenState
     );
   }
 
+  // Quick-action grid — "Verify payments" ab yahan hai (Walk-in ki jagah).
+  // Walk-in ab bottom nav mein dedicated tab ban gaya hai.
   Widget _buildActionGrid() {
     return GridView.count(
       shrinkWrap: true,
@@ -284,16 +294,17 @@ class _ReceptionistDashboardScreenState
       childAspectRatio: 1.05,
       children: [
         _gridCard(
-          icon: Icons.person_add_alt_1_outlined,
-          iconBg: const Color(0xFFEAE3F7),
-          iconColor: const Color(0xFF7E57C2),
-          title: 'Walk-in patient',
-          subtitle: 'Register and book',
+          icon: Icons.payments_outlined,
+          cardBg: const Color(0xFFFCEFD8),
+          iconColor: const Color(0xFFB8860B),
+          title: 'Verify payments',
+          subtitle: 'Review screenshots',
+          badge: _pendingPayments,
           onTap: () async {
             await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const WalkInScreen(),
+                builder: (_) => const VerifyPaymentsScreen(),
               ),
             );
             _loadData();
@@ -301,7 +312,7 @@ class _ReceptionistDashboardScreenState
         ),
         _gridCard(
           icon: Icons.science_outlined,
-          iconBg: const Color(0xFFD9ECF8),
+          cardBg: const Color(0xFFD9ECF8),
           iconColor: const Color(0xFF1565C0),
           title: 'Lab payments',
           subtitle: 'Collect and forward',
@@ -319,9 +330,11 @@ class _ReceptionistDashboardScreenState
     );
   }
 
+  // Card background is the full tint color (like the patient
+  // dashboard's "Our services" cards), not just the icon chip.
   Widget _gridCard({
     required IconData icon,
-    required Color iconBg,
+    required Color cardBg,
     required Color iconColor,
     required String title,
     required String subtitle,
@@ -333,7 +346,7 @@ class _ReceptionistDashboardScreenState
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBg,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
@@ -349,19 +362,10 @@ class _ReceptionistDashboardScreenState
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: iconBg,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    icon,
-                    color: iconColor,
-                    size: 18,
-                  ),
+                Icon(
+                  icon,
+                  color: iconColor,
+                  size: 22,
                 ),
                 if (badge > 0)
                   Container(
@@ -407,11 +411,14 @@ class _ReceptionistDashboardScreenState
     );
   }
 
-  // Full-width list-style card — Admissions + Pending Refunds share this
-  // (consistent look, no mismatched shapes on the dashboard)
+  // Full-width list-style card — Admissions + Pending Refunds share this.
+  // ✅ CHANGED: ab poora card tinted background use karta hai
+  // (cardBg), bilkul _gridCard jaisa — pehle sirf ek chhoti icon-chip
+  // rangeen thi aur baaqi card plain white tha. Icon, title, subtitle,
+  // badge, chevron — sab bilkul waisa hi hai, sirf background style.
   Widget _buildListCard({
     required IconData icon,
-    required Color iconBg,
+    required Color cardBg,
     required Color iconColor,
     required String title,
     required String subtitle,
@@ -423,7 +430,7 @@ class _ReceptionistDashboardScreenState
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardBg,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
@@ -435,19 +442,10 @@ class _ReceptionistDashboardScreenState
         ),
         child: Row(
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                icon,
-                color: iconColor,
-                size: 18,
-              ),
+            Icon(
+              icon,
+              color: iconColor,
+              size: 22,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -504,6 +502,9 @@ class _ReceptionistDashboardScreenState
     );
   }
 
+  // Bottom nav — Home / Appointments / Walk-in / Profile.
+  // "Payments" ab yahan nahi (Quick actions grid mein move ho gaya),
+  // is ki jagah "Walk-in" tab yahan aa gaya hai.
   Widget _buildBottomNav() {
     return BottomNavigationBar(
       currentIndex: _selectedIndex,
@@ -526,7 +527,7 @@ class _ReceptionistDashboardScreenState
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const VerifyPaymentsScreen(),
+              builder: (_) => const WalkInScreen(),
             ),
           );
         } else if (index == 3) {
@@ -543,7 +544,7 @@ class _ReceptionistDashboardScreenState
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
         BottomNavigationBarItem(icon: Icon(Icons.event_note_outlined), label: 'Appointments'),
-        BottomNavigationBarItem(icon: Icon(Icons.payments_outlined), label: 'Payments'),
+        BottomNavigationBarItem(icon: Icon(Icons.person_add_alt_1_outlined), label: 'Walk-in'),
         BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
       ],
     );
