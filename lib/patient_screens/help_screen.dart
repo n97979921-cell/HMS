@@ -91,14 +91,14 @@ class HelpScreen extends StatelessWidget {
                           'reviews and confirms it. You can track the status under '
                           'My Appointments.',
                     ),
-                    // Q3 — general kar diya
+
                     _buildInfoTile(
                       'How do I pay?',
                       'Consultation fees are paid online via EasyPaisa after '
                           'booking. Lab tests and room charges are paid at the '
                           'hospital reception.',
                     ),
-                    // Q4 — general kar diya
+
                     _buildInfoTile(
                       'Where are my prescriptions and reports?',
                       'They appear on the Home screen after a completed visit.',

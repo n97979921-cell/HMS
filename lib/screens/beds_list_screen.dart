@@ -52,24 +52,34 @@ class _BedsListScreenState extends State<BedsListScreen> {
 
   Future<void> _addBed() async {
     setState(() => _isAdding = true);
-
     try {
       final priceDoc = await FirebaseFirestore.instance
           .collection('room_type_prices')
           .doc(widget.roomType)
           .get();
-
       if (!priceDoc.exists || priceDoc.data()?['pricePerHour'] == null) {
         _showError(
             'Price not set for ${widget.roomType}. Ask admin to set room prices first.');
-        setState(() => _isAdding = false);
         return;
       }
-
       final pricePerHour = priceDoc.data()!['pricePerHour'];
+      final existingBeds = await FirebaseFirestore.instance
+          .collection('beds')
+          .where('roomId', isEqualTo: widget.roomId)
+          .get();
 
+      final usedNumbers = existingBeds.docs
+          .map((doc) => (doc.data()['bedNumber'] as num?)?.toInt())
+          .whereType<int>()
+          .toSet();
+
+      int nextBedNumber = 1;
+      while (usedNumbers.contains(nextBedNumber)) {
+        nextBedNumber++;
+      }
       await FirebaseFirestore.instance.collection('beds').add({
         'roomId': widget.roomId,
+        'bedNumber': nextBedNumber,
         'availability': 'Available',
         'appointmentId': null,
         'assignedAt': null,
@@ -77,7 +87,6 @@ class _BedsListScreenState extends State<BedsListScreen> {
         'pricePerHour': pricePerHour,
         'updatedAt': DateTime.now(),
       });
-
       _showSuccess('Bed added successfully!');
     } catch (e) {
       _showError('Error: $e');
@@ -202,7 +211,7 @@ class _BedsListScreenState extends State<BedsListScreen> {
         stream: FirebaseFirestore.instance
             .collection('beds')
             .where('roomId', isEqualTo: widget.roomId)
-            .orderBy('updatedAt')
+            .orderBy('bedNumber')
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -297,7 +306,7 @@ class _BedsListScreenState extends State<BedsListScreen> {
                           final bed = beds[index];
                           final data = bed.data() as Map<String, dynamic>;
                           final status = data['availability'] ?? 'Available';
-                          final bedNumber = index + 1;
+                          final bedNumber = data['bedNumber'] ?? (index + 1);
 
                           return _BedCard(
                             bedNumber: bedNumber,

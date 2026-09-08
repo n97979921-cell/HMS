@@ -11,6 +11,7 @@ class LabTestDetail {
   final String testType;
   final LabTestStatus status;
   final String? reportBase64;
+  final String? reportType;
 
   LabTestDetail({
     required this.testId,
@@ -20,5 +21,6 @@ class LabTestDetail {
     required this.testType,
     required this.status,
     required this.reportBase64,
+    this.reportType,
   });
 }

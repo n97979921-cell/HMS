@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../login_screen.dart';
 
 /// RECEPTIONIST PROFILE
 /// - Editable: name, phone
@@ -105,7 +106,10 @@ class _ReceptionistProfileScreenState extends State<ReceptionistProfileScreen> {
     if (confirm != true) return;
     await FirebaseAuth.instance.signOut();
     if (!mounted) return;
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   void _showChangePasswordSheet() {

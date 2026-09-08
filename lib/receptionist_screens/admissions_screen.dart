@@ -157,6 +157,7 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
         'patientName': patientName,
         'roomNumber': roomNumber,
         'roomType': roomType,
+        'bedNumber': bed['bedNumber'] ?? '',
         'pricePerHour': bed['pricePerHour'] ?? 0,
         'assignedAt': assignedDt,
       });

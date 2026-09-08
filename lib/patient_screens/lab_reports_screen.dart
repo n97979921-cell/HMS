@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 /// PATIENT — LAB REPORTS
 ///
@@ -79,6 +80,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
           'testType': data['testType'] ?? '',
           'status': data['status'] ?? 'Pending',
           'reportBase64': data['reportBase64'],
+          'reportType': data['reportType'],
           'charge': data['charge'] ?? 0,
           'paymentStatus': data['paymentStatus'],
           'doctorName': doctorDoc.data()?['name'] ?? 'Doctor',
@@ -117,20 +119,24 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
     setState(() => _selectedFilter = filter);
   }
 
-  // Full-screen base64 report viewer (zoom/pan) — jaise payment screenshot
-  void _viewReport(String base64Str) {
+  void _viewReport(String base64Str, String? reportType) {
+    final bytes = base64Decode(base64Str);
+    final isPdf = reportType == 'pdf';
+
     showDialog(
       context: context,
       builder: (_) => Dialog.fullscreen(
-        backgroundColor: Colors.black,
+        backgroundColor: isPdf ? Colors.white : Colors.black,
         child: Stack(
           children: [
             Center(
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 5.0,
-                child: Image.memory(base64Decode(base64Str)),
-              ),
+              child: isPdf
+                  ? SfPdfViewer.memory(bytes)
+                  : InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 5.0,
+                      child: Image.memory(bytes),
+                    ),
             ),
             Positioned(
               top: 16,
@@ -140,10 +146,13 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: isPdf
+                        ? Colors.black.withValues(alpha: 0.15)
+                        : Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 22),
+                  child: Icon(Icons.close,
+                      color: isPdf ? Colors.black87 : Colors.white, size: 22),
                 ),
               ),
             ),
@@ -183,8 +192,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                           color: _primary,
                           child: ListView.separated(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding:
-                                const EdgeInsets.fromLTRB(18, 8, 18, 24),
+                            padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
                             itemCount: _filteredTests.length,
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 14),
@@ -307,6 +315,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
     final status = test['status'] as String;
     final statusColors = _statusColor(status);
     final String? reportBase64 = test['reportBase64'];
+    final String? reportType = test['reportType'];
     final canView = status == 'Completed' &&
         reportBase64 != null &&
         reportBase64.isNotEmpty;
@@ -366,7 +375,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
               // status badge ki jagah "View" pill button dikhta hai.
               if (canView)
                 ElevatedButton.icon(
-                  onPressed: () => _viewReport(reportBase64),
+                  onPressed: () => _viewReport(reportBase64, reportType),
                   icon: const Icon(Icons.remove_red_eye_outlined,
                       size: 16, color: Colors.white),
                   label: const Text('View',
@@ -375,15 +384,15 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                     backgroundColor: statusColors['text'],
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20)),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     elevation: 0,
                   ),
                 )
               else
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: statusColors['bg'],
                     borderRadius: BorderRadius.circular(8),

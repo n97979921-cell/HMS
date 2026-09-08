@@ -103,6 +103,7 @@ class FirebaseDoctorRepository implements DoctorRepository {
           admissionRecommended: data['admissionRecommended'] as bool? ?? false,
           symptoms: data['symptoms'] as String?,
           patientReportBase64: data['patientReportBase64'] as String?,
+          patientReportType: data['patientReportType'] as String?,
         );
       }).toList();
     } on FirebaseException catch (e) {
@@ -185,6 +186,7 @@ class FirebaseDoctorRepository implements DoctorRepository {
         status:
             LabTestStatusX.fromString((data['status'] as String?) ?? 'Pending'),
         reportBase64: data['reportBase64'] as String?,
+        reportType: data['reportType'] as String?,
       );
     } on FirebaseException catch (e) {
       throw Exception('Failed to load report: ${e.message}');
@@ -410,6 +412,7 @@ class FirebaseDoctorRepository implements DoctorRepository {
         'testType': testType,
         'status': 'Pending',
         'reportBase64': null,
+        'reportType': null,
         'charge': charge,
         'paymentStatus': null,
         'createdAt': FieldValue.serverTimestamp(),

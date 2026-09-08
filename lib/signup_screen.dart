@@ -26,7 +26,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   final authService = AuthService();
 
-  // Theme colors — matched to Admin Dashboard's green palette
+  // Theme colors
   static const Color _navy = Color(0xFF1A2F5A);
   static const Color _teal = Color(0xFF1F8A70);
   static const Color _bg = Color(0xFFF4F7F6);
@@ -75,7 +75,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         // ✅ SUCCESS
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Account created! Check your email to verify.'),
+            content: Text('Account created! Check your email to verify.'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -94,7 +94,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         // ❌ FAILED
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('❌ Registration failed. Please try again.'),
+            content: Text('Registration failed. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -105,7 +105,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ Error: $e'),
+          content: Text('Error: $e'),
           backgroundColor: Colors.red,
         ),
       );
