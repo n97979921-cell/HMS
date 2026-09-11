@@ -58,9 +58,6 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     _checkExistingPrescription();
   }
 
-  // Ek appointment ki sirf EK prescription honi chahiye (schema-rule).
-  // Screen khulते hi check karo — agar pehle se ban chuki hai, "Add
-  // Prescription" button poori tarah hide kar do.
   Future<void> _checkExistingPrescription() async {
     try {
       final snap = await FirebaseFirestore.instance
@@ -71,9 +68,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       if (mounted && snap.docs.isNotEmpty) {
         setState(() => _hasPrescription = true);
       }
-    } catch (_) {
-      // fail ho to button dikhta rahega — silent, koi crash nahi
-    }
+    } catch (_) {}
   }
 
   bool get _isVideoCall =>
@@ -89,20 +84,11 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       _currentStatus == AppointmentStatus.inProgress ||
       _currentStatus == AppointmentStatus.completed;
 
-  /// Lab-test request sirf ACTIVE consultation ke dauran ho sakta hai
-  /// — Completed hone ke baad "Request Lab Test" button poori tarah
-  /// GHAYAB (Admission-toggle jaisa "locked-but-visible" nahi, balke
-  /// bilkul hidden — kyunki naya lab-test request ek naya clinical
-  /// decision hai jo consultation ke baad lena sahi nahi).
   bool get _canRequestLabTest =>
       _currentStatus == AppointmentStatus.confirmed ||
       _currentStatus == AppointmentStatus.checkedIn ||
       _currentStatus == AppointmentStatus.inProgress;
 
-  /// Admission recommendation sirf ACTIVE consultation ke dauran editable
-  /// hai. Completed hone ke baad LOCKED — sirf dekhne ke liye, kyunki
-  /// receptionist is decision par bed/room assign kar sakta hai; baad
-  /// mein badalna data inconsistent kar deta.
   bool get _admissionEditable =>
       _currentStatus == AppointmentStatus.confirmed ||
       _currentStatus == AppointmentStatus.checkedIn ||
@@ -184,7 +170,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         return jsonDecode(response.body)['token'] as String;
       }
     } catch (e) {
-      print('❌ TOKEN FETCH ERROR: $e');
+      print('TOKEN FETCH ERROR: $e');
     }
     return null;
   }

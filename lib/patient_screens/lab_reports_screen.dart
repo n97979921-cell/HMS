@@ -13,12 +13,12 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 ///   (reportBase64, na ke reportUrl) — jaise payment screenshot.
 /// - Report "View" sirf tab jab status == Completed && reportBase64 != null
 ///
-/// ✅ UPDATED — Doctor-side jaisa "View" button pattern:
+///  UPDATED — Doctor-side jaisa "View" button pattern:
 /// Status badge ki jagah "View" pill button dikhta hai jab report
 /// ready ho (Completed + reportBase64 mojood). Baaki statuses ke
 /// liye normal status badge.
 ///
-/// ✅ NAYA — Filter tabs (doctor-side jaisa): All | Pending |
+///  NAYA — Filter tabs (doctor-side jaisa): All | Pending |
 /// In Progress | Completed | Cancelled. Client-side filtering hai
 /// (data ek hi baar load hota hai, tab badalne par sirf list filter
 /// hoti hai — extra Firestore query nahi lagti).

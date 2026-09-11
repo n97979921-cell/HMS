@@ -11,7 +11,7 @@ import 'package:intl/intl.dart';
 ///
 /// Tap karne par isRead: true ho jata hai. Type ke hisaab se icon.
 ///
-/// ✅ REAL-TIME: Ab StreamBuilder use karta hai — sirf ek collection
+///  REAL-TIME: Ab StreamBuilder use karta hai — sirf ek collection
 /// (`notifications`) se data aata hai, is liye poori screen real-time
 /// bana di gayi hai (Rule 1). Naya notification aate hi list khud
 /// update ho jayegi, refresh karne ki zaroorat nahi.

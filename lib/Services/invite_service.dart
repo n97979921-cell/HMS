@@ -8,6 +8,37 @@ class InviteService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final Logger _logger = Logger();
 
+  // 0. CHECK EXISTING INVITE STATUS (before generating a new one)
+  // Return values:
+  //   "pending"  -> already ek invite is email pe active hai (used=false, not expired)
+  //   "used"     -> is email se user already signup kar chuka hai
+  //   "none"     -> koi active invite nahi, naya generate karne ki ijazat hai
+  Future<String> checkInviteStatus(String email) async {
+    try {
+      QuerySnapshot snap = await _firestore
+          .collection('invites')
+          .where('email', isEqualTo: email.trim())
+          .orderBy('createdAt', descending: true)
+          .limit(1)
+          .get();
+
+      if (snap.docs.isEmpty) return "none";
+
+      Map<String, dynamic> data =
+          snap.docs.first.data() as Map<String, dynamic>;
+
+      if (data['used'] == true) return "used";
+
+      DateTime expiresAt = (data['expiresAt'] as Timestamp).toDate();
+      if (DateTime.now().isAfter(expiresAt)) return "none";
+
+      return "pending";
+    } catch (e) {
+      _logger.e("checkInviteStatus error: $e");
+      return "none";
+    }
+  }
+
   // 1. GENERATE INVITE
   // FIX: pehle inviteCode timestamp se banta tha (INVITE-1784905218084)
   // — guessable tha. Ab Firestore ki apni random 20-character ID use
@@ -81,10 +112,10 @@ class InviteService {
         ),
       );
 
-      _logger.i("✅ Email sent to: $email");
+      _logger.i("Email sent to: $email");
       return true;
     } catch (e) {
-      _logger.e("❌ Email error: $e");
+      _logger.e(" Email error: $e");
       return false;
     }
   }

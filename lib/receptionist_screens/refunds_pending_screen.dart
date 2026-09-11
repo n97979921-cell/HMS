@@ -14,7 +14,7 @@ import '../services/notification_service.dart';
 /// - Refunded     = full refund dena hai
 /// - HalfRefunded = aadha refund dena hai (NoShow)
 ///
-/// ✅ REAL-TIME (Rule 2): Data `payments` + `users` (patient naam) se
+/// REAL-TIME (Rule 2): Data `payments` + `users` (patient naam) se
 /// milkar banta hai, is liye poori screen StreamBuilder mein convert
 /// NAHI ki. Iski jagah ek lightweight listener `payments` collection
 /// ko sunta hai (status Refunded/HalfRefunded + refundPaid == false

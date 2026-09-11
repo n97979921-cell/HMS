@@ -15,7 +15,7 @@ import 'assign_bed_screen.dart';
 ///   koi Paid Room-type payment is appointmentId ke liye nahi (pehle
 ///   discharge ho chuka to dobara pending mein nahi aana chahiye)
 ///
-/// ✅ REAL-TIME (Rule 2 — SABSE ZAROORI SCREEN): Data `appointments` +
+///  REAL-TIME (Rule 2 — SABSE ZAROORI SCREEN): Data `appointments` +
 /// `beds` + `payments` + `users` se milkar banta hai, is liye poori
 /// screen StreamBuilder mein convert NAHI ki. Iski jagah ek lightweight
 /// listener `appointments` collection ko sunta hai

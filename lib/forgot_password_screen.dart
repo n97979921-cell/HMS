@@ -37,7 +37,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final email = _emailController.text.trim();
 
     try {
-      // ✅ Call Firebase
+      //  Call Firebase
       bool success = await authService.forgotPassword(email);
 
       setState(() => _isLoading = false);
@@ -49,7 +49,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Reset link sent! Check your email.'),
+            content: Text('Reset link sent! Check your email.'),
             backgroundColor: Color(0xFF1F8A70),
           ),
         );
@@ -66,7 +66,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('❌ Email not registered'),
+            content: Text('Email not registered'),
             backgroundColor: Colors.red,
           ),
         );
@@ -77,7 +77,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ Error: $e'),
+          content: Text('Error: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -263,7 +263,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               ),
                             ),
 
-                            // ✅ RESEND BUTTON
+                            //  RESEND BUTTON
                             const SizedBox(height: 16),
                             SizedBox(
                               width: double.infinity,

@@ -45,7 +45,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void _register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // ✅ Get all values
+    //  Get all values
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final name = _nameController.text.trim();
@@ -57,7 +57,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // ✅ Call Firebase
+      // Call Firebase
       bool success = await authService.patientSignup(
         email: email,
         password: password,
@@ -72,7 +72,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (!mounted) return;
 
       if (success) {
-        // ✅ SUCCESS
+        //  SUCCESS
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Account created! Check your email to verify.'),
@@ -81,7 +81,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
         );
 
-        // ✅ Redirect to login after 2 seconds
+        // Redirect to login after 2 seconds
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
             Navigator.pushReplacement(
@@ -91,7 +91,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           }
         });
       } else {
-        // ❌ FAILED
+        // FAILED
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Registration failed. Please try again.'),

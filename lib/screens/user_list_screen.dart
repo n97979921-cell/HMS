@@ -73,7 +73,8 @@ class _UserListScreenState extends State<UserListScreen> {
             ? _users
             : _users.where((user) {
                 final name = (user['name'] ?? '').toString().toLowerCase();
-                return name.contains(_searchController.text.trim().toLowerCase());
+                return name
+                    .contains(_searchController.text.trim().toLowerCase());
               }).toList();
         _isLoading = false;
       });
@@ -170,11 +171,14 @@ class _UserListScreenState extends State<UserListScreen> {
                 controller: _searchController,
                 decoration: InputDecoration(
                   hintText: 'Search by name...',
-                  hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
-                  prefixIcon: const Icon(Icons.search_rounded, color: primaryColor),
+                  hintStyle:
+                      const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+                  prefixIcon:
+                      const Icon(Icons.search_rounded, color: primaryColor),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.close_rounded, color: Color(0xFF9CA3AF)),
+                          icon: const Icon(Icons.close_rounded,
+                              color: Color(0xFF9CA3AF)),
                           onPressed: () => _searchController.clear(),
                         )
                       : null,
@@ -182,21 +186,25 @@ class _UserListScreenState extends State<UserListScreen> {
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                 ),
               ),
             ),
           ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                ? const Center(
+                    child: CircularProgressIndicator(color: primaryColor))
                 : _filteredUsers.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              _users.isEmpty ? _roleIcon : Icons.search_off_rounded,
+                              _users.isEmpty
+                                  ? _roleIcon
+                                  : Icons.search_off_rounded,
                               size: 64,
                               color: primaryColor.withOpacity(0.3),
                             ),
@@ -216,7 +224,8 @@ class _UserListScreenState extends State<UserListScreen> {
                               _users.isEmpty
                                   ? 'Tap + to send an invite'
                                   : 'Try a different name',
-                              style: const TextStyle(fontSize: 14, color: primaryColor),
+                              style: const TextStyle(
+                                  fontSize: 14, color: primaryColor),
                             ),
                           ],
                         ),
@@ -313,6 +322,22 @@ class _UserCardState extends State<_UserCard> {
         });
       }
     } catch (e) {}
+  }
+
+// ── NAYA: check karta hai ke yeh delete/deactivate hone wala
+// user aakhri active admin to nahi hai ──
+  Future<bool> _wouldRemoveLastActiveAdmin() async {
+    if (widget.user['role'] != 'admin') return false;
+    if (widget.user['status'] != 'active')
+      return false; // already inactive, no impact
+
+    final snap = await FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'admin')
+        .where('status', isEqualTo: 'active')
+        .get();
+
+    return snap.docs.length <= 1; // yehi ek bacha hai
   }
 
   void _showSetTimingDialog(BuildContext context) {
@@ -888,12 +913,26 @@ class _UserCardState extends State<_UserCard> {
                       return;
                     }
 
+                    // ── NAYA: last active admin protection ──
+                    if (value == 'deactivate' || value == 'delete') {
+                      final isLastAdmin = await _wouldRemoveLastActiveAdmin();
+                      if (isLastAdmin) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Cannot deactivate or delete the last active admin.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+                    }
+
                     if (value == 'edit') {
                       _showEditDialog(context);
                     } else if (value == 'timing') {
                       _showSetTimingDialog(context);
                     } else if (value == 'fee') {
-                      // NAYA
                       _showSetFeeDialog(context);
                     } else if (value == 'deactivate') {
                       await adminService.deactivateUser(widget.user['uid']);

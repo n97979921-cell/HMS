@@ -79,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Login Successful! Welcome 👋'),
+        content: Text('Login Successful! Welcome '),
         backgroundColor: Color(0xFF1F8A70),
       ),
     );
@@ -134,7 +134,8 @@ class _LoginScreenState extends State<LoginScreen> {
         final Map<String, dynamic> user = result['user'];
         _routeByRole(user);
       }
-    } else {
+    } else if (result['error'] != 'Google sign-in cancelled') {
+      // User ne khud dialog cancel kiya — koi error dikhane ki zaroorat nahi
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['error'] ?? 'Google sign-in failed'),

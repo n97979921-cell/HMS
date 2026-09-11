@@ -28,7 +28,7 @@ import 'lab_reports_screen.dart';
 ///     → NoShow + HALF refund (patient ki galti)
 ///   InProgress + patientJoinedAt set → chhuo mat, consultation chal rahi
 ///
-/// ✅ REAL-TIME (Rule 2): Data kai collections (slots + appointments +
+///  REAL-TIME (Rule 2): Data kai collections (slots + appointments +
 /// users) se milkar banta hai, is liye poori screen StreamBuilder mein
 /// convert NAHI ki. Iski jagah ek lightweight listener sirf
 /// `appointments` collection ko sunta hai (doctorId filter ke saath) —
