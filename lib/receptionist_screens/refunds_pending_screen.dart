@@ -4,22 +4,29 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/notification_service.dart';
 
-/// REFUNDS PENDING SCREEN (Receptionist)
+/// REFUNDS SCREEN (Receptionist)
 ///
 /// Jab bhi koi payment Refunded ya HalfRefunded ho lekin refundPaid:false,
-/// matlab paisa abhi patient ko wapas dena baaki hai. Yeh screen woh sab
-/// dikhati hai. Receptionist paisa de kar (cash counter / EasyPaisa)
+/// matlab paisa abhi patient ko wapas dena baaki hai. "Pending" tab woh
+/// sab dikhati hai. Receptionist paisa de kar (cash counter / EasyPaisa)
 /// "Mark as Refunded" dabaye → refundPaid: true.
 ///
 /// - Refunded     = full refund dena hai
 /// - HalfRefunded = aadha refund dena hai (NoShow)
 ///
+/// NAYA — "Processed" tab: refundPaid: true wale records (jo pehle
+/// kahin dikhte hi nahi the, sirf Firestore mein hamesha ke liye reh
+/// jate the). Yahan har record par individual "Delete" hai, aur jab
+/// list khali na ho ek "Delete All" button bhi — dono bina confirmation
+/// ke seedha permanent delete karte hain, taake purana processed data
+/// halka rakha ja sake.
+///
 /// ✅ REAL-TIME (Rule 2): Data `payments` + `users` (patient naam) se
 /// milkar banta hai, is liye poori screen StreamBuilder mein convert
 /// NAHI ki. Iski jagah ek lightweight listener `payments` collection
 /// ko sunta hai (status Refunded/HalfRefunded + refundPaid == false
-/// filter ke saath). Naya refund-to-process aate hi list turant
-/// update ho jaati hai.
+/// filter ke saath — sirf Pending tab ke liye relevant). Naya
+/// refund-to-process aate hi list turant update ho jaati hai.
 class RefundsPendingScreen extends StatefulWidget {
   const RefundsPendingScreen({super.key});
 
@@ -31,11 +38,16 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
   static const Color _primary = Color(0xFF1F8A70);
   static const Color _primaryDark = Color(0xFF0D6B5A);
 
+  // 'Pending' | 'Processed'
+  String _selectedTab = 'Pending';
+
   bool _isLoading = true;
   List<Map<String, dynamic>> _refunds = [];
 
   // Real-time listener — `payments` collection ko sunta hai (status
   // Refunded/HalfRefunded + refundPaid == false filter ke saath).
+  // Sirf "Pending" tab ke liye relevant — "Processed" tab manually
+  // load hota hai (_loadRefunds() dono tabs handle karta hai).
   StreamSubscription<QuerySnapshot>? _paymentsSub;
 
   @override
@@ -59,20 +71,32 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
         .where('refundPaid', isEqualTo: false)
         .snapshots()
         .listen((_) {
-          _loadRefunds();
+          // Sirf Pending tab par ho to hi is listener ki wajah se
+          // reload karo — Processed tab ka apna refresh hota hai
+          // (delete ke baad manually _loadRefunds() call hota hai).
+          if (_selectedTab == 'Pending') _loadRefunds();
         }, onError: (_) {
-          setState(() => _isLoading = false);
+          if (_selectedTab == 'Pending') setState(() => _isLoading = false);
         });
+  }
+
+  void _changeTab(String tab) {
+    if (_selectedTab == tab) return;
+    setState(() => _selectedTab = tab);
+    _loadRefunds();
   }
 
   Future<void> _loadRefunds() async {
     setState(() => _isLoading = true);
     try {
-      // Refunded ya HalfRefunded + refundPaid == false
+      final bool wantPaid = _selectedTab == 'Processed';
+
+      // Pending: Refunded/HalfRefunded + refundPaid == false
+      // Processed: Refunded/HalfRefunded + refundPaid == true
       final snap = await FirebaseFirestore.instance
           .collection('payments')
           .where('status', whereIn: ['Refunded', 'HalfRefunded'])
-          .where('refundPaid', isEqualTo: false)
+          .where('refundPaid', isEqualTo: wantPaid)
           .get();
 
       final List<Map<String, dynamic>> result = [];
@@ -216,6 +240,46 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
     }
   }
 
+  // ── Delete ek processed refund record — bina confirmation ke
+  //    seedha permanent delete ──
+  Future<void> _deleteRefund(String paymentId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('payments')
+          .doc(paymentId)
+          .delete();
+      _showSuccess('Refund record deleted');
+      _loadRefunds();
+    } catch (e) {
+      _showError('Error deleting: $e');
+    }
+  }
+
+  // ── Delete All — SAARE processed (refundPaid: true) refund records
+  //    ek batch write mein, bina confirmation ke ──
+  Future<void> _deleteAllProcessed() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('payments')
+          .where('status', whereIn: ['Refunded', 'HalfRefunded'])
+          .where('refundPaid', isEqualTo: true)
+          .get();
+
+      if (snap.docs.isEmpty) return;
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+
+      _showSuccess('${snap.docs.length} refund record(s) deleted');
+      _loadRefunds();
+    } catch (e) {
+      _showError('Error deleting all: $e');
+    }
+  }
+
   void _showError(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -244,6 +308,11 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
         child: Column(
           children: [
             _buildHeader(),
+            _buildTabToggle(),
+            if (_selectedTab == 'Processed' &&
+                !_isLoading &&
+                _refunds.isNotEmpty)
+              _buildDeleteAllBar(),
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -255,7 +324,7 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
                           color: _primary,
                           child: ListView.separated(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+                            padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
                             itemCount: _refunds.length,
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 12),
@@ -289,7 +358,7 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
             ),
           ),
           const SizedBox(width: 14),
-          const Text('Pending Refunds',
+          const Text('Refunds',
               style: TextStyle(
                   color: Colors.white,
                   fontSize: 19,
@@ -299,7 +368,78 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
     );
   }
 
+  Widget _buildTabToggle() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(18, 14, 18, 8),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _tabButton('Pending', 'Pending'),
+          _tabButton('Processed', 'Processed'),
+        ],
+      ),
+    );
+  }
+
+  Widget _tabButton(String label, String value) {
+    final isSelected = _selectedTab == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _changeTab(value),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? _primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(26),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.grey,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // "Delete All" bar — sirf "Processed" tab par, jab list khali na ho.
+  // Koi confirmation dialog nahi — seedha tap par saare processed
+  // refund records permanent delete ho jaate hain.
+  Widget _buildDeleteAllBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          onPressed: _deleteAllProcessed,
+          icon: const Icon(Icons.delete_sweep_outlined,
+              size: 18, color: Color(0xFFD9534F)),
+          label: const Text('Delete All',
+              style: TextStyle(
+                  color: Color(0xFFD9534F),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmpty() {
+    final isProcessed = _selectedTab == 'Processed';
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -307,14 +447,20 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
           Icon(Icons.check_circle_outline,
               size: 64, color: _primary.withValues(alpha: 0.3)),
           const SizedBox(height: 16),
-          const Text('No pending refunds',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF6B7280))),
+          Text(
+            isProcessed ? 'No processed refunds' : 'No pending refunds',
+            style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6B7280)),
+          ),
           const SizedBox(height: 6),
-          const Text('All refunds have been paid',
-              style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF))),
+          Text(
+            isProcessed
+                ? 'Refunds you\'ve paid out will show up here'
+                : 'All refunds have been paid',
+            style: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
+          ),
         ],
       ),
     );
@@ -322,6 +468,7 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
 
   Widget _refundCard(Map<String, dynamic> refund) {
     final isHalf = refund['status'] == 'HalfRefunded';
+    final isProcessed = _selectedTab == 'Processed';
     final refundAmt = refund['refundAmount'] ??
         (isHalf ? (refund['amount'] / 2) : refund['amount']);
 
@@ -427,8 +574,12 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Amount to refund',
-                    style: TextStyle(fontSize: 12, color: Colors.black54)),
+                Text(
+                    isProcessed
+                        ? 'Amount refunded'
+                        : 'Amount to refund',
+                    style: const TextStyle(
+                        fontSize: 12, color: Colors.black54)),
                 Text('Rs. $refundAmt',
                     style: const TextStyle(
                         fontSize: 16,
@@ -438,21 +589,39 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _markRefunded(refund),
-              icon: const Icon(Icons.check, size: 18, color: Colors.white),
-              label: const Text('Mark as Refunded',
-                  style: TextStyle(color: Colors.white)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _primary,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+          if (isProcessed)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _deleteRefund(refund['paymentId']),
+                icon: const Icon(Icons.delete_outline,
+                    size: 18, color: Color(0xFFD9534F)),
+                label: const Text('Delete',
+                    style: TextStyle(color: Color(0xFFD9534F))),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFFD9534F)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _markRefunded(refund),
+                icon: const Icon(Icons.check, size: 18, color: Colors.white),
+                label: const Text('Mark as Refunded',
+                    style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _primary,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

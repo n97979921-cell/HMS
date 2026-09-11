@@ -14,7 +14,12 @@ import 'package:http/http.dart' as http;
 
 class _DetailColors {
   static const primary = Color(0xFF1F8A70);
-  static const primaryDark = Color(0xFF166049);
+  // FIXED: pehle 0xFF166049 tha — ye baaqi poori app se ek alag green
+  // shade tha (My Appointments, Lab Dashboard, Refunds, patient-side
+  // Appointment Detail sab jagah 0xFF0D6B5A use hota hai). Ab match
+  // kar diya, taake video-call screen ka top bar bhi baaqi screens
+  // jaisa hi dikhe.
+  static const primaryDark = Color(0xFF0D6B5A);
   static const background = Color(0xFFF5F7F8);
   static const cardBackground = Colors.white;
   static const textMuted = Color(0xFF8A8A8A);
@@ -859,30 +864,42 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 16, 20, 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
+      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
           colors: [_DetailColors.primary, _DetailColors.primaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context,
+          GestureDetector(
+            onTap: () => Navigator.pop(context,
                 _isCompleted || _currentStatus == AppointmentStatus.noShow),
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child:
+                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
+            ),
           ),
-          const Text('Appointment Detail',
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Appointment Detail',
               style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold)),
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
       ),
     );

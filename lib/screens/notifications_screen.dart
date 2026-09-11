@@ -15,6 +15,15 @@ import 'package:intl/intl.dart';
 /// (`notifications`) se data aata hai, is liye poori screen real-time
 /// bana di gayi hai (Rule 1). Naya notification aate hi list khud
 /// update ho jayegi, refresh karne ki zaroorat nahi.
+///
+/// ✅ NEW: Delete support add kiya gaya hai —
+///   - Har card pe ek chhota delete (trash) icon — sirf wahi ek
+///     notification delete karta hai.
+///   - Header mein "Clear all" button — is user ki SAARI
+///     notifications ek batch mein delete karta hai (confirmation
+///     dialog ke saath, taake galti se sab delete na ho jayen).
+/// Baqi poora logic (mark-as-read, real-time stream, icons/colors,
+/// time-ago) bilkul waisa hi hai, kuch change nahi hua.
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
 
@@ -54,6 +63,86 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       // mein change ho jayega — koi manual setState() ki zaroorat nahi.
     } catch (_) {
       // Silent — read-status miss hone se koi bara nuqsan nahi
+    }
+  }
+
+  // ── DELETE: single notification ──
+  // Sirf wahi ek document delete hota hai. StreamBuilder khud list
+  // se hata dega, koi manual setState() ki zaroorat nahi.
+  Future<void> _deleteNotification(String notificationId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('notifications')
+          .doc(notificationId)
+          .delete();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not delete notification')),
+      );
+    }
+  }
+
+  // ── DELETE: all notifications (this user only) ──
+  // Batch delete — pehle is user ki saari notifications fetch karo,
+  // phir ek hi batch mein sab delete kar do (single write, atomic).
+  Future<void> _deleteAllNotifications() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('notifications')
+          .where('userId', isEqualTo: uid)
+          .get();
+
+      if (snap.docs.isEmpty) return;
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not clear notifications')),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteAll() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text('Clear all notifications?'),
+        content: const Text(
+          'This will permanently delete all your notifications. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text(
+              'Clear all',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _deleteAllNotifications();
     }
   }
 
@@ -174,6 +263,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
+  // ✅ CHANGED: "Clear all" button add kiya gaya hai, right side pe.
+  // Baqi header (back button, title) bilkul same hai.
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
@@ -194,11 +285,30 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ),
           const SizedBox(width: 14),
-          const Text('Notifications',
+          const Expanded(
+            child: Text('Notifications',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold)),
+          ),
+          TextButton(
+            onPressed: _confirmDeleteAll,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 6,
+              ),
+            ),
+            child: const Text(
+              'Clear all',
               style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold)),
+                color: Colors.white70,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -222,72 +332,104 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
+  // ✅ CHANGED: card ab Dismissible mein wrap hai — patient chahe to
+  // swipe karke bhi delete kar sakta hai (left ya right). Iske ilawa
+  // ek chhota trash icon bhi laga diya gaya hai (jinhe swipe pasand
+  // nahi, wo seedha icon tap kar ke delete kar saken). Baqi card ka
+  // content (icon, message, time, unread dot) bilkul same hai.
   Widget _card(Map<String, dynamic> n) {
     final isRead = n['isRead'] == true;
     final color = _colorForType(n['type']);
+    final notificationId = n['notificationId'] as String;
 
-    return GestureDetector(
-      onTap: () {
-        if (!isRead) _markAsRead(n['notificationId']);
-      },
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
+    return Dismissible(
+      key: ValueKey(notificationId),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        margin: const EdgeInsets.only(bottom: 0),
         decoration: BoxDecoration(
-          color: isRead ? Colors.white : const Color(0xFFF0FAF7),
+          color: const Color(0xFFD9534F),
           borderRadius: BorderRadius.circular(14),
-          border: isRead
-              ? null
-              : Border.all(color: _primary.withValues(alpha: 0.3)),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 6,
-                offset: const Offset(0, 2)),
-          ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              alignment: Alignment.center,
-              child: Icon(_iconForType(n['type']), color: color, size: 18),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(n['message'],
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight:
-                              isRead ? FontWeight.w400 : FontWeight.w600,
-                          color: const Color(0xFF1A2F3A))),
-                  const SizedBox(height: 4),
-                  Text(_timeAgo(n['createdAt']),
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFF9CA3AF))),
-                ],
-              ),
-            ),
-            if (!isRead)
+        child: const Icon(Icons.delete_outline, color: Colors.white),
+      ),
+      onDismissed: (_) => _deleteNotification(notificationId),
+      child: GestureDetector(
+        onTap: () {
+          if (!isRead) _markAsRead(notificationId);
+        },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: isRead ? Colors.white : const Color(0xFFF0FAF7),
+            borderRadius: BorderRadius.circular(14),
+            border: isRead
+                ? null
+                : Border.all(color: _primary.withValues(alpha: 0.3)),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Container(
-                width: 8,
-                height: 8,
-                margin: const EdgeInsets.only(top: 4),
-                decoration: const BoxDecoration(
-                  color: _primary,
-                  shape: BoxShape.circle,
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Icon(_iconForType(n['type']), color: color, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(n['message'],
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight:
+                                isRead ? FontWeight.w400 : FontWeight.w600,
+                            color: const Color(0xFF1A2F3A))),
+                    const SizedBox(height: 4),
+                    Text(_timeAgo(n['createdAt']),
+                        style: const TextStyle(
+                            fontSize: 11, color: Color(0xFF9CA3AF))),
+                  ],
                 ),
               ),
-          ],
+              if (!isRead)
+                Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(top: 4, right: 6),
+                  decoration: const BoxDecoration(
+                    color: _primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              GestureDetector(
+                onTap: () => _deleteNotification(notificationId),
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 2, top: 2),
+                  child: Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: Colors.grey.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

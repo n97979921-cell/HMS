@@ -375,6 +375,9 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     );
   }
 
+  // ✅ CHANGED: sirf logo add kiya gaya hai (left side, round). Baqi
+  // sab — gradient, "Welcome,", name, tagline, bell icon — bilkul
+  // pehle jaisa hi hai, kuch nahi hataya.
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
@@ -390,6 +393,30 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       ),
       child: Row(
         children: [
+          // Logo mark — round, no white box background.
+          ClipOval(
+            child: Image.asset(
+              'assets/Logo.png',
+              width: 70,
+              height: 70,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                // Asset path galat ho to app crash nahi hogi, ye
+                // fallback icon dikhega taake pata chal jaye.
+                return Container(
+                  width: 44,
+                  height: 44,
+                  color: Colors.white24,
+                  child: const Icon(
+                    Icons.local_hospital,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

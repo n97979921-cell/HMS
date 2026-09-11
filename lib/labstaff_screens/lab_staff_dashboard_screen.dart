@@ -22,6 +22,15 @@ import '../widgets/notification_bell_icon.dart';
 /// Confirmed/In Progress/Completed), taake tab badalne par listener
 /// dobara banane ki zaroorat na pade. Jab bhi kuch badle, purana
 /// `_loadData()` khud-ba-khud dobara call ho jaata hai.
+///
+/// NAYA — DELETE (sirf "Completed" tab par):
+///   - Har completed test card par ek chhota delete icon — us akele
+///     test ka record permanent delete karta hai.
+///   - "Delete All" button (Completed tab ke header mein, jab list
+///     khali na ho) — us tab ke SAARE Completed records ek sath
+///     permanent delete kar deta hai (batch write).
+///   - Dono jagah koi confirmation dialog nahi — seedha delete, jaisa
+///     request kiya gaya. Purana completed data halka rehta hai.
 class LabStaffDashboardScreen extends StatefulWidget {
   const LabStaffDashboardScreen({super.key});
 
@@ -161,6 +170,61 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
     );
   }
 
+  void _showSuccess(String msg) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: _primary,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  // ── Delete ek test — bina confirmation ke seedha permanent delete ──
+  Future<void> _deleteTest(String testId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('lab_tests')
+          .doc(testId)
+          .delete();
+      _showSuccess('Test record deleted');
+      // Real-time listener khud-ba-khud _loadData() call kar dega,
+      // lekin turant feel ke liye yahan bhi rakh sakte hain.
+      _loadData();
+    } catch (e) {
+      _showError('Error deleting: $e');
+    }
+  }
+
+  // ── Delete All — sirf "Completed" tab ke saare records, ek batch
+  //    write mein, bina confirmation ke ──
+  Future<void> _deleteAllCompleted() async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('lab_tests')
+          .where('status', isEqualTo: 'Completed')
+          .get();
+
+      if (snap.docs.isEmpty) return;
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+
+      _showSuccess('${snap.docs.length} completed record(s) deleted');
+      _loadData();
+    } catch (e) {
+      _showError('Error deleting all: $e');
+    }
+  }
+
   Future<void> _logout() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -209,6 +273,10 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
           children: [
             _buildHeader(),
             _buildTabToggle(),
+            if (_selectedTab == 'Completed' &&
+                !_isLoading &&
+                _tests.isNotEmpty)
+              _buildDeleteAllBar(),
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -243,6 +311,9 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
     );
   }
 
+  // ✅ CHANGED: sirf logo add kiya gaya hai (left side, round). Baqi
+  // sab — gradient, "Welcome,", name, tagline, bell icon, profile
+  // button — bilkul pehle jaisa hi hai, kuch nahi hataya.
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
@@ -258,6 +329,30 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
       ),
       child: Row(
         children: [
+          // Logo mark — round, no white box background.
+          ClipOval(
+            child: Image.asset(
+              'assets/Logo.png',
+              width: 70,
+              height: 70,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                // Asset path galat ho to app crash nahi hogi, ye
+                // fallback icon dikhega taake pata chal jaye.
+                return Container(
+                  width: 44,
+                  height: 44,
+                  color: Colors.white24,
+                  child: const Icon(
+                    Icons.local_hospital,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -379,6 +474,28 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
     );
   }
 
+  // "Delete All" bar — sirf Completed tab par, jab list khali na ho.
+  // Koi confirmation dialog nahi — seedha tap par saare completed
+  // records permanent delete ho jaate hain.
+  Widget _buildDeleteAllBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          onPressed: _deleteAllCompleted,
+          icon: const Icon(Icons.delete_sweep_outlined,
+              size: 18, color: Color(0xFFD9534F)),
+          label: const Text('Delete All',
+              style: TextStyle(
+                  color: Color(0xFFD9534F),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmpty() {
     return Center(
       child: Column(
@@ -404,6 +521,8 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
   }
 
   Widget _card(Map<String, dynamic> test) {
+    final isCompleted = test['status'] == 'Completed';
+
     return GestureDetector(
       onTap: () async {
         final result = await Navigator.push(
@@ -468,6 +587,15 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
                 ],
               ),
             ),
+            // Individual delete — sirf Completed cards par. Bina
+            // confirmation ke, seedha us akele test ka record delete.
+            if (isCompleted)
+              IconButton(
+                onPressed: () => _deleteTest(test['testId']),
+                icon: const Icon(Icons.delete_outline,
+                    color: Color(0xFFD9534F), size: 20),
+                tooltip: 'Delete',
+              ),
             const Icon(
               Icons.chevron_right,
               color: Color(0xFF9CA3AF),

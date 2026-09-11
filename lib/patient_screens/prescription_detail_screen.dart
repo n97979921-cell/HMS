@@ -188,32 +188,11 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(med['medicineName'] ?? '',
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A2F3A))),
-              ),
-              if (med['duration'] != null)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDCEFE9),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(med['duration'],
-                      style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: _primary)),
-                ),
-            ],
-          ),
+          Text(med['medicineName'] ?? '',
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A2F3A))),
           const SizedBox(height: 8),
           _detailRow(
               Icons.medication_liquid_outlined, 'Dosage', med['dosage'] ?? '—'),
@@ -225,6 +204,12 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
             const SizedBox(height: 4),
             _detailRow(Icons.info_outline, 'Instructions',
                 med['instructions'].toString()),
+          ],
+          if (med['duration'] != null &&
+              med['duration'].toString().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            _detailRow(Icons.calendar_month_outlined, 'Duration',
+                med['duration'].toString()),
           ],
         ],
       ),

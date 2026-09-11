@@ -28,6 +28,12 @@ class _UserListScreenState extends State<UserListScreen> {
   List<Map<String, dynamic>> _filteredUsers = [];
   bool _isLoading = true;
 
+  // ── NAYA: multi-select state ──
+  // _selectionMode true hote hi har card pe checkbox aa jata hai.
+  // _selectedUids un users ke uid rakhta hai jo currently checked hain.
+  bool _selectionMode = false;
+  final Set<String> _selectedUids = {};
+
   // Theme colors — matched to Admin Dashboard's green palette
   static const Color primaryColor = Color(0xFF1F8A70);
   static const Color bgColor = Color(0xFFF4F7F6);
@@ -97,6 +103,99 @@ class _UserListScreenState extends State<UserListScreen> {
     }
   }
 
+  // ── NAYA: selection mode helpers ──
+
+  void _enterSelectionMode() {
+    setState(() {
+      _selectionMode = true;
+      _selectedUids.clear();
+    });
+  }
+
+  void _cancelSelectionMode() {
+    setState(() {
+      _selectionMode = false;
+      _selectedUids.clear();
+    });
+  }
+
+  void _toggleSelected(String uid) {
+    setState(() {
+      if (_selectedUids.contains(uid)) {
+        _selectedUids.remove(uid);
+      } else {
+        _selectedUids.add(uid);
+      }
+    });
+  }
+
+  // "Select all" — apni khud ki account ko selection se bahar rakhta
+  // hai (jaisa single-delete mein bhi khud ko delete nahi kar sakte).
+  void _toggleSelectAll() {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    final selectableUids = _filteredUsers
+        .map((u) => u['uid'] as String)
+        .where((uid) => uid != currentUid)
+        .toList();
+
+    final allSelected = selectableUids.isNotEmpty &&
+        selectableUids.every((uid) => _selectedUids.contains(uid));
+
+    setState(() {
+      if (allSelected) {
+        _selectedUids.removeAll(selectableUids);
+      } else {
+        _selectedUids.addAll(selectableUids);
+      }
+    });
+  }
+
+  // ── NAYA: bulk delete — selected users ek-ek karke usi
+  // AdminService().deleteUser() se delete hote hain jo single-delete
+  // mein use hota hai, taake wahi purana delete-logic (soft delete,
+  // status: 'deleted') consistent rahe.
+  Future<void> _confirmBulkDelete() async {
+    if (_selectedUids.isEmpty) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Delete selected users?',
+          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.red),
+        ),
+        content: Text(
+          'Are you sure you want to delete ${_selectedUids.length} user(s)? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    for (final uid in _selectedUids) {
+      await _adminService.deleteUser(uid);
+    }
+
+    _cancelSelectionMode();
+    _loadUsers();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -105,11 +204,22 @@ class _UserListScreenState extends State<UserListScreen> {
         backgroundColor: primaryColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          icon: Icon(
+            _selectionMode ? Icons.close_rounded : Icons.arrow_back_ios_rounded,
+            color: Colors.white,
+          ),
+          onPressed: () {
+            if (_selectionMode) {
+              _cancelSelectionMode();
+            } else {
+              Navigator.pop(context);
+            }
+          },
         ),
         title: Text(
-          widget.title,
+          _selectionMode
+              ? '${_selectedUids.length} selected'
+              : widget.title,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w700,
@@ -117,76 +227,121 @@ class _UserListScreenState extends State<UserListScreen> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DeletedUsersScreen(
-                    role: widget.role,
-                    title: widget.title,
+        actions: _selectionMode
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.delete_rounded, color: Colors.white),
+                  onPressed:
+                      _selectedUids.isEmpty ? null : _confirmBulkDelete,
+                ),
+              ]
+            : [
+                TextButton(
+                  onPressed: _enterSelectionMode,
+                  child: const Text(
+                    'Select',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
                   ),
                 ),
-              );
-            },
-            child: const Text(
-              'Deleted',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
-            ),
-          ),
-        ],
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DeletedUsersScreen(
+                          role: widget.role,
+                          title: widget.title,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'Deleted',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                ),
+              ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => InviteFormScreen(role: widget.role),
+      floatingActionButton: _selectionMode
+          ? null
+          : FloatingActionButton(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => InviteFormScreen(role: widget.role),
+                  ),
+                );
+                _loadUsers();
+              },
+              backgroundColor: primaryColor,
+              child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
             ),
-          );
-          _loadUsers();
-        },
-        backgroundColor: primaryColor,
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
-      ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
+          if (!_selectionMode)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search by name...',
+                    hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+                    prefixIcon: const Icon(Icons.search_rounded, color: primaryColor),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Color(0xFF9CA3AF)),
+                            onPressed: () => _searchController.clear(),
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  ),
+                ),
+              ),
+            ),
+          // ── NAYA: "Select all" row — sirf selection mode mein dikhta hai ──
+          if (_selectionMode && _filteredUsers.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: _filteredUsers
+                        .map((u) => u['uid'] as String)
+                        .where((uid) =>
+                            uid != FirebaseAuth.instance.currentUser?.uid)
+                        .every((uid) => _selectedUids.contains(uid)) &&
+                        _filteredUsers.isNotEmpty,
+                    activeColor: primaryColor,
+                    onChanged: (_) => _toggleSelectAll(),
+                  ),
+                  const Text(
+                    'Select all',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1A1A2E),
+                    ),
                   ),
                 ],
               ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search by name...',
-                  hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
-                  prefixIcon: const Icon(Icons.search_rounded, color: primaryColor),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.close_rounded, color: Color(0xFF9CA3AF)),
-                          onPressed: () => _searchController.clear(),
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                ),
-              ),
             ),
-          ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator(color: primaryColor))
@@ -228,10 +383,19 @@ class _UserListScreenState extends State<UserListScreen> {
                           padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                           itemCount: _filteredUsers.length,
                           itemBuilder: (context, index) {
+                            final user = _filteredUsers[index];
+                            final uid = user['uid'] as String;
+                            final isCurrentUser =
+                                uid == FirebaseAuth.instance.currentUser?.uid;
+
                             return _UserCard(
-                              user: _filteredUsers[index],
+                              user: user,
                               roleIcon: _roleIcon,
                               onChanged: _loadUsers,
+                              selectionMode: _selectionMode,
+                              isSelected: _selectedUids.contains(uid),
+                              isCurrentUser: isCurrentUser,
+                              onToggleSelect: () => _toggleSelected(uid),
                             );
                           },
                         ),
@@ -248,12 +412,22 @@ class _UserCard extends StatefulWidget {
   final IconData roleIcon;
   final VoidCallback onChanged;
 
+  // ── NAYA: selection-mode params ──
+  final bool selectionMode;
+  final bool isSelected;
+  final bool isCurrentUser;
+  final VoidCallback onToggleSelect;
+
   static const Color primaryColor = Color(0xFF1F8A70);
 
   const _UserCard({
     required this.user,
     required this.roleIcon,
     required this.onChanged,
+    this.selectionMode = false,
+    this.isSelected = false,
+    this.isCurrentUser = false,
+    required this.onToggleSelect,
   });
 
   @override
@@ -714,14 +888,18 @@ class _UserCardState extends State<_UserCard> {
     final bool isIncomplete =
         isDoctor && (!_hasTimingSetting || !_hasFeeSetting);
 
-    return Container(
+    final card = Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: widget.selectionMode && widget.isSelected
+            ? primaryColor.withOpacity(0.06)
+            : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: isIncomplete
-            ? Border.all(color: const Color(0xFFF4B400), width: 1.5)
-            : null,
+        border: widget.selectionMode && widget.isSelected
+            ? Border.all(color: primaryColor, width: 1.5)
+            : isIncomplete
+                ? Border.all(color: const Color(0xFFF4B400), width: 1.5)
+                : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -735,6 +913,18 @@ class _UserCardState extends State<_UserCard> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── NAYA: selection checkbox — sirf selectionMode mein ──
+            if (widget.selectionMode)
+              Padding(
+                padding: const EdgeInsets.only(right: 4, top: 4),
+                child: Checkbox(
+                  value: widget.isSelected,
+                  activeColor: primaryColor,
+                  onChanged: widget.isCurrentUser
+                      ? null
+                      : (_) => widget.onToggleSelect(),
+                ),
+              ),
             Container(
               width: 50,
               height: 50,
@@ -805,24 +995,48 @@ class _UserCardState extends State<_UserCard> {
                             fontWeight: FontWeight.w500),
                       ),
                     ),
-                  // ── NAYA: Fee info ──
+                  // ── NAYA: Fee info — multi-line format ──
                   if (isDoctor && _hasFeeSetting)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Row(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 1),
-                            child: Icon(Icons.payments_rounded,
-                                size: 12, color: primaryColor),
+                          Row(
+                            children: [
+                              const Icon(Icons.payments_rounded,
+                                  size: 12, color: primaryColor),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'In clinic: RS ${_inPersonFee.toStringAsFixed(0)}',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontSize: 11,
+                                      color: primaryColor,
+                                      fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 4),
-                          Expanded(
+                          const SizedBox(height: 2),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16),
                             child: Text(
-                              'In: Rs ${_inPersonFee.toStringAsFixed(0)} · Walk: Rs ${_walkInFee.toStringAsFixed(0)} · Video: Rs ${_videoCallFee.toStringAsFixed(0)}',
+                              'Walk in: RS ${_walkInFee.toStringAsFixed(0)}',
                               overflow: TextOverflow.ellipsis,
-                              maxLines: 2,
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: primaryColor,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16),
+                            child: Text(
+                              'video consultation: RS ${_videoCallFee.toStringAsFixed(0)}',
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                   fontSize: 11,
                                   color: primaryColor,
@@ -846,153 +1060,195 @@ class _UserCardState extends State<_UserCard> {
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? const Color(0xFFDCEFE9)
-                        : const Color(0xFFFCE8E6),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    isActive ? 'Active' : 'Inactive',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isActive ? primaryColor : const Color(0xFFDB4437),
+            // ── NAYA: selection mode mein status badge dikhta hai,
+            // popup menu (3-dot) hide ho jata hai taake accidental
+            // single-action na ho jaye. Selection mode band hone par
+            // sab kuch bilkul pehle jaisa hi hai. ──
+            widget.selectionMode
+                ? Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? const Color(0xFFDCEFE9)
+                          : const Color(0xFFFCE8E6),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded,
-                      color: Color(0xFF6B7280), size: 20),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  onSelected: (value) async {
-                    final currentUid = FirebaseAuth.instance.currentUser?.uid;
-                    if ((value == 'deactivate' || value == 'delete') &&
-                        widget.user['uid'] == currentUid) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              'You cannot deactivate or delete your own account.'),
-                          backgroundColor: Colors.red,
+                    child: Text(
+                      isActive ? 'Active' : 'Inactive',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: isActive ? primaryColor : const Color(0xFFDB4437),
+                      ),
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isActive
+                              ? const Color(0xFFDCEFE9)
+                              : const Color(0xFFFCE8E6),
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                      );
-                      return;
-                    }
+                        child: Text(
+                          isActive ? 'Active' : 'Inactive',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isActive
+                                ? primaryColor
+                                : const Color(0xFFDB4437),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert_rounded,
+                            color: Color(0xFF6B7280), size: 20),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        onSelected: (value) async {
+                          final currentUid =
+                              FirebaseAuth.instance.currentUser?.uid;
+                          if ((value == 'deactivate' || value == 'delete') &&
+                              widget.user['uid'] == currentUid) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'You cannot deactivate or delete your own account.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
 
-                    if (value == 'edit') {
-                      _showEditDialog(context);
-                    } else if (value == 'timing') {
-                      _showSetTimingDialog(context);
-                    } else if (value == 'fee') {
-                      // NAYA
-                      _showSetFeeDialog(context);
-                    } else if (value == 'deactivate') {
-                      await adminService.deactivateUser(widget.user['uid']);
-                      widget.onChanged();
-                    } else if (value == 'activate') {
-                      await adminService.reactivateUser(widget.user['uid']);
-                      widget.onChanged();
-                    } else if (value == 'reset') {
-                      await adminService
-                          .resetUserPassword(widget.user['email']);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Password reset email sent!'),
-                          backgroundColor: primaryColor,
-                        ),
-                      );
-                    } else if (value == 'delete') {
-                      _showDeleteConfirm(context);
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(children: [
-                        Icon(Icons.edit_rounded, color: primaryColor, size: 18),
-                        SizedBox(width: 8),
-                        Text('Edit'),
-                      ]),
-                    ),
-                    if (isDoctor)
-                      PopupMenuItem(
-                        value: 'timing',
-                        child: Row(children: [
-                          const Icon(Icons.access_time_rounded,
-                              color: primaryColor, size: 18),
-                          const SizedBox(width: 8),
-                          Text(_hasTimingSetting
-                              ? 'Update Timing'
-                              : 'Set Timing'),
-                        ]),
+                          if (value == 'edit') {
+                            _showEditDialog(context);
+                          } else if (value == 'timing') {
+                            _showSetTimingDialog(context);
+                          } else if (value == 'fee') {
+                            // NAYA
+                            _showSetFeeDialog(context);
+                          } else if (value == 'deactivate') {
+                            await adminService
+                                .deactivateUser(widget.user['uid']);
+                            widget.onChanged();
+                          } else if (value == 'activate') {
+                            await adminService
+                                .reactivateUser(widget.user['uid']);
+                            widget.onChanged();
+                          } else if (value == 'reset') {
+                            await adminService
+                                .resetUserPassword(widget.user['email']);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Password reset email sent!'),
+                                backgroundColor: primaryColor,
+                              ),
+                            );
+                          } else if (value == 'delete') {
+                            _showDeleteConfirm(context);
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Row(children: [
+                              Icon(Icons.edit_rounded,
+                                  color: primaryColor, size: 18),
+                              SizedBox(width: 8),
+                              Text('Edit'),
+                            ]),
+                          ),
+                          if (isDoctor)
+                            PopupMenuItem(
+                              value: 'timing',
+                              child: Row(children: [
+                                const Icon(Icons.access_time_rounded,
+                                    color: primaryColor, size: 18),
+                                const SizedBox(width: 8),
+                                Text(_hasTimingSetting
+                                    ? 'Update Timing'
+                                    : 'Set Timing'),
+                              ]),
+                            ),
+                          // ── NAYA: Set/Update Fee — sirf doctor ke liye ──
+                          if (isDoctor)
+                            PopupMenuItem(
+                              value: 'fee',
+                              child: Row(children: [
+                                const Icon(Icons.payments_rounded,
+                                    color: primaryColor, size: 18),
+                                const SizedBox(width: 8),
+                                Text(_hasFeeSetting
+                                    ? 'Update Fee'
+                                    : 'Set Fee'),
+                              ]),
+                            ),
+                          if (isActive)
+                            const PopupMenuItem(
+                              value: 'deactivate',
+                              child: Row(children: [
+                                Icon(Icons.block_rounded,
+                                    color: Color(0xFFF4B400), size: 18),
+                                SizedBox(width: 8),
+                                Text('Deactivate'),
+                              ]),
+                            )
+                          else
+                            const PopupMenuItem(
+                              value: 'activate',
+                              child: Row(children: [
+                                Icon(Icons.check_circle_rounded,
+                                    color: Color(0xFF0F9D58), size: 18),
+                                SizedBox(width: 8),
+                                Text('Activate'),
+                              ]),
+                            ),
+                          const PopupMenuItem(
+                            value: 'reset',
+                            child: Row(children: [
+                              Icon(Icons.lock_reset_rounded,
+                                  color: Color(0xFF1A73E8), size: 18),
+                              SizedBox(width: 8),
+                              Text('Reset Password'),
+                            ]),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Row(children: [
+                              Icon(Icons.delete_rounded,
+                                  color: Color(0xFFDB4437), size: 18),
+                              SizedBox(width: 8),
+                              Text('Delete',
+                                  style: TextStyle(color: Color(0xFFDB4437))),
+                            ]),
+                          ),
+                        ],
                       ),
-                    // ── NAYA: Set/Update Fee — sirf doctor ke liye ──
-                    if (isDoctor)
-                      PopupMenuItem(
-                        value: 'fee',
-                        child: Row(children: [
-                          const Icon(Icons.payments_rounded,
-                              color: primaryColor, size: 18),
-                          const SizedBox(width: 8),
-                          Text(_hasFeeSetting ? 'Update Fee' : 'Set Fee'),
-                        ]),
-                      ),
-                    if (isActive)
-                      const PopupMenuItem(
-                        value: 'deactivate',
-                        child: Row(children: [
-                          Icon(Icons.block_rounded,
-                              color: Color(0xFFF4B400), size: 18),
-                          SizedBox(width: 8),
-                          Text('Deactivate'),
-                        ]),
-                      )
-                    else
-                      const PopupMenuItem(
-                        value: 'activate',
-                        child: Row(children: [
-                          Icon(Icons.check_circle_rounded,
-                              color: Color(0xFF0F9D58), size: 18),
-                          SizedBox(width: 8),
-                          Text('Activate'),
-                        ]),
-                      ),
-                    const PopupMenuItem(
-                      value: 'reset',
-                      child: Row(children: [
-                        Icon(Icons.lock_reset_rounded,
-                            color: Color(0xFF1A73E8), size: 18),
-                        SizedBox(width: 8),
-                        Text('Reset Password'),
-                      ]),
-                    ),
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(children: [
-                        Icon(Icons.delete_rounded,
-                            color: Color(0xFFDB4437), size: 18),
-                        SizedBox(width: 8),
-                        Text('Delete',
-                            style: TextStyle(color: Color(0xFFDB4437))),
-                      ]),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                    ],
+                  ),
           ],
         ),
       ),
     );
+
+    // Selection mode mein poore card pe tap karne se bhi toggle ho
+    // jaye (sirf chhote checkbox pe hi tap karne ki zaroorat nahi).
+    if (widget.selectionMode) {
+      return GestureDetector(
+        onTap: widget.isCurrentUser ? null : widget.onToggleSelect,
+        child: card,
+      );
+    }
+
+    return card;
   }
 }
 
