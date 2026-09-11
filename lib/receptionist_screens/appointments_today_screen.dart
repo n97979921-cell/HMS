@@ -25,7 +25,7 @@ import 'receptionist_profile_screen.dart';
 ///       → status: NoShow | slot: rehne do (waqt guzar chuka, delete
 ///         ka faida nahi) | payment: HalfRefunded (refundPaid:false)
 ///
-/// ✅ REAL-TIME (Rule 2): Data `slots` + `appointments` + `users` se
+///  REAL-TIME (Rule 2): Data `slots` + `appointments` + `users` se
 /// milkar banta hai, is liye poori screen StreamBuilder mein convert
 /// NAHI ki. Iski jagah ek lightweight listener `appointments`
 /// collection ko sunta hai (status filter: Confirmed/CheckedIn — yehi

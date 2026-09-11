@@ -79,7 +79,8 @@ class _UserListScreenState extends State<UserListScreen> {
             ? _users
             : _users.where((user) {
                 final name = (user['name'] ?? '').toString().toLowerCase();
-                return name.contains(_searchController.text.trim().toLowerCase());
+                return name
+                    .contains(_searchController.text.trim().toLowerCase());
               }).toList();
         _isLoading = false;
       });
@@ -344,14 +345,17 @@ class _UserListScreenState extends State<UserListScreen> {
             ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                ? const Center(
+                    child: CircularProgressIndicator(color: primaryColor))
                 : _filteredUsers.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              _users.isEmpty ? _roleIcon : Icons.search_off_rounded,
+                              _users.isEmpty
+                                  ? _roleIcon
+                                  : Icons.search_off_rounded,
                               size: 64,
                               color: primaryColor.withOpacity(0.3),
                             ),
@@ -371,7 +375,8 @@ class _UserListScreenState extends State<UserListScreen> {
                               _users.isEmpty
                                   ? 'Tap + to send an invite'
                                   : 'Try a different name',
-                              style: const TextStyle(fontSize: 14, color: primaryColor),
+                              style: const TextStyle(
+                                  fontSize: 14, color: primaryColor),
                             ),
                           ],
                         ),
@@ -487,6 +492,22 @@ class _UserCardState extends State<_UserCard> {
         });
       }
     } catch (e) {}
+  }
+
+// ── NAYA: check karta hai ke yeh delete/deactivate hone wala
+// user aakhri active admin to nahi hai ──
+  Future<bool> _wouldRemoveLastActiveAdmin() async {
+    if (widget.user['role'] != 'admin') return false;
+    if (widget.user['status'] != 'active')
+      return false; // already inactive, no impact
+
+    final snap = await FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'admin')
+        .where('status', isEqualTo: 'active')
+        .get();
+
+    return snap.docs.length <= 1; // yehi ek bacha hai
   }
 
   void _showSetTimingDialog(BuildContext context) {
@@ -1126,6 +1147,22 @@ class _UserCardState extends State<_UserCard> {
                               ),
                             );
                             return;
+                          }
+
+                          // ── NAYA: last active admin protection ──
+                          if (value == 'deactivate' || value == 'delete') {
+                            final isLastAdmin =
+                                await _wouldRemoveLastActiveAdmin();
+                            if (isLastAdmin) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'Cannot deactivate or delete the last active admin.'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
                           }
 
                           if (value == 'edit') {

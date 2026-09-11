@@ -15,7 +15,7 @@ import '../widgets/notification_bell_icon.dart';
 ///       "In Progress" (chal raha hai) |
 ///       "Completed" (report ban chuki)
 ///
-/// ✅ REAL-TIME (Rule 2): Data `lab_tests` + `users` (patient/doctor
+///  REAL-TIME (Rule 2): Data `lab_tests` + `users` (patient/doctor
 /// naam) se milkar banta hai, is liye poori screen StreamBuilder mein
 /// convert NAHI ki. Iski jagah ek lightweight listener `lab_tests`
 /// collection ko sunta hai (teeno relevant statuses ek sath —

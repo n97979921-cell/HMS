@@ -87,6 +87,7 @@ class _OccupiedBedsScreenState extends State<OccupiedBedsScreen> {
           'patientName': patientName,
           'roomNumber': roomNumber,
           'roomType': roomType,
+          'bedNumber': bed['bedNumber'] ?? '',
           'pricePerHour': bed['pricePerHour'] ?? 0,
           'assignedAt': assignedDt,
         });
@@ -137,7 +138,8 @@ class _OccupiedBedsScreenState extends State<OccupiedBedsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Patient: ${bed['patientName']}'),
-            Text('Room ${bed['roomNumber']} (${bed['roomType']})'),
+            Text(
+                'Room ${bed['roomNumber']} · Bed ${bed['bedNumber']} (${bed['roomType']})'),
             const SizedBox(height: 8),
             Text('Duration: ${_durationLabel(assignedAt)}'),
             Text('Billed hours: $hours (rounded to nearest hour)'),
@@ -362,7 +364,8 @@ class _OccupiedBedsScreenState extends State<OccupiedBedsScreen> {
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1A2F3A))),
                     const SizedBox(height: 2),
-                    Text('Room ${bed['roomNumber']} · ${bed['roomType']}',
+                    Text(
+                        'Room ${bed['roomNumber']} · Bed ${bed['bedNumber']} · ${bed['roomType']}',
                         style: const TextStyle(
                             fontSize: 12, color: Colors.black54)),
                   ],

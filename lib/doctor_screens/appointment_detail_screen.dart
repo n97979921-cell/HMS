@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/notification_service.dart';
 import 'package:http/http.dart' as http;
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class _DetailColors {
   static const primary = Color(0xFF1F8A70);
@@ -62,9 +63,6 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     _checkExistingPrescription();
   }
 
-  // Ek appointment ki sirf EK prescription honi chahiye (schema-rule).
-  // Screen khulते hi check karo — agar pehle se ban chuki hai, "Add
-  // Prescription" button poori tarah hide kar do.
   Future<void> _checkExistingPrescription() async {
     try {
       final snap = await FirebaseFirestore.instance
@@ -75,9 +73,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       if (mounted && snap.docs.isNotEmpty) {
         setState(() => _hasPrescription = true);
       }
-    } catch (_) {
-      // fail ho to button dikhta rahega — silent, koi crash nahi
-    }
+    } catch (_) {}
   }
 
   bool get _isVideoCall =>
@@ -93,20 +89,11 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
       _currentStatus == AppointmentStatus.inProgress ||
       _currentStatus == AppointmentStatus.completed;
 
-  /// Lab-test request sirf ACTIVE consultation ke dauran ho sakta hai
-  /// — Completed hone ke baad "Request Lab Test" button poori tarah
-  /// GHAYAB (Admission-toggle jaisa "locked-but-visible" nahi, balke
-  /// bilkul hidden — kyunki naya lab-test request ek naya clinical
-  /// decision hai jo consultation ke baad lena sahi nahi).
   bool get _canRequestLabTest =>
       _currentStatus == AppointmentStatus.confirmed ||
       _currentStatus == AppointmentStatus.checkedIn ||
       _currentStatus == AppointmentStatus.inProgress;
 
-  /// Admission recommendation sirf ACTIVE consultation ke dauran editable
-  /// hai. Completed hone ke baad LOCKED — sirf dekhne ke liye, kyunki
-  /// receptionist is decision par bed/room assign kar sakta hai; baad
-  /// mein badalna data inconsistent kar deta.
   bool get _admissionEditable =>
       _currentStatus == AppointmentStatus.confirmed ||
       _currentStatus == AppointmentStatus.checkedIn ||
@@ -188,7 +175,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         return jsonDecode(response.body)['token'] as String;
       }
     } catch (e) {
-      print('❌ TOKEN FETCH ERROR: $e');
+      print('TOKEN FETCH ERROR: $e');
     }
     return null;
   }
@@ -997,19 +984,80 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
             const Text('Attached report',
                 style: TextStyle(fontSize: 11, color: _DetailColors.textMuted)),
             const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.memory(
-                base64Decode(widget.appointment.patientReportBase64!),
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Text(
-                    'Could not load attached image',
-                    style: TextStyle(
-                        fontSize: 12, color: _DetailColors.textMuted)),
+            widget.appointment.patientReportType == 'pdf'
+                ? _buildPdfAttachmentPreview(
+                    widget.appointment.patientReportBase64!)
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.memory(
+                      base64Decode(widget.appointment.patientReportBase64!),
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Text(
+                          'Could not load attached image',
+                          style: TextStyle(
+                              fontSize: 12, color: _DetailColors.textMuted)),
+                    ),
+                  ),
+          ],
+        ],
+      ),
+    );
+  }
+
+// PDF attachment ka chhota preview card — tap karne par full-screen
+// PDF viewer khulta hai (chhoti jagah mein SfPdfViewer theek se
+// render nahi hoti, is liye card + full-screen dialog pattern).
+  Widget _buildPdfAttachmentPreview(String base64Str) {
+    return GestureDetector(
+      onTap: () => _openPdfFullScreen(base64Str),
+      child: Container(
+        height: 90,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+        ),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.picture_as_pdf, color: Colors.red, size: 28),
+            SizedBox(height: 4),
+            Text('Tap to view PDF report',
+                style: TextStyle(fontSize: 12, color: Colors.black54)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openPdfFullScreen(String base64Str) {
+    final bytes = base64Decode(base64Str);
+    showDialog(
+      context: context,
+      builder: (_) => Dialog.fullscreen(
+        backgroundColor: Colors.white,
+        child: Stack(
+          children: [
+            SfPdfViewer.memory(bytes),
+            Positioned(
+              top: 16,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child:
+                      const Icon(Icons.close, color: Colors.black87, size: 22),
+                ),
               ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }

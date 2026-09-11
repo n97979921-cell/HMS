@@ -10,9 +10,17 @@ import 'package:logger/logger.dart';
 /// 3. Transaction fail par orphan Firebase Auth account delete
 /// 4. serverTimestamp() har jagah
 /// 5. admin/doctor/labstaff/receptionist — sab invite se ban sakte hain
-/// 6. Google Sign-In — SIRF patients ke liye (invite-based roles allowed nahi)
-/// 7. MOBILE-ONLY Google Sign-In (google_sign_in v7.2.0) — serverClientId ke
-///    saath initialize hota hai taake Firebase ke liye ID token mil sake.
+/// 6. Google Sign-In — LOGIN screen ka feature hai, signup nahi.
+///    Account picker sab roles ki emails dikhata hai (ye OS/Google ka
+///    apna native chooser hai, app control nahi karta), role-check
+///    tabhi hota hai jab account select ho jaye:
+///      - role != patient          -> "only for patients" error
+///      - patient, record maujood  -> normal login
+///      - patient, record nahi hai -> "email not registered" error
+///        (Google se naya account is function se KABHI nahi banta)
+/// 7. google_sign_in v6.2.2 API — GoogleSignIn() instance object,
+///    .signIn() (null return hota hai agar user cancel kare),
+///    .authentication ek Future hai (await lagta hai).
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -23,29 +31,14 @@ class AuthService {
   static const String _webClientId =
       '904098371260-h7ds81cbguoji0ae7d1cfujj9unpuhaq.apps.googleusercontent.com';
 
-  // google_sign_in v7+ mein instance ko sirf ek dafa initialize karna
-  // zaroori hai. `static` isliye taake AuthService ka naya instance banne
-  // par bhi ye flag reset na ho (warna "init() has already been called"
-  // error aata hai).
-  static bool _googleSignInInitialized = false;
-
-  Future<void> _ensureGoogleSignInInitialized() async {
-    if (_googleSignInInitialized) return;
-    try {
-      await GoogleSignIn.instance.initialize(
-        // serverClientId zaroori hai taake authenticate() ke baad humein
-        // Firebase credential banane ke liye idToken mil sake.
-        serverClientId: _webClientId,
-      );
-      _googleSignInInitialized = true;
-    } catch (e) {
-      if (e.toString().contains('already been called')) {
-        _googleSignInInitialized = true;
-      } else {
-        rethrow;
-      }
-    }
-  }
+  // v6.2.2 mein GoogleSignIn ek normal instance hai — koi separate
+  // initialize() call ki zaroorat nahi (jo v7+ mein zaroori thi).
+  // serverClientId isliye diya taake authentication.idToken mile
+  // (Firebase credential banane ke liye zaroori hai).
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: _webClientId,
+  );
+  // Google Sign-In LOGIN screen ke liye hai — SIGNUP is method se kabhi nahi hota.
 
   // 1. PATIENT SIGNUP
   Future<bool> patientSignup({
@@ -163,18 +156,37 @@ class AuthService {
     }
   }
 
-  // 2b. GOOGLE SIGN-IN — MOBILE ONLY, PATIENT ONLY
-  // Success (existing patient): {'success': true, 'isNewUser': false, 'user': userData}
-  // Success (first-time Google user): {'success': true, 'isNewUser': true, 'googleUser': {...}}
+  // 2b. GOOGLE SIGN-IN — LOGIN SCREEN ONLY, PATIENT ONLY
+  // (koi bhi role account picker mein apni email dekh/select kar sakta hai —
+  // ye Android/Google ka apna native chooser hai, app isay control nahi karta.
+  // Behavior account select hone ke BAAD decide hota hai.)
+  //
+  //   - role != patient          -> error: only for patients
+  //   - patient, record maujood  -> normal login
+  //   - patient, record NAHI hai -> error: email not registered
+  //     (Google se naya account YAHAN se kabhi nahi banta — signup hamesha
+  //     email/password form se hota hai)
+  //
+  // Success (existing patient): {'success': true, 'user': userData}
   // Fail: {'success': false, 'error': 'reason'}
   Future<Map<String, dynamic>> signInWithGoogle() async {
     try {
-      await _ensureGoogleSignInInitialized();
+      // Pehle purani cached Google session clear karo, taake
+      // hamesha fresh account-picker screen dikhe (na ke silently
+      // wahi purana account use ho jaye). Isi wajah se error ke baad
+      // dobara button dabane par sab accounts ki list phir dikhti hai.
+      await _googleSignIn.signOut();
 
-      final GoogleSignInAccount googleUser =
-          await GoogleSignIn.instance.authenticate();
+      // v6.2.2: signIn() null return karta hai agar user ne dialog
+      // cancel kar diya — koi exception throw nahi hoti.
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      if (googleUser == null) {
+        return {'success': false, 'error': 'Google sign-in cancelled'};
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       if (googleAuth.idToken == null) {
         return {
@@ -185,6 +197,7 @@ class AuthService {
 
       final credential = GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,
+        accessToken: googleAuth.accessToken,
       );
 
       final userCred = await _auth.signInWithCredential(credential);
@@ -213,39 +226,16 @@ class AuthService {
           };
         }
 
-        return {'success': true, 'isNewUser': false, 'user': userData};
+        return {'success': true, 'user': userData};
       }
 
-      // No Firestore doc under this Google uid — before treating this as a
-      // brand-new patient, make sure the email isn't already registered
-      // under a different uid (e.g. an invite-created doctor/admin account).
-      final emailTaken = await emailExists(firebaseUser.email ?? '');
-      if (emailTaken) {
-        await _auth.signOut();
-        return {
-          'success': false,
-          'error':
-              'This email is already registered. Please log in with email and password instead.'
-        };
-      }
-
-      return {
-        'success': true,
-        'isNewUser': true,
-        'googleUser': {
-          'uid': firebaseUser.uid,
-          'email': firebaseUser.email ?? '',
-          'name': firebaseUser.displayName ?? '',
-        },
-      };
-    } on GoogleSignInException catch (e) {
-      _logger.e("Google sign-in exception: ${e.code} - ${e.description}");
-      if (e.code == GoogleSignInExceptionCode.canceled) {
-        return {'success': false, 'error': 'Google sign-in cancelled'};
-      }
+      // Is Google uid ke against Firestore me koi record nahi hai.
+      // Login screen se naya account kabhi nahi banega — signup
+      // hamesha email/password form se hota hai.
+      await _auth.signOut();
       return {
         'success': false,
-        'error': 'Google sign-in failed. Please try again.'
+        'error': 'This email is not registered. Please sign up first.'
       };
     } on FirebaseAuthException catch (e) {
       _logger.e("Google sign-in FirebaseAuth error: ${e.code}");
@@ -313,7 +303,7 @@ class AuthService {
   Future<void> logout() async {
     try {
       await _auth.signOut();
-      await GoogleSignIn.instance.signOut();
+      await _googleSignIn.signOut();
       _logger.i("Logged out successfully");
     } catch (e) {
       _logger.e("Logout error: $e");

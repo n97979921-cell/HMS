@@ -157,6 +157,7 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
         'patientName': patientName,
         'roomNumber': roomNumber,
         'roomType': roomType,
+        'bedNumber': bed['bedNumber'] ?? '',
         'pricePerHour': bed['pricePerHour'] ?? 0,
         'assignedAt': assignedDt,
       });
@@ -307,6 +308,48 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
       _load();
     } catch (e) {
       _showError('Could not release bed: $e');
+    } finally {
+      if (mounted) setState(() => _processingId = null);
+    }
+  }
+
+  Future<void> _cancelRecommendation(Map<String, dynamic> p) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Cancel recommendation'),
+        content: Text(
+            'Remove "${p['patientName']}" from pending admissions? No bed has been assigned yet.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDB4437)),
+            child: const Text('Yes, cancel',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    setState(() => _processingId = p['appointmentId']);
+    try {
+      await FirebaseFirestore.instance
+          .collection('appointments')
+          .doc(p['appointmentId'])
+          .update({'admissionRecommended': false});
+
+      if (!mounted) return;
+      _showSuccess('Recommendation cancelled');
+      _load();
+    } catch (e) {
+      _showError('Could not cancel: $e');
     } finally {
       if (mounted) setState(() => _processingId = null);
     }
@@ -465,6 +508,7 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
   }
 
   Widget _pendingCard(Map<String, dynamic> p) {
+    final isProcessing = _processingId == p['appointmentId'];
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -506,28 +550,43 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
               ],
             ),
           ),
+          TextButton(
+            onPressed: isProcessing ? null : () => _cancelRecommendation(p),
+            style:
+                TextButton.styleFrom(foregroundColor: const Color(0xFFDB4437)),
+            child: const Text('Cancel', style: TextStyle(fontSize: 12)),
+          ),
+          const SizedBox(width: 4),
           ElevatedButton(
-            onPressed: () async {
-              final assigned = await Navigator.push<bool>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AssignBedScreen(
-                    appointmentId: p['appointmentId'],
-                    patientId: p['patientId'],
-                    patientName: p['patientName'],
-                  ),
-                ),
-              );
-              if (assigned == true) _load();
-            },
+            onPressed: isProcessing
+                ? null
+                : () async {
+                    final assigned = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AssignBedScreen(
+                          appointmentId: p['appointmentId'],
+                          patientId: p['patientId'],
+                          patientName: p['patientName'],
+                        ),
+                      ),
+                    );
+                    if (assigned == true) _load();
+                  },
             style: ElevatedButton.styleFrom(
               backgroundColor: _primary,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Assign Bed',
-                style: TextStyle(color: Colors.white, fontSize: 12)),
+            child: isProcessing
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2))
+                : const Text('Assign Bed',
+                    style: TextStyle(color: Colors.white, fontSize: 12)),
           ),
         ],
       ),

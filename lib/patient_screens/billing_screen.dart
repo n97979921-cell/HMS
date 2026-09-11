@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'bill_detail_screen.dart';
 
-/// ✅ REAL-TIME (Rule 2): Data `payments` + `appointments` + `users` +
+///  REAL-TIME (Rule 2): Data `payments` + `appointments` + `users` +
 /// `departments` + `slots` se milkar banta hai, is liye poori screen
 /// StreamBuilder mein convert NAHI ki. Iski jagah ek lightweight
 /// listener `payments` collection ko sunta hai (patientId filter ke

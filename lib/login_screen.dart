@@ -85,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Login Successful! Welcome 👋'),
+        content: Text('Login Successful! Welcome '),
         backgroundColor: Color(0xFF1F8A70),
       ),
     );
@@ -140,11 +140,10 @@ class _LoginScreenState extends State<LoginScreen> {
         final Map<String, dynamic> user = result['user'];
         _routeByRole(user);
       }
-    } else {
-      // User ne khud back dabakar Google sign-in cancel kiya — ye ek
-      // genuine error nahi hai, is liye koi red SnackBar nahi dikhani.
-      if (result['error'] == 'Google sign-in cancelled') return;
-
+    } else if (result['error'] != 'Google sign-in cancelled') {
+      // User ne khud back dabakar ya dialog band karke Google sign-in
+      // cancel kiya — ye ek genuine error nahi hai, is liye koi red
+      // SnackBar nahi dikhani. Baaki sab genuine errors par dikhti hai.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['error'] ?? 'Google sign-in failed'),

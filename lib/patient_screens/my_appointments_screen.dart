@@ -22,7 +22,7 @@ import 'patient_profile_screen.dart';
 ///    Priority: status=='Confirmed' (Doctor never started) → FULL
 ///    refund, patientJoinedAt irrelevant. status=='InProgress' +
 ///    patientJoinedAt==null → HALF refund.
-/// 5. ✅ REAL-TIME (Rule 2): Data kai collections (appointments +
+/// 5.  REAL-TIME (Rule 2): Data kai collections (appointments +
 ///    users + doctor_profiles + slots) se milkar banta hai, is liye
 ///    poori screen StreamBuilder mein convert NAHI ki. Iski jagah ek
 ///    lightweight listener sirf `appointments` collection ko sunta

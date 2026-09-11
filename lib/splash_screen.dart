@@ -52,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // ✅ Admin dashboard ke bgColor se match kiya (0xFFF4F7F6)
+      //  Admin dashboard ke bgColor se match kiya (0xFFF4F7F6)
       backgroundColor: const Color(0xFFF4F7F6),
 
       body: SafeArea(
@@ -80,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                   const SizedBox(height: 40),
 
-                  // ✅ EXACT IMAGE COLOR: Dark teal text (image jaisa)
+                  //  EXACT IMAGE COLOR: Dark teal text (image jaisa)
                   const Text(
                     'FAMILY WELL',
                     textAlign: TextAlign.center,
@@ -104,7 +104,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                   const SizedBox(height: 70),
 
-                  // ✅ EXACT IMAGE COLOR: Medium dark teal for tagline
+                  //  EXACT IMAGE COLOR: Medium dark teal for tagline
                   const Text(
                     'CONNECT EVERY CORNER OF CARE',
                     textAlign: TextAlign.center,

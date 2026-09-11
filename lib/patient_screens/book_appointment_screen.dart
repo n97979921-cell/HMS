@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'payment_upload_screen.dart';
+import 'package:file_picker/file_picker.dart';
 
 /// FIXES IS FILE MEIN:
 /// 1. Past-time slots: aaj ki date par guzre hue times ab disabled hain
@@ -67,7 +68,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   // Storage avoid karne ke liye base64 me Firestore me jaati hai
   // (jaise payment screenshot) — schema: patientReportUrl → base64.
   String? _reportBase64;
-
+  String? _reportType;
   @override
   void initState() {
     super.initState();
@@ -263,8 +264,49 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     ));
   }
 
-  // ── Optional: attach a previous medical report (gallery only) ────
+  // ── Chooser: Gallery image ya PDF ──
   Future<void> _pickReport() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 16, bottom: 4),
+              child: Text('Select Report Type',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.photo_library_outlined, color: _primary),
+              title: const Text('Photo from Gallery'),
+              onTap: () => Navigator.pop(ctx, 'image'),
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.picture_as_pdf_outlined, color: Colors.red),
+              title: const Text('PDF Document'),
+              onTap: () => Navigator.pop(ctx, 'pdf'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (choice == 'image') {
+      await _pickImageReport();
+    } else if (choice == 'pdf') {
+      await _pickPdfReport();
+    }
+  }
+
+// ── Gallery image pick (purana image_picker wala logic) ──
+  Future<void> _pickImageReport() async {
     try {
       final XFile? picked = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -279,13 +321,47 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         _showError('Image too large. Please choose a smaller file.');
         return;
       }
-      setState(() => _reportBase64 = base64Encode(bytes));
+      setState(() {
+        _reportBase64 = base64Encode(bytes);
+        _reportType = 'image';
+      });
     } catch (e) {
-      _showError('Could not load report: $e');
+      _showError('Could not load image: $e');
     }
   }
 
-  void _removeReport() => setState(() => _reportBase64 = null);
+// ── PDF pick (file_picker) ──
+  Future<void> _pickPdfReport() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        withData: true,
+      );
+      if (result == null) return;
+
+      final bytes = result.files.single.bytes;
+      if (bytes == null) {
+        _showError('Could not read PDF.');
+        return;
+      }
+      if (bytes.lengthInBytes > 700 * 1024) {
+        _showError('PDF too large. Please choose a smaller file (max 700KB).');
+        return;
+      }
+      setState(() {
+        _reportBase64 = base64Encode(bytes);
+        _reportType = 'pdf';
+      });
+    } catch (e) {
+      _showError('Could not load PDF: $e');
+    }
+  }
+
+  void _removeReport() => setState(() {
+        _reportBase64 = null;
+        _reportType = null;
+      });
 
   // ── Book: slot + appointment created atomically ───────────
   Future<void> _bookAppointment() async {
@@ -393,6 +469,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               ? null
               : _symptomsController.text.trim(),
           'patientReportBase64': _reportBase64,
+          'patientReportType': _reportType,
           'appointmentType': widget.appointmentType,
           'admissionRecommended': false,
           'consultationStartedAt': null,
@@ -763,15 +840,35 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     if (_reportBase64 != null) {
       return Column(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.memory(
-              base64Decode(_reportBase64!),
-              height: 160,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          ),
+          _reportType == 'pdf'
+              ? Container(
+                  height: 90,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.06),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.picture_as_pdf, color: Colors.red, size: 28),
+                      SizedBox(height: 4),
+                      Text('PDF report attached',
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.black54)),
+                    ],
+                  ),
+                )
+              : ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.memory(
+                    base64Decode(_reportBase64!),
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

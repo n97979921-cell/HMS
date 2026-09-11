@@ -17,7 +17,7 @@ import '../widgets/notification_bell_icon.dart';
 /// Payments, Lab Payments) → 2 full-width cards (Admissions, Pending
 /// Refunds) → bottom nav bar (Home, Appointments, Walk-in, Profile).
 ///
-/// ✅ UI-ONLY CHANGE: Saare "Quick action" style cards (Verify
+///  UI-ONLY CHANGE: Saare "Quick action" style cards (Verify
 /// payments, Lab payments, Admissions, Pending refunds) ab EK JAISE
 /// full-color tinted background use karte hain (jaisa Patient
 /// dashboard ke "Our services" cards mein hai) — pehle sirf upar
@@ -445,7 +445,7 @@ class _ReceptionistDashboardScreenState
   }
 
   // Full-width list-style card — Admissions + Pending Refunds share this.
-  // ✅ CHANGED: ab poora card tinted background use karta hai
+  //  CHANGED: ab poora card tinted background use karta hai
   // (cardBg), bilkul _gridCard jaisa — pehle sirf ek chhoti icon-chip
   // rangeen thi aur baaqi card plain white tha. Icon, title, subtitle,
   // badge, chevron — sab bilkul waisa hi hai, sirf background style.

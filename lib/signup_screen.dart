@@ -26,7 +26,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   final authService = AuthService();
 
-  // Theme colors — matched to Admin Dashboard's green palette
+  // Theme colors
   static const Color _navy = Color(0xFF1A2F5A);
   static const Color _teal = Color(0xFF1F8A70);
   static const Color _bg = Color(0xFFF4F7F6);
@@ -45,7 +45,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void _register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // ✅ Get all values
+    //  Get all values
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final name = _nameController.text.trim();
@@ -57,7 +57,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // ✅ Call Firebase
+      // Call Firebase
       bool success = await authService.patientSignup(
         email: email,
         password: password,
@@ -72,16 +72,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (!mounted) return;
 
       if (success) {
-        // ✅ SUCCESS
+        //  SUCCESS
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Account created! Check your email to verify.'),
+            content: Text('Account created! Check your email to verify.'),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
         );
 
-        // ✅ Redirect to login after 2 seconds
+        // Redirect to login after 2 seconds
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
             Navigator.pushReplacement(
@@ -91,10 +91,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
           }
         });
       } else {
-        // ❌ FAILED
+        // FAILED
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('❌ Registration failed. Please try again.'),
+            content: Text('Registration failed. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -105,7 +105,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ Error: $e'),
+          content: Text('Error: $e'),
           backgroundColor: Colors.red,
         ),
       );

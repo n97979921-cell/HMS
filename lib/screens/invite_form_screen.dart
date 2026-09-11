@@ -83,22 +83,37 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
     setState(() => _isLoading = true);
 
     try {
+      final email = _emailController.text.trim();
+
+      // NEW: pehle check karo ke is email pe pehle se invite pending ya used to nahi
+      final status = await _inviteService.checkInviteStatus(email);
+
+      if (status == "pending") {
+        _showError('An invite is already active for this email. Please wait until it is used or expires.');
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      if (status == "used") {
+        _showError('A user with this email is already registered.');
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // status == "none" -> yahan se aage normal flow chalega
       final inviteCode = await _inviteService.generateInvite(
         doctorName: _nameController.text.trim(),
-        email: _emailController.text.trim(),
+        email: email,
         role: widget.role,
         specialization: _isDoctor ? _specializationController.text.trim() : '',
         phone: _phoneController.text.trim(),
-        departmentId: _isDoctor
-            ? (_selectedDepartmentId ?? '')
-            : '', // ← YEH LINE ADD KAR
+        departmentId: _isDoctor ? (_selectedDepartmentId ?? '') : '',
         license: _isDoctor ? _licenceController.text.trim() : '',
       );
 
       if (inviteCode != null) {
-        // Send email with invite
         await _inviteService.sendInviteEmail(
-          email: _emailController.text.trim(),
+          email: email,
           inviteCode: inviteCode,
           name: _nameController.text.trim(),
         );

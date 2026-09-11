@@ -14,6 +14,7 @@ class DoctorAppointmentListItem {
   final bool admissionRecommended;
   final String? symptoms;
   final String? patientReportBase64;
+  final String? patientReportType;
 
   DoctorAppointmentListItem({
     required this.appointmentId,
@@ -25,5 +26,6 @@ class DoctorAppointmentListItem {
     this.admissionRecommended = false,
     this.symptoms,
     this.patientReportBase64,
+    this.patientReportType,
   });
 }

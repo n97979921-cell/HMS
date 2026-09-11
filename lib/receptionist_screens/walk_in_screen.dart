@@ -19,12 +19,12 @@ import 'receptionist_profile_screen.dart';
 ///  - "Booked" = cash li ja chuki (payment record Paid/Cash foran banta hai)
 ///  - Baad me appointment time par check-in na ho → HalfRefunded (Phase 4)
 ///
-/// ✅ UI-ONLY CHANGE: Ab dashboard jaisi hi bottom nav bar add ki hai
+///  UI-ONLY CHANGE: Ab dashboard jaisi hi bottom nav bar add ki hai
 /// (Home / Appointments / Walk-in / Profile) — "Walk-in" tab hamesha
 /// highlighted rehta hai jab is screen par hon. Search/Register/Book
 /// ka koi logic nahi chhua.
 ///
-/// ✅ UI-ONLY CHANGE: Confirm walk-in booking dialog mein "Back" button
+/// UI-ONLY CHANGE: Confirm walk-in booking dialog mein "Back" button
 /// ab "Cash received — Book" jaisa hi oval/pill-shaped outlined button
 /// hai (pehle plain TextButton tha) — koi logic nahi badla.
 // CNIC ko type karte waqt auto-format karta hai: 12345-1234567-1

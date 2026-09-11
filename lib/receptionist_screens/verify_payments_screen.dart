@@ -27,7 +27,7 @@ import '../services/notification_service.dart';
 ///   - Refund  → payment: Refunded (full) — screenshot asli tha
 ///   - Reject  → payment: Rejected (koi refund) — screenshot fake tha
 ///
-/// ✅ REAL-TIME (Rule 2): Data `payments` + `appointments` + `users` +
+/// REAL-TIME (Rule 2): Data `payments` + `appointments` + `users` +
 /// `slots` se milkar banta hai, is liye poori screen StreamBuilder mein
 /// convert NAHI ki. Iski jagah ek lightweight listener `payments`
 /// collection ko sunta hai (status == 'Pending' filter ke saath) —
@@ -762,39 +762,21 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
 
   Widget _screenshotPreview(String? base64Img) {
     if (base64Img == null) return const SizedBox.shrink();
-    return GestureDetector(
-      onTap: () => _viewScreenshot(base64Img),
-      child: Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.memory(
-              base64Decode(base64Img),
-              height: 160,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                height: 160,
-                color: const Color(0xFFF0F0F0),
-                alignment: Alignment.center,
-                child: const Text('Could not load screenshot',
-                    style: TextStyle(color: Colors.grey)),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 8,
-            right: 8,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.5),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.zoom_in, color: Colors.white, size: 18),
-            ),
-          ),
-        ],
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ElevatedButton.icon(
+        onPressed: () => _viewScreenshot(base64Img),
+        icon: const Icon(Icons.remove_red_eye_outlined,
+            size: 16, color: Colors.white),
+        label: const Text('View Screenshot',
+            style: TextStyle(color: Colors.white, fontSize: 12)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _primary,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          elevation: 0,
+        ),
       ),
     );
   }

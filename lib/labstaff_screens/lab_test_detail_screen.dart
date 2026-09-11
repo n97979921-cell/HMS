@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/notification_service.dart';
+import 'package:file_picker/file_picker.dart';
 
 /// LAB TEST DETAIL (Lab Staff)
 ///
@@ -37,7 +38,7 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
   String _patientName = '';
   String _doctorName = '';
   String? _reportBase64;
-
+  String? _reportType;
   @override
   void initState() {
     super.initState();
@@ -105,7 +106,49 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
   }
 
   // ── Report upload (base64, gallery image) ──
+  // ── Chooser: Gallery image ya PDF ──
   Future<void> _pickReport() async {
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 16, bottom: 4),
+              child: Text('Select Report Type',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.photo_library_outlined, color: _primary),
+              title: const Text('Photo from Gallery'),
+              onTap: () => Navigator.pop(ctx, 'image'),
+            ),
+            ListTile(
+              leading:
+                  const Icon(Icons.picture_as_pdf_outlined, color: Colors.red),
+              title: const Text('PDF Document'),
+              onTap: () => Navigator.pop(ctx, 'pdf'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (choice == 'image') {
+      await _pickImageReport();
+    } else if (choice == 'pdf') {
+      await _pickPdfReport();
+    }
+  }
+
+// ── Gallery image pick (purana image_picker wala logic) ──
+  Future<void> _pickImageReport() async {
     try {
       final XFile? picked = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -119,9 +162,40 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
         _showError('Image too large. Please choose a smaller file.');
         return;
       }
-      setState(() => _reportBase64 = base64Encode(bytes));
+      setState(() {
+        _reportBase64 = base64Encode(bytes);
+        _reportType = 'image';
+      });
     } catch (e) {
-      _showError('Could not load report: $e');
+      _showError('Could not load image: $e');
+    }
+  }
+
+// ── PDF pick (file_picker) ──
+  Future<void> _pickPdfReport() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        withData: true,
+      );
+      if (result == null) return;
+
+      final bytes = result.files.single.bytes;
+      if (bytes == null) {
+        _showError('Could not read PDF.');
+        return;
+      }
+      if (bytes.lengthInBytes > 700 * 1024) {
+        _showError('PDF too large. Please choose a smaller file (max 700KB).');
+        return;
+      }
+      setState(() {
+        _reportBase64 = base64Encode(bytes);
+        _reportType = 'pdf';
+      });
+    } catch (e) {
+      _showError('Could not load PDF: $e');
     }
   }
 
@@ -139,6 +213,7 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
           .update({
         'status': 'Completed',
         'reportBase64': _reportBase64,
+        'reportType': _reportType,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
@@ -621,11 +696,32 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
     if (_reportBase64 != null) {
       return Column(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.memory(base64Decode(_reportBase64!),
-                height: 180, width: double.infinity, fit: BoxFit.cover),
-          ),
+          _reportType == 'pdf'
+              ? Container(
+                  height: 100,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(12),
+                    border:
+                        Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.picture_as_pdf, color: Colors.red, size: 32),
+                      SizedBox(height: 6),
+                      Text('PDF report selected',
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.black54)),
+                    ],
+                  ),
+                )
+              : ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.memory(base64Decode(_reportBase64!),
+                      height: 180, width: double.infinity, fit: BoxFit.cover),
+                ),
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: _pickReport,
@@ -636,6 +732,7 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
         ],
       );
     }
+
     return GestureDetector(
       onTap: _pickReport,
       child: Container(

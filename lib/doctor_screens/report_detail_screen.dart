@@ -4,6 +4,7 @@ import 'doctor_repository.dart';
 import 'lab_test_status.dart';
 import 'lab_test_detail.dart';
 import 'dart:convert';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class _DetailColors {
   static const primary = Color(0xFF1F8A70);
@@ -61,19 +62,24 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
   }
 
-  void _viewReportFullscreen(String base64Str) {
+  void _viewReportFullscreen(String base64Str, String? reportType) {
+    final bytes = base64Decode(base64Str);
+    final isPdf = reportType == 'pdf';
+
     showDialog(
       context: context,
       builder: (_) => Dialog.fullscreen(
-        backgroundColor: Colors.black,
+        backgroundColor: isPdf ? Colors.white : Colors.black,
         child: Stack(
           children: [
             Center(
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 5.0,
-                child: Image.memory(base64Decode(base64Str)),
-              ),
+              child: isPdf
+                  ? SfPdfViewer.memory(bytes)
+                  : InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 5.0,
+                      child: Image.memory(bytes),
+                    ),
             ),
             Positioned(
               top: 16,
@@ -83,10 +89,13 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: isPdf
+                        ? Colors.black.withOpacity(0.15)
+                        : Colors.white.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close, color: Colors.white, size: 22),
+                  child: Icon(Icons.close,
+                      color: isPdf ? Colors.black87 : Colors.white, size: 22),
                 ),
               ),
             ),
@@ -294,45 +303,69 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         ),
         const SizedBox(height: 16),
 
-        // PDF file + download
-        // Report image (base64) — tap to zoom
+        // Report (image ya PDF, base64) — tap to view
         if (detail.reportBase64 != null && detail.reportBase64!.isNotEmpty) ...[
-          GestureDetector(
-            onTap: () => _viewReportFullscreen(detail.reportBase64!),
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.memory(
-                    base64Decode(detail.reportBase64!),
+          detail.reportType == 'pdf'
+              ? GestureDetector(
+                  onTap: () => _viewReportFullscreen(
+                      detail.reportBase64!, detail.reportType),
+                  child: Container(
                     height: 220,
                     width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 220,
-                      color: const Color(0xFFF0F0F0),
-                      alignment: Alignment.center,
-                      child: const Text('Could not load report',
-                          style: TextStyle(color: Colors.grey)),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 10,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      shape: BoxShape.circle,
+                      color: Colors.red.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.red.withOpacity(0.3)),
                     ),
-                    child: const Icon(Icons.zoom_in,
-                        color: Colors.white, size: 18),
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.picture_as_pdf, color: Colors.red, size: 44),
+                        SizedBox(height: 8),
+                        Text('Tap to view PDF report',
+                            style:
+                                TextStyle(color: Colors.black54, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                )
+              : GestureDetector(
+                  onTap: () => _viewReportFullscreen(
+                      detail.reportBase64!, detail.reportType),
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.memory(
+                          base64Decode(detail.reportBase64!),
+                          height: 220,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            height: 220,
+                            color: const Color(0xFFF0F0F0),
+                            alignment: Alignment.center,
+                            child: const Text('Could not load report',
+                                style: TextStyle(color: Colors.grey)),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 10,
+                        right: 10,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.zoom_in,
+                              color: Colors.white, size: 18),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
         ] else ...[
           Container(
             width: double.infinity,

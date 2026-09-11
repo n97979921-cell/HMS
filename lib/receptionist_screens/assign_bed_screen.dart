@@ -99,7 +99,7 @@ class _AssignBedScreenState extends State<AssignBedScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Assign this bed?'),
         content: Text(
-            'Room ${bed['roomNumber']} — Rs. ${bed['pricePerHour']}/hour\n\n'
+            'Room ${bed['roomNumber']} — Bed ${bed['bedNumber']} — Rs. ${bed['pricePerHour']}/hour\n\n'
             'Patient: ${widget.patientName}'),
         actions: [
           TextButton(
