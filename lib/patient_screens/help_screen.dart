@@ -19,8 +19,8 @@ class HelpScreen extends StatelessWidget {
   static const Color _primaryDark = Color(0xFF0D6B5A);
 
   // ── YAHAN BADLO (hospital ka asli number/email milne par) ──────
-  static const String _hospitalPhone = '0300-0000000'; // TODO: asli number
-  static const String _hospitalEmail = 'info@familywellcare.com'; // TODO
+  static const String _hospitalPhone = '0308-9456453'; // TODO: asli number
+  static const String _hospitalEmail = 'familywelcarehospital@gmail.com'; // TODO
   // ────────────────────────────────────────────────────────────────
 
   static const String _emergencyNumber = '1122'; // Rescue 1122 — fixed

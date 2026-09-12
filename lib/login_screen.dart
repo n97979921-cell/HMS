@@ -19,6 +19,12 @@ import 'labstaff_screens/lab_staff_dashboard_screen.dart';
 ///   labstaff     → "coming soon" (jab uska dashboard banega, add karna)
 ///
 /// UI/UX REDESIGN ONLY — koi login/validation logic change nahi hua.
+///
+/// FIX (this version): Google Sign-In ko user khud "back" dabakar cancel
+/// kare to ab koi red error SnackBar nahi dikhti — silently login screen
+/// par hi rehta hai. Baaki sab genuine Google sign-in errors (network,
+/// wrong config, account already exists, etc.) par pehle jaisa hi red
+/// error message dikhta hai.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -135,7 +141,9 @@ class _LoginScreenState extends State<LoginScreen> {
         _routeByRole(user);
       }
     } else if (result['error'] != 'Google sign-in cancelled') {
-      // User ne khud dialog cancel kiya — koi error dikhane ki zaroorat nahi
+      // User ne khud back dabakar ya dialog band karke Google sign-in
+      // cancel kiya — ye ek genuine error nahi hai, is liye koi red
+      // SnackBar nahi dikhani. Baaki sab genuine errors par dikhti hai.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['error'] ?? 'Google sign-in failed'),
@@ -205,7 +213,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Welcome back',
+                        'Welcome',
                         style: TextStyle(
                           color: _navy,
                           fontSize: 24,

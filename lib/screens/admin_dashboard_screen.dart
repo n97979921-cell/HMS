@@ -11,7 +11,6 @@ import 'view_payment_records_screen.dart';
 import 'view_feedback_screen.dart';
 import 'reports_screen.dart';
 import 'admin_profile_screen.dart';
-import '../widgets/notification_bell_icon.dart';
 
 /// ADMIN DASHBOARD — UI/UX redesign only, ALL logic unchanged.
 ///
@@ -19,7 +18,6 @@ import '../widgets/notification_bell_icon.dart';
 ///  - No separate top AppBar (hospital name/logo removed) — single
 ///    gradient header card instead, matching Receptionist/Doctor style.
 ///  - Hamburger (opens Drawer) moved INSIDE the header card, left side.
-///  - Bell icon moved INSIDE the header card, right side.
 ///  - 3-dot menu removed entirely (was non-functional).
 ///  - Bottom nav restyled to match the app-wide rounded/active-tab look
 ///    used elsewhere (Patient/Receptionist), same 3 items + same
@@ -31,6 +29,11 @@ import '../widgets/notification_bell_icon.dart';
 ///    instead of a white card with just a coloured icon chip.
 ///  - Drawer: same items, same navigation, only re-themed to match
 ///    the app's green palette instead of the old teal.
+///  - Header: compact bar, no gradient — small circular logo mark
+///    (assets/Logo.png) next to the hamburger, and a role tag
+///    ("Admin") shown under the name.
+///  - ✅ REMOVED: notification bell icon — admin doesn't receive
+///    notifications, so it's taken out of the header entirely.
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -160,7 +163,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       backgroundColor: bgColor,
       drawer: _buildDrawer(),
 
-      // No AppBar — header card inside the body carries menu/bell now
+      // No AppBar — header card inside the body carries the menu now
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadStats,
@@ -247,78 +250,91 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // Header card — replaces the old AppBar.
-  // Hamburger (left, opens Drawer) + notification bell (right)
-  // live here now.
+  // Header — compact bar, no gradient (solid primaryDark), small
+  // circular logo mark (assets/Logo.png) next to the hamburger, name
+  // + role tag ("Admin") stacked. Same hamburger → openDrawer() as
+  // before — only the visual style changed, and the bell icon has
+  // been removed (admin doesn't receive notifications).
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [primaryColor, primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: primaryDark,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => _scaffoldKey.currentState?.openDrawer(),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.menu_rounded,
-                color: Colors.white,
-                size: 20,
+          // Hamburger — no permanent circle background.
+          // Circle only appears as a ripple while pressed.
+          Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            child: InkWell(
+              onTap: () => _scaffoldKey.currentState?.openDrawer(),
+              customBorder: const CircleBorder(),
+              child: const Padding(
+                padding: EdgeInsets.all(6),
+                child: Icon(
+                  Icons.menu_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
             ),
           ),
 
-          const SizedBox(width: 14),
+          const SizedBox(width: 8),
+
+          // Small logo mark
+          Container(
+            width: 30,
+            height: 30,
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/Logo.png',
+                width: 70,
+                height: 70,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 10),
 
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'Welcome back',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
                 Text(
                   _adminName,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
+
+                const SizedBox(height: 2),
+
+                // Role tag — always "Admin" on this dashboard.
+                const Text(
+                  'Admin',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
-          ),
-
-          // ─────────────────────────────────────────────
-          // NOTIFICATION BELL
-          // Existing notification system is used here.
-          // Unread notifications will automatically show
-          // red count badge on the bell.
-          // ─────────────────────────────────────────────
-          const NotificationBellIcon(
-            iconColor: Colors.white,
-            backgroundColor: Color(0x26FFFFFF),
-            size: 20,
           ),
         ],
       ),
@@ -439,16 +455,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
+                  // Hospital logo — replaces the old generic icon.
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    width: 48,
+                    height: 48,
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.local_hospital_rounded,
-                      color: Colors.white,
-                      size: 28,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/Logo.png',
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
 

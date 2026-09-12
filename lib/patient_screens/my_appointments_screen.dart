@@ -32,6 +32,16 @@ import 'patient_profile_screen.dart';
 /// 6. NAYA — IN_PERSON ARRIVAL REMINDER: upcoming (Requested/Confirmed)
 ///    in-clinic appointment cards par ek chhota reminder banner —
 ///    patient ko yaad dilata hai ke 10 min pehle pohanchna hai.
+/// 7. NAYA — DELETE: Cancelled appointments, aur Completed appointments
+///    jin par feedback de diya ja chuka hai, un cards par ek "Delete"
+///    option — permanent delete, koi confirmation dialog nahi (jaisa
+///    request kiya gaya). Isse purana, ab bekaar data record se hat
+///    jata hai.
+/// 8. NAYA — NoShow appointments: inpar bhi individual "Delete" option
+///    (Cancelled jaisa hi). Is ke ilawa, jab filter "NoShow" par ho
+///    aur list khali na ho, ek "Delete All" button bhi dikhta hai jo
+///    is patient ke SAARE NoShow records ek sath permanent delete
+///    kar deta hai (batch write) — koi confirmation dialog nahi.
 class MyAppointmentsScreen extends StatefulWidget {
   const MyAppointmentsScreen({super.key});
 
@@ -429,6 +439,52 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     }
   }
 
+  // ── Delete: sirf Cancelled, NoShow, ya (Completed + feedback diya ja
+  //    chuka) appointments ke liye. Bina confirmation ke, seedha permanent
+  //    delete — jaisa request kiya gaya. Appointment document Firestore
+  //    se hamesha ke liye hat jata hai, is se data halka ho jata hai.
+  Future<void> _deleteAppointment(Map<String, dynamic> appt) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('appointments')
+          .doc(appt['appointmentId'])
+          .delete();
+      _showSuccess('Appointment deleted');
+      _loadAppointments();
+    } catch (e) {
+      _showError('Error deleting: $e');
+    }
+  }
+
+  // ── Delete All — is patient ke SAARE NoShow appointments ek batch
+  //    write mein, bina confirmation ke. Sirf "NoShow" filter tab par
+  //    dikhta hai.
+  Future<void> _deleteAllNoShow() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      final snap = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('patientId', isEqualTo: uid)
+          .where('status', isEqualTo: 'NoShow')
+          .get();
+
+      if (snap.docs.isEmpty) return;
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+
+      _showSuccess('${snap.docs.length} no-show record(s) deleted');
+      _loadAppointments();
+    } catch (e) {
+      _showError('Error deleting all: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -441,6 +497,10 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
               child: _buildFilterTabs(),
             ),
+            if (_selectedFilter == 'NoShow' &&
+                !_isLoading &&
+                _filteredAppointments.isNotEmpty)
+              _buildDeleteAllBar(),
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -556,6 +616,28 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     );
   }
 
+  // "Delete All" bar — sirf NoShow filter tab par, jab list khali na
+  // ho. Koi confirmation dialog nahi — seedha tap par saare NoShow
+  // records permanent delete ho jaate hain.
+  Widget _buildDeleteAllBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          onPressed: _deleteAllNoShow,
+          icon: const Icon(Icons.delete_sweep_outlined,
+              size: 18, color: Colors.red),
+          label: const Text('Delete All',
+              style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+        ),
+      ),
+    );
+  }
+
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -581,6 +663,14 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     final canCancel =
         appt['status'] == 'Requested' || appt['status'] == 'Confirmed';
     final isCompleted = appt['status'] == 'Completed';
+    final isCancelled = appt['status'] == 'Cancelled';
+    final isNoShow = appt['status'] == 'NoShow';
+    // Delete sirf Cancelled ya NoShow cards par, ya Completed cards par
+    // jab feedback pehle hi de diya gaya ho — is se purana, ab bekaar
+    // data record se hat jata hai.
+    final canDelete = isCancelled ||
+        isNoShow ||
+        (isCompleted && appt['hasFeedback'] == true);
     // Reminder sirf in-clinic + abhi tak upcoming (cancel ho sakne
     // wali) appointments par dikhta hai — completed/cancelled/noshow
     // purani appointments par bewajah nahi.
@@ -744,6 +834,19 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                     ),
                   ),
                 ),
+            ],
+            if (canDelete) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => _deleteAppointment(appt),
+                  icon: const Icon(Icons.delete_outline,
+                      size: 16, color: Colors.red),
+                  label: const Text('Delete',
+                      style: TextStyle(color: Colors.red, fontSize: 12)),
+                ),
+              ),
             ],
           ],
         ),

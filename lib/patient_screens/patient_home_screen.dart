@@ -288,6 +288,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     );
   }
 
+  // ✅ CHANGED: sirf logo add kiya gaya hai (left side, round). Baqi
+  // sab — gradient, "Hello,", name, tagline, bell icon — bilkul
+  // pehle jaisa hi hai, kuch nahi hataya.
   Widget _buildGreetingCard() {
     return Container(
       width: double.infinity,
@@ -301,36 +304,61 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Hello,',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
+          // Logo mark — round, no white box background.
+          ClipOval(
+            child: Image.asset(
+              'assets/Logo.png',
+              width: 70,
+              height: 70,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                // Asset path galat ho to app crash nahi hogi, ye
+                // fallback icon dikhega taake pata chal jaye.
+                return Container(
+                  width: 44,
+                  height: 44,
+                  color: Colors.white24,
+                  child: const Icon(
+                    Icons.local_hospital,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Hello,',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                _patientName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 2),
+                Text(
+                  _patientName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Your health, our priority',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
+                const SizedBox(height: 4),
+                const Text(
+                  'Your health, our priority',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
 
           // Notification Bell

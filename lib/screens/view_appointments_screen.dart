@@ -85,6 +85,10 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
   // Takes the raw docs from the stream and resolves patient/doctor
   // names for each one. Used inside a nested FutureBuilder so the
   // outer StreamBuilder stays purely real-time.
+  // NAYA: har Completed appointment ke liye feedback collection bhi
+  // check karte hain — 'hasFeedback' flag Delete button ke liye
+  // zaroori hai (feedback diye ja chuke Completed cards par hi
+  // Delete dikhna hai).
   Future<List<Map<String, dynamic>>> _enrichWithNames(
       List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) async {
     final List<Map<String, dynamic>> results = [];
@@ -92,11 +96,22 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
       final data = doc.data();
       final patientName = await _getUserName(data['patientId']);
       final doctorName = await _getUserName(data['doctorId']);
+
+      bool hasFeedback = false;
+      if (data['status'] == 'Completed') {
+        final feedbackDoc = await FirebaseFirestore.instance
+            .collection('feedback')
+            .doc(doc.id)
+            .get();
+        hasFeedback = feedbackDoc.exists;
+      }
+
       results.add({
         'id': doc.id,
         ...data,
         'patientName': patientName,
         'doctorName': doctorName,
+        'hasFeedback': hasFeedback,
       });
     }
     return results;
@@ -166,6 +181,70 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
         return 'Walk-In';
       default:
         return type;
+    }
+  }
+
+  // ── Delete: sirf Cancelled, NoShow, ya (Completed + feedback diya ja
+  //    chuka) appointments ke liye. Bina confirmation ke, seedha permanent
+  //    delete — jaisa request kiya gaya. StreamBuilder khud-ba-khud
+  //    list refresh kar dega, manual reload ki zaroorat nahi.
+  Future<void> _deleteAppointment(BuildContext context, String id) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('appointments')
+          .doc(id)
+          .delete();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Appointment deleted'),
+          backgroundColor: _primary,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error deleting: $e'),
+          backgroundColor: const Color(0xFFDB4437),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    }
+  }
+
+  // ── Delete All — SAARE NoShow appointments ek batch write mein,
+  //    bina confirmation ke. Sirf jab "NoShow" status filter select
+  //    ho aur list khali na ho, is button ka option dikhta hai.
+  Future<void> _deleteAllNoShow(BuildContext context) async {
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('appointments')
+          .where('status', isEqualTo: 'NoShow')
+          .get();
+
+      if (snap.docs.isEmpty) return;
+
+      final batch = FirebaseFirestore.instance.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('${snap.docs.length} no-show record(s) deleted'),
+          backgroundColor: _primary,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error deleting all: $e'),
+          backgroundColor: const Color(0xFFDB4437),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
     }
   }
 
@@ -373,13 +452,35 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
                           color: const Color(0xFFDCEFE9),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
-                          child: Text(
-                            '${appointments.length} appointment${appointments.length == 1 ? '' : 's'} found',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: _primary,
-                            ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${appointments.length} appointment${appointments.length == 1 ? '' : 's'} found',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: _primary,
+                                  ),
+                                ),
+                              ),
+                              // "Delete All" — sirf NoShow status filter
+                              // par, jab list khali na ho. Koi
+                              // confirmation nahi — seedha saare NoShow
+                              // records permanent delete.
+                              if (_statusFilter == 'NoShow' &&
+                                  appointments.isNotEmpty)
+                                TextButton.icon(
+                                  onPressed: () => _deleteAllNoShow(context),
+                                  icon: const Icon(Icons.delete_sweep_outlined,
+                                      size: 16, color: Color(0xFFDB4437)),
+                                  label: const Text('Delete All',
+                                      style: TextStyle(
+                                          color: Color(0xFFDB4437),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600)),
+                                ),
+                            ],
                           ),
                         ),
                         Expanded(
@@ -436,6 +537,8 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
                                           appt['appointmentType'] ?? ''),
                                       typeLabel: _typeLabel(
                                           appt['appointmentType'] ?? ''),
+                                      onDelete: () =>
+                                          _deleteAppointment(context, appt['id']),
                                     );
                                   },
                                 ),
@@ -515,12 +618,14 @@ class _AppointmentCard extends StatelessWidget {
   final Color statusColor;
   final IconData typeIcon;
   final String typeLabel;
+  final VoidCallback onDelete;
 
   const _AppointmentCard({
     required this.appt,
     required this.statusColor,
     required this.typeIcon,
     required this.typeLabel,
+    required this.onDelete,
   });
 
   static const Color _primary = Color(0xFF1F8A70);
@@ -539,6 +644,11 @@ class _AppointmentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = appt['status'] ?? 'Unknown';
     final fee = appt['consultationFee'];
+    // Delete sirf Cancelled ya NoShow cards par, ya Completed cards par
+    // jab feedback pehle hi de diya gaya ho.
+    final canDelete = status == 'Cancelled' ||
+        status == 'NoShow' ||
+        (status == 'Completed' && appt['hasFeedback'] == true);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -678,6 +788,21 @@ class _AppointmentCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+          if (canDelete) ...[
+            const SizedBox(height: 10),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline,
+                    size: 16, color: Color(0xFFDB4437)),
+                label: const Text('Delete',
+                    style: TextStyle(color: Color(0xFFDB4437), fontSize: 12)),
+              ),
             ),
           ],
         ],

@@ -12,7 +12,7 @@ import '../widgets/notification_bell_icon.dart';
 
 /// RECEPTIONIST DASHBOARD — professional layout
 ///
-/// Header (gradient, name + bell) → compact stat-chip row
+/// Header (compact bar, logo + name/role + bell) → compact stat-chip row
 /// (Pending / Today / Refunds) → 2-item quick-action grid (Verify
 /// Payments, Lab Payments) → 2 full-width cards (Admissions, Pending
 /// Refunds) → bottom nav bar (Home, Appointments, Walk-in, Profile).
@@ -24,6 +24,12 @@ import '../widgets/notification_bell_icon.dart';
 /// wale 2 grid-cards rangeen the, neeche wale 2 list-cards plain
 /// white the sirf icon-chip rangeen thi. Koi logic, koi navigation,
 /// koi data change nahi hua — sirf colors/background style.
+///
+/// ✅ UI-ONLY CHANGE: Header ab compact bar style mein hai — gradient
+/// ki jagah solid color, aur left side pe app logo (Logo.png) hai
+/// (is screen pe sidebar nahi hai isliye hamburger icon nahi laga),
+/// name k neechay "Receptionist" role tag add kiya gaya hai. Bell
+/// icon aur uska logic bilkul waisa hi hai.
 class ReceptionistDashboardScreen extends StatefulWidget {
   const ReceptionistDashboardScreen({super.key});
 
@@ -166,40 +172,67 @@ class _ReceptionistDashboardScreenState
     );
   }
 
+  // ✅ CHANGED: compact bar (solid color, no gradient) + logo mark
+  // (replaces hamburger — is screen pe sidebar nahi hai) + name k
+  // neechay "Receptionist" role tag. Bell icon aur uska logic same.
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_primary, _primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: _primary,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         children: [
+          // Logo mark (replaces hamburger/menu icon — no sidebar on this screen)
+          // Round logo, no white box background — just the image itself.
+          ClipOval(
+            child: Image.asset(
+              'assets/Logo.png',
+              width: 70,
+              height: 70,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                // Asset path galat ho to app crash nahi hogi, ye
+                // fallback icon dikhega taake pata chal jaye.
+                return Container(
+                  width: 40,
+                  height: 40,
+                  color: Colors.white24,
+                  child: const Icon(
+                    Icons.local_hospital,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Name + role tag
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Reception desk',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 4),
                 Text(
                   _isLoading ? 'Loading...' : _receptionistName,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
+                    fontSize: 17,
                     fontWeight: FontWeight.bold,
                   ),
                   overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 3),
+                const Text(
+                  'Receptionist',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
