@@ -63,33 +63,49 @@ class _BedsListScreenState extends State<BedsListScreen> {
         return;
       }
       final pricePerHour = priceDoc.data()!['pricePerHour'];
-      final existingBeds = await FirebaseFirestore.instance
-          .collection('beds')
-          .where('roomId', isEqualTo: widget.roomId)
-          .get();
 
-      final usedNumbers = existingBeds.docs
-          .map((doc) => (doc.data()['bedNumber'] as num?)?.toInt())
-          .whereType<int>()
-          .toSet();
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final existingBeds = await FirebaseFirestore.instance
+            .collection('beds')
+            .where('roomId', isEqualTo: widget.roomId)
+            .get();
 
-      int nextBedNumber = 1;
-      while (usedNumbers.contains(nextBedNumber)) {
-        nextBedNumber++;
-      }
-      await FirebaseFirestore.instance.collection('beds').add({
-        'roomId': widget.roomId,
-        'bedNumber': nextBedNumber,
-        'availability': 'Available',
-        'appointmentId': null,
-        'assignedAt': null,
-        'releasedAt': null,
-        'pricePerHour': pricePerHour,
-        'updatedAt': DateTime.now(),
+        // Private room restriction — only 1 bed allowed per Private room
+        if (widget.roomType == 'Private' && existingBeds.docs.isNotEmpty) {
+          throw Exception('PRIVATE_LIMIT_REACHED');
+        }
+
+        final usedNumbers = existingBeds.docs
+            .map((doc) => (doc.data()['bedNumber'] as num?)?.toInt())
+            .whereType<int>()
+            .toSet();
+
+        int nextBedNumber = 1;
+        while (usedNumbers.contains(nextBedNumber)) {
+          nextBedNumber++;
+        }
+
+        final newBedRef = FirebaseFirestore.instance.collection('beds').doc();
+        transaction.set(newBedRef, {
+          'roomId': widget.roomId,
+          'bedNumber': nextBedNumber,
+          'availability': 'Available',
+          'appointmentId': null,
+          'assignedAt': null,
+          'releasedAt': null,
+          'pricePerHour': pricePerHour,
+          'updatedAt': DateTime.now(),
+        });
       });
+
       _showSuccess('Bed added successfully!');
     } catch (e) {
-      _showError('Error: $e');
+      if (e.toString().contains('PRIVATE_LIMIT_REACHED')) {
+        _showError(
+            'Private room already has a bed. Only 1 bed allowed per Private room.');
+      } else {
+        _showError('Error: $e');
+      }
     } finally {
       if (mounted) setState(() => _isAdding = false);
     }
@@ -194,18 +210,34 @@ class _BedsListScreenState extends State<BedsListScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _isAdding ? null : _addBed,
-        backgroundColor: widget.roomTypeColor,
-        icon: _isAdding
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 2),
-              )
-            : const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add Bed', style: TextStyle(color: Colors.white)),
+      floatingActionButton: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('beds')
+            .where('roomId', isEqualTo: widget.roomId)
+            .snapshots(),
+        builder: (context, snapshot) {
+          final bedCount = snapshot.data?.docs.length ?? 0;
+          final isPrivateLimitReached =
+              widget.roomType == 'Private' && bedCount >= 1;
+
+          if (isPrivateLimitReached) {
+            return const SizedBox.shrink();
+          }
+
+          return FloatingActionButton.extended(
+            onPressed: _isAdding ? null : _addBed,
+            backgroundColor: widget.roomTypeColor,
+            icon: _isAdding
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2),
+                  )
+                : const Icon(Icons.add, color: Colors.white),
+            label: const Text('Add Bed', style: TextStyle(color: Colors.white)),
+          );
+        },
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance

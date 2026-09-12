@@ -439,113 +439,156 @@ class _ManageTestPricesScreenState extends State<ManageTestPricesScreen> {
   void _showAddDialog() {
     final nameController = TextEditingController();
     final priceController = TextEditingController();
+    bool isSaving = false;
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Add Test',
-                style: TextStyle(fontWeight: FontWeight.w700)),
-            IconButton(
-              icon: const Icon(Icons.close_rounded, color: Colors.grey),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Test Name',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                hintText: 'Type...',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: primaryColor),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Add Test',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                onPressed: () => Navigator.pop(dialogContext),
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text('Price',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: priceController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: 'Type...',
-                prefixText: 'Rs ',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: primaryColor),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () async {
-                if (nameController.text.trim().isEmpty) return;
-
-                final existing = await _firestore
-                    .collection('test_type_prices')
-                    .doc(nameController.text.trim())
-                    .get();
-                if (existing.exists) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content:
-                            Text('This test already exists. Use Edit instead.'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                  return;
-                }
-
-                final price = double.tryParse(priceController.text.trim()) ?? 0;
-                await _firestore
-                    .collection('test_type_prices')
-                    .doc(nameController.text.trim())
-                    .set({
-                  'testType': nameController.text.trim(),
-                  'charge': price,
-                  'updatedAt': DateTime.now(),
-                });
-                Navigator.pop(context);
-                _loadTests();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: const Text('Save',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
+            ],
           ),
-        ],
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Test Name',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  hintText: 'Type...',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: primaryColor),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('Price',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: priceController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'Type...',
+                  prefixText: 'Rs ',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: primaryColor),
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        final name = nameController.text.trim();
+                        if (name.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Test name is required'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
+
+                        setDialogState(() => isSaving = true);
+
+                        try {
+                          final existing = await _firestore
+                              .collection('test_type_prices')
+                              .where('testType', isEqualTo: name)
+                              .limit(1)
+                              .get();
+
+                          if (existing.docs.isNotEmpty) {
+                            if (dialogContext.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                      'This test already exists. Use Edit instead.'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                            setDialogState(() => isSaving = false);
+                            return;
+                          }
+
+                          final price =
+                              double.tryParse(priceController.text.trim()) ?? 0;
+
+                          final docRef =
+                              _firestore.collection('test_type_prices').doc();
+                          await docRef.set({
+                            'testType': name,
+                            'charge': price,
+                            'updatedAt': DateTime.now(),
+                          });
+
+                          if (dialogContext.mounted) {
+                            Navigator.pop(dialogContext);
+                          }
+                          _loadTests();
+                        } catch (e) {
+                          setDialogState(() => isSaving = false);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to save test: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text('Save',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
