@@ -108,16 +108,14 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   }
 
   // ── Next 7 weekdays, Sat/Sun skipped ──────────────────────
-  // TODO: REVERT BEFORE SUBMISSION/VIVA — weekend check temporarily
-  // disabled below to allow screenshot testing on Sat/Sun.
   List<DateTime> _generateNextWeekdays(int count) {
     final List<DateTime> result = [];
     DateTime cursor = DateTime.now();
     while (result.length < count) {
-      // if (cursor.weekday != DateTime.saturday &&
-      //     cursor.weekday != DateTime.sunday) {
-      result.add(DateTime(cursor.year, cursor.month, cursor.day));
-      // }
+      if (cursor.weekday != DateTime.saturday &&
+          cursor.weekday != DateTime.sunday) {
+        result.add(DateTime(cursor.year, cursor.month, cursor.day));
+      }
       cursor = cursor.add(const Duration(days: 1));
     }
     return result;
