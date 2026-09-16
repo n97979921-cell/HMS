@@ -107,7 +107,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     }
   }
 
-  // ── Next 7 weekdays, Sat/Sun skipped ──────────────────────
+  // ── Next 7 weekdays, Sat/Sun skipped
   List<DateTime> _generateNextWeekdays(int count) {
     final List<DateTime> result = [];
     DateTime cursor = DateTime.now();
