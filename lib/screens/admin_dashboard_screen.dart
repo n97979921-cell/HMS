@@ -29,7 +29,7 @@ import 'admin_profile_screen.dart';
 ///    instead of a white card with just a coloured icon chip.
 ///  - Drawer: same items, same navigation, only re-themed to match
 ///    the app's green palette instead of the old teal.
-///  - Header: compact bar, no gradient — small circular logo mark
+///  - Header: compact bar, no gradient — bigger circular logo mark
 ///    (assets/Logo.png) next to the hamburger, and a role tag
 ///    ("Admin") shown under the name.
 ///  - ✅ REMOVED: notification bell icon — admin doesn't receive
@@ -250,7 +250,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // Header — compact bar, no gradient (solid primaryDark), small
+  // Header — compact bar, no gradient (solid primaryDark), bigger
   // circular logo mark (assets/Logo.png) next to the hamburger, name
   // + role tag ("Admin") stacked. Same hamburger → openDrawer() as
   // before — only the visual style changed, and the bell icon has
@@ -284,28 +284,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ),
 
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
 
-          // Small logo mark
+          // Logo mark — enlarged. The source asset has its own
+          // built-in white margin around the FWC mark, which was
+          // showing as a double ring alongside the container's white
+          // backing. Scaling the image up inside the clip crops that
+          // baked-in whitespace away so only the FWC circle shows.
           Container(
-            width: 30,
-            height: 30,
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+            width: 52,
+            height: 52,
+            decoration: const BoxDecoration(
+              color: Colors.white,
               shape: BoxShape.circle,
             ),
             child: ClipOval(
-              child: Image.asset(
-                'assets/Logo.png',
-                width: 70,
-                height: 70,
-                fit: BoxFit.cover,
+              child: Transform.scale(
+                scale: 1.6,
+                child: Image.asset(
+                  'assets/Logo.png',
+                  width: 52,
+                  height: 52,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
 
           Expanded(
             child: Column(
@@ -316,7 +322,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   _adminName,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -329,7 +335,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   'Admin',
                   style: TextStyle(
                     color: Colors.white70,
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -455,19 +461,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
-                  // Hospital logo — replaces the old generic icon.
+                  // Hospital logo — enlarged, with a solid white
+                  // backing. The asset's own baked-in white margin is
+                  // cropped out with a scale-up inside the clip (same
+                  // fix as the header logo) so no double ring shows.
                   Container(
-                    width: 48,
-                    height: 48,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                    width: 64,
+                    height: 64,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
                       shape: BoxShape.circle,
                     ),
                     child: ClipOval(
-                      child: Image.asset(
-                        'assets/Logo.png',
-                        fit: BoxFit.cover,
+                      child: Transform.scale(
+                        scale: 1.6,
+                        child: Image.asset(
+                          'assets/Logo.png',
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   ),
@@ -481,7 +492,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         'Family Well Care',
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 14,
+                          fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -489,7 +500,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         'Hospital',
                         style: TextStyle(
                           color: Colors.white70,
-                          fontSize: 12,
+                          fontSize: 13,
                         ),
                       ),
                     ],
