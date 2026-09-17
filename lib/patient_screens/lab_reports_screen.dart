@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 /// PATIENT — LAB REPORTS
 ///
@@ -119,24 +118,21 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
     setState(() => _selectedFilter = filter);
   }
 
-  void _viewReport(String base64Str, String? reportType) {
+  void _viewReport(String base64Str) {
     final bytes = base64Decode(base64Str);
-    final isPdf = reportType == 'pdf';
 
     showDialog(
       context: context,
       builder: (_) => Dialog.fullscreen(
-        backgroundColor: isPdf ? Colors.white : Colors.black,
+        backgroundColor: Colors.black,
         child: Stack(
           children: [
             Center(
-              child: isPdf
-                  ? SfPdfViewer.memory(bytes)
-                  : InteractiveViewer(
-                      minScale: 0.5,
-                      maxScale: 5.0,
-                      child: Image.memory(bytes),
-                    ),
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 5.0,
+                child: Image.memory(bytes),
+              ),
             ),
             Positioned(
               top: 16,
@@ -146,13 +142,11 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: isPdf
-                        ? Colors.black.withValues(alpha: 0.15)
-                        : Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.close,
-                      color: isPdf ? Colors.black87 : Colors.white, size: 22),
+                  child: const Icon(Icons.close,
+                      color: Colors.white, size: 22),
                 ),
               ),
             ),
@@ -207,11 +201,23 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
     );
   }
 
+  // FIXED: pehle full-width, bilkul flat rectangle header tha (koi
+  // rounded corners nahi). Ab appointment_detail_screen.dart jaisa hi
+  // floating, sab-corners-round gradient card, taake Lab Reports
+  // screen baaqi patient screens se consistent dikhe.
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [_primary, _primaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
         children: [
           GestureDetector(
@@ -222,16 +228,21 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                 color: Colors.white.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
+              child: const Icon(Icons.arrow_back,
+                  color: Colors.white, size: 18),
             ),
           ),
-          const SizedBox(width: 14),
-          const Text('Lab Reports',
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Lab Reports',
               style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold)),
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -315,7 +326,6 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
     final status = test['status'] as String;
     final statusColors = _statusColor(status);
     final String? reportBase64 = test['reportBase64'];
-    final String? reportType = test['reportType'];
     final canView = status == 'Completed' &&
         reportBase64 != null &&
         reportBase64.isNotEmpty;
@@ -375,7 +385,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
               // status badge ki jagah "View" pill button dikhta hai.
               if (canView)
                 ElevatedButton.icon(
-                  onPressed: () => _viewReport(reportBase64, reportType),
+                  onPressed: () => _viewReport(reportBase64),
                   icon: const Icon(Icons.remove_red_eye_outlined,
                       size: 16, color: Colors.white),
                   label: const Text('View',

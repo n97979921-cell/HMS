@@ -21,6 +21,12 @@ import 'package:logger/logger.dart';
 /// 7. google_sign_in v6.2.2 API — GoogleSignIn() instance object,
 ///    .signIn() (null return hota hai agar user cancel kare),
 ///    .authentication ek Future hai (await lagta hai).
+/// 8. NAYA — patientSignup() ab {'success': bool, 'error': String?}
+///    return karta hai (login() jaisa hi pattern), pehle sirf bool
+///    deta tha jis se asal Firebase error (email already in use,
+///    weak password, Firestore permission-denied, waghera) screen
+///    par kabhi nahi dikhta tha — sirf generic "Registration failed"
+///    aata tha.
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -41,7 +47,11 @@ class AuthService {
   // Google Sign-In LOGIN screen ke liye hai — SIGNUP is method se kabhi nahi hota.
 
   // 1. PATIENT SIGNUP
-  Future<bool> patientSignup({
+  // NAYA: ab {'success': bool, 'error': String?} return karta hai
+  // (login() jaisa hi pattern) — taake asal Firebase/Firestore error
+  // screen par dikh sake, generic "Registration failed" ke peeche
+  // chhupa na rahe.
+  Future<Map<String, dynamic>> patientSignup({
     required String email,
     required String password,
     required String name,
@@ -50,8 +60,9 @@ class AuthService {
     required int age,
     required String gender,
   }) async {
+    UserCredential? cred;
     try {
-      UserCredential cred = await _auth.createUserWithEmailAndPassword(
+      cred = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -80,10 +91,42 @@ class AuthService {
       });
 
       _logger.i("Patient signup successful: $email");
-      return true;
+      return {'success': true};
+    } on FirebaseAuthException catch (e) {
+      _logger.e("Patient signup FirebaseAuth error: ${e.code}");
+      String message;
+      switch (e.code) {
+        case 'email-already-in-use':
+          message = 'This email is already registered. Try logging in.';
+          break;
+        case 'invalid-email':
+          message = 'Invalid email format';
+          break;
+        case 'weak-password':
+          message = 'Password is too weak (minimum 6 characters)';
+          break;
+        case 'network-request-failed':
+          message = 'No internet connection. Please try again.';
+          break;
+        default:
+          message = 'Registration failed: ${e.message ?? e.code}';
+      }
+      // Auth account ban chuka ho lekin baad mein fail ho to orphan
+      // account clean up karo, taake wahi email dobara try ki ja sake.
+      try {
+        await cred?.user?.delete();
+      } catch (_) {}
+      return {'success': false, 'error': message};
     } catch (e) {
       _logger.e("Patient signup error: $e");
-      return false;
+      try {
+        await cred?.user?.delete();
+      } catch (_) {}
+      // Yahan aane wala error mostly Firestore security-rules /
+      // permission-denied hota hai (Auth account ban chuka tha lekin
+      // 'users' ya 'patient_profiles' collection mein likhne se
+      // roka gaya) — is liye raw error message hi dikhate hain.
+      return {'success': false, 'error': 'Registration failed: $e'};
     }
   }
 

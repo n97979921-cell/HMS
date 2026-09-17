@@ -8,7 +8,7 @@ import 'doctor_profile_screen.dart';
 
 class _LabColors {
   static const primary = Color(0xFF1F8A70);
-  static const primaryDark = Color(0xFF166049);
+  static const primaryDark = Color(0xFF0D6B5A);
   static const background = Color(0xFFF5F7F8);
   static const cardBackground = Colors.white;
   static const textMuted = Color(0xFF8A8A8A);
@@ -112,29 +112,39 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 16, 20, 24),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
+      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
           colors: [_LabColors.primary, _LabColors.primaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child:
+                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
+            ),
           ),
-          const SizedBox(width: 4),
-          const Text(
-            'Lab Reports',
-            style: TextStyle(
-                color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Lab Reports',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),

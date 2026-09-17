@@ -4,6 +4,10 @@ import 'package:hospital_management_app/services/auth_service.dart';
 import 'login_screen.dart';
 
 /// UI/UX REDESIGN ONLY — koi signup/validation logic change nahi hua.
+/// NAYA: patientSignup() ab Map<String, dynamic> return karta hai
+/// (login() jaisa hi), is liye _register() mein result['error'] se
+/// asal Firebase/Firestore error dikhaya jata hai — generic
+/// "Registration failed" ke peeche chhupa nahi rehta.
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -57,8 +61,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Call Firebase
-      bool success = await authService.patientSignup(
+      // Call Firebase — ab Map<String, dynamic> milta hai
+      final result = await authService.patientSignup(
         email: email,
         password: password,
         name: name,
@@ -71,7 +75,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       setState(() => _isLoading = false);
       if (!mounted) return;
 
-      if (success) {
+      if (result['success'] == true) {
         //  SUCCESS
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -91,10 +95,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
           }
         });
       } else {
-        // FAILED
+        // FAILED — ab asal wajah dikhati hai, generic message nahi
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Registration failed. Please try again.'),
+          SnackBar(
+            content: Text(result['error'] ?? 'Registration failed. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );

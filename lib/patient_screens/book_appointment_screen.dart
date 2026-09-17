@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'payment_upload_screen.dart';
-import 'package:file_picker/file_picker.dart';
 
 /// FIXES IS FILE MEIN:
 /// 1. Past-time slots: aaj ki date par guzre hue times ab disabled hain
@@ -266,45 +265,9 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     ));
   }
 
-  // ── Chooser: Gallery image ya PDF ──
+  // ── Report pick (gallery image) ──
   Future<void> _pickReport() async {
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.only(top: 16, bottom: 4),
-              child: Text('Select Report Type',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-            ),
-            ListTile(
-              leading:
-                  const Icon(Icons.photo_library_outlined, color: _primary),
-              title: const Text('Photo from Gallery'),
-              onTap: () => Navigator.pop(ctx, 'image'),
-            ),
-            ListTile(
-              leading:
-                  const Icon(Icons.picture_as_pdf_outlined, color: Colors.red),
-              title: const Text('PDF Document'),
-              onTap: () => Navigator.pop(ctx, 'pdf'),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-
-    if (choice == 'image') {
-      await _pickImageReport();
-    } else if (choice == 'pdf') {
-      await _pickPdfReport();
-    }
+    await _pickImageReport();
   }
 
 // ── Gallery image pick (purana image_picker wala logic) ──
@@ -329,34 +292,6 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
       });
     } catch (e) {
       _showError('Could not load image: $e');
-    }
-  }
-
-// ── PDF pick (file_picker) ──
-  Future<void> _pickPdfReport() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
-        withData: true,
-      );
-      if (result == null) return;
-
-      final bytes = result.files.single.bytes;
-      if (bytes == null) {
-        _showError('Could not read PDF.');
-        return;
-      }
-      if (bytes.lengthInBytes > 700 * 1024) {
-        _showError('PDF too large. Please choose a smaller file (max 700KB).');
-        return;
-      }
-      setState(() {
-        _reportBase64 = base64Encode(bytes);
-        _reportType = 'pdf';
-      });
-    } catch (e) {
-      _showError('Could not load PDF: $e');
     }
   }
 
@@ -842,35 +777,15 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     if (_reportBase64 != null) {
       return Column(
         children: [
-          _reportType == 'pdf'
-              ? Container(
-                  height: 90,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.06),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.withOpacity(0.3)),
-                  ),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.picture_as_pdf, color: Colors.red, size: 28),
-                      SizedBox(height: 4),
-                      Text('PDF report attached',
-                          style:
-                              TextStyle(fontSize: 12, color: Colors.black54)),
-                    ],
-                  ),
-                )
-              : ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.memory(
-                    base64Decode(_reportBase64!),
-                    height: 160,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.memory(
+              base64Decode(_reportBase64!),
+              height: 160,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

@@ -11,7 +11,6 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/notification_service.dart';
 import 'package:http/http.dart' as http;
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class _DetailColors {
   static const primary = Color(0xFF1F8A70);
@@ -759,8 +758,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                 children: [
                   _buildPatientCard(),
                   const SizedBox(height: 16),
-                  if ((widget.appointment.symptoms?.isNotEmpty ?? false) ||
-                      widget.appointment.patientReportBase64 != null) ...[
+                  if (widget.appointment.symptoms?.isNotEmpty ?? false) ...[
                     _buildAppointmentInfoCard(),
                     const SizedBox(height: 16),
                   ],
@@ -978,86 +976,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
             const SizedBox(height: 4),
             Text(widget.appointment.symptoms!,
                 style: const TextStyle(fontSize: 13)),
-            const SizedBox(height: 12),
-          ],
-          if (widget.appointment.patientReportBase64 != null) ...[
-            const Text('Attached report',
-                style: TextStyle(fontSize: 11, color: _DetailColors.textMuted)),
-            const SizedBox(height: 6),
-            widget.appointment.patientReportType == 'pdf'
-                ? _buildPdfAttachmentPreview(
-                    widget.appointment.patientReportBase64!)
-                : ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.memory(
-                      base64Decode(widget.appointment.patientReportBase64!),
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const Text(
-                          'Could not load attached image',
-                          style: TextStyle(
-                              fontSize: 12, color: _DetailColors.textMuted)),
-                    ),
-                  ),
           ],
         ],
-      ),
-    );
-  }
-
-// PDF attachment ka chhota preview card — tap karne par full-screen
-// PDF viewer khulta hai (chhoti jagah mein SfPdfViewer theek se
-// render nahi hoti, is liye card + full-screen dialog pattern).
-  Widget _buildPdfAttachmentPreview(String base64Str) {
-    return GestureDetector(
-      onTap: () => _openPdfFullScreen(base64Str),
-      child: Container(
-        height: 90,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-        ),
-        child: const Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.picture_as_pdf, color: Colors.red, size: 28),
-            SizedBox(height: 4),
-            Text('Tap to view PDF report',
-                style: TextStyle(fontSize: 12, color: Colors.black54)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _openPdfFullScreen(String base64Str) {
-    final bytes = base64Decode(base64Str);
-    showDialog(
-      context: context,
-      builder: (_) => Dialog.fullscreen(
-        backgroundColor: Colors.white,
-        child: Stack(
-          children: [
-            SfPdfViewer.memory(bytes),
-            Positioned(
-              top: 16,
-              right: 16,
-              child: GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child:
-                      const Icon(Icons.close, color: Colors.black87, size: 22),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

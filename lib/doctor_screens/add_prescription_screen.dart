@@ -5,7 +5,11 @@ import 'prescription.dart';
 
 class _RxColors {
   static const primary = Color(0xFF1F8A70);
-  static const primaryDark = Color(0xFF166049);
+  // FIXED: pehle 0xFF166049 tha — ye baaqi poori app se ek alag green
+  // shade tha. Ab 0xFF0D6B5A kar diya, taake ye screen bhi baaqi
+  // screens (Appointment Detail, Request Lab Test, My Appointments,
+  // waghera) jaisi hi dikhe.
+  static const primaryDark = Color(0xFF0D6B5A);
   static const background = Color(0xFFF5F7F8);
   static const cardBackground = Colors.white;
   static const textMuted = Color(0xFF8A8A8A);
@@ -195,31 +199,47 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
     );
   }
 
+  // FIXED: pehle full-width, sirf neeche-corners-round header card tha
+  // (aur alag primaryDark shade use kar raha tha). Ab appointment_detail_
+  // screen.dart jaisa hi floating, sab-corners-round gradient card, taake
+  // Add Prescription screen baaqi doctor screens se consistent dikhe.
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 16, 20, 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
+      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
           colors: [_RxColors.primary, _RxColors.primaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.arrow_back,
+                  color: Colors.white, size: 18),
+            ),
           ),
-          const Text(
-            'Add Prescription',
-            style: TextStyle(
-                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Add Prescription',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),

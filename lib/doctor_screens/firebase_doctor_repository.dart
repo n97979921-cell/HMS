@@ -385,7 +385,13 @@ class FirebaseDoctorRepository implements DoctorRepository {
       final snap = await _db.collection('test_type_prices').get();
       return snap.docs
           .map((doc) => TestTypePrice(
-                testType: doc.id,
+                // FIX: naam ab 'testType' FIELD se parha jata hai, doc.id
+                // se nahi — pehle document ki auto-generated ID hi "naam"
+                // ban kar dikh rahi thi (garbled strings jaisi
+                // "1DtGMHPYSCVMxd4rgaSM"). Fallback doc.id sirf tab
+                // istemal hota hai jab field kisi purani/kharaab entry
+                // mein waqai missing ho — crash na ho, is liye.
+                testType: (doc.data()['testType'] as String?) ?? doc.id,
                 charge: (doc.data()['charge'] as num?) ?? 0,
               ))
           .toList();

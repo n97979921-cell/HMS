@@ -4,11 +4,14 @@ import 'doctor_repository.dart';
 import 'lab_test_status.dart';
 import 'lab_test_detail.dart';
 import 'dart:convert';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class _DetailColors {
   static const primary = Color(0xFF1F8A70);
-  static const primaryDark = Color(0xFF166049);
+  // FIXED: pehle 0xFF166049 tha — ye baaqi poori app se ek alag green
+  // shade tha. Ab 0xFF0D6B5A kar diya, taake ye screen bhi baaqi
+  // screens (Appointment Detail, Request Lab Test, Add Prescription,
+  // waghera) jaisi hi dikhe.
+  static const primaryDark = Color(0xFF0D6B5A);
   static const background = Color(0xFFF5F7F8);
   static const cardBackground = Colors.white;
   static const textMuted = Color(0xFF8A8A8A);
@@ -62,24 +65,21 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
   }
 
-  void _viewReportFullscreen(String base64Str, String? reportType) {
+  void _viewReportFullscreen(String base64Str) {
     final bytes = base64Decode(base64Str);
-    final isPdf = reportType == 'pdf';
 
     showDialog(
       context: context,
       builder: (_) => Dialog.fullscreen(
-        backgroundColor: isPdf ? Colors.white : Colors.black,
+        backgroundColor: Colors.black,
         child: Stack(
           children: [
             Center(
-              child: isPdf
-                  ? SfPdfViewer.memory(bytes)
-                  : InteractiveViewer(
-                      minScale: 0.5,
-                      maxScale: 5.0,
-                      child: Image.memory(bytes),
-                    ),
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 5.0,
+                child: Image.memory(bytes),
+              ),
             ),
             Positioned(
               top: 16,
@@ -89,13 +89,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: isPdf
-                        ? Colors.black.withOpacity(0.15)
-                        : Colors.white.withOpacity(0.2),
+                    color: Colors.white.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.close,
-                      color: isPdf ? Colors.black87 : Colors.white, size: 22),
+                  child: const Icon(Icons.close,
+                      color: Colors.white, size: 22),
                 ),
               ),
             ),
@@ -138,34 +136,48 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     );
   }
 
+  // FIXED: pehle full-width, sirf neeche-corners-round header card tha
+  // (aur alag primaryDark shade use kar raha tha). Ab appointment_detail_
+  // screen.dart jaisa hi floating, sab-corners-round gradient card, taake
+  // Report Detail screen baaqi doctor screens se consistent dikhe. Status
+  // badge (jab report load ho chuka ho) bilkul pehle jaisa hi right side
+  // par raha hai.
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 16, 20, 24),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
+      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
           colors: [_DetailColors.primary, _DetailColors.primaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.arrow_back,
+                  color: Colors.white, size: 18),
+            ),
           ),
+          const SizedBox(width: 12),
           const Expanded(
             child: Text(
               'Report Detail',
               style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold),
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           if (_detail != null)
@@ -303,69 +315,44 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Report (image ya PDF, base64) — tap to view
+        // Report (image, base64) — tap to view
         if (detail.reportBase64 != null && detail.reportBase64!.isNotEmpty) ...[
-          detail.reportType == 'pdf'
-              ? GestureDetector(
-                  onTap: () => _viewReportFullscreen(
-                      detail.reportBase64!, detail.reportType),
-                  child: Container(
+          GestureDetector(
+            onTap: () => _viewReportFullscreen(detail.reportBase64!),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.memory(
+                    base64Decode(detail.reportBase64!),
                     height: 220,
                     width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.red.withOpacity(0.3)),
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 220,
+                      color: const Color(0xFFF0F0F0),
+                      alignment: Alignment.center,
+                      child: const Text('Could not load report',
+                          style: TextStyle(color: Colors.grey)),
                     ),
-                    child: const Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.picture_as_pdf, color: Colors.red, size: 44),
-                        SizedBox(height: 8),
-                        Text('Tap to view PDF report',
-                            style:
-                                TextStyle(color: Colors.black54, fontSize: 13)),
-                      ],
-                    ),
-                  ),
-                )
-              : GestureDetector(
-                  onTap: () => _viewReportFullscreen(
-                      detail.reportBase64!, detail.reportType),
-                  child: Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.memory(
-                          base64Decode(detail.reportBase64!),
-                          height: 220,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            height: 220,
-                            color: const Color(0xFFF0F0F0),
-                            alignment: Alignment.center,
-                            child: const Text('Could not load report',
-                                style: TextStyle(color: Colors.grey)),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        bottom: 10,
-                        right: 10,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.5),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.zoom_in,
-                              color: Colors.white, size: 18),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
+                Positioned(
+                  bottom: 10,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.zoom_in,
+                        color: Colors.white, size: 18),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ] else ...[
           Container(
             width: double.infinity,

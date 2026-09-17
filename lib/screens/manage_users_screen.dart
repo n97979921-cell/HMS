@@ -12,36 +12,36 @@ class ManageUsersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final roles = [
-      {
-        'title': 'Doctors',
-        'role': 'doctor',
-        'icon': Icons.medical_services_rounded,
-        'cardColor': const Color(0xFFD9ECF8),
-        'iconColor': const Color(0xFF1565C0),
-      },
-      {
-        'title': 'Admins',
-        'role': 'admin',
-        'icon': Icons.admin_panel_settings_rounded,
-        'cardColor': const Color(0xFFE3DFF5),
-        'iconColor': const Color(0xFF7E57C2),
-      },
-      {
-        'title': 'Receptionists',
-        'role': 'receptionist',
-        'icon': Icons.support_agent_rounded,
-        'cardColor': const Color(0xFFFDE6E0),
-        'iconColor': const Color(0xFFD9534F),
-      },
-      {
-        'title': 'Lab Staff',
-        'role': 'labstaff',
-        'icon': Icons.biotech_rounded,
-        'cardColor': const Color(0xFFFCEFD8),
-        'iconColor': const Color(0xFFB8860B),
-      },
-    ];
+      final roles = [
+        {
+          'title': 'Doctors',
+          'role': 'doctor',
+          'icon': Icons.medical_services_rounded,
+          'cardColor': const Color(0xFFD9ECF8),
+          'iconColor': const Color(0xFF1565C0),
+       },
+       {
+          'title': 'Admins',
+          'role': 'admin',
+          'icon': Icons.admin_panel_settings_rounded,
+          'cardColor': const Color(0xFFDCF2E7),   // light green
+          'iconColor': const Color(0xFF1F8A70),   // green
+       },
+       {
+          'title': 'Receptionists',
+          'role': 'receptionist',
+          'icon': Icons.support_agent_rounded,
+          'cardColor': const Color(0xFFFCEFD8),   // light yellow
+          'iconColor': const Color(0xFFF4B400),   // yellow
+       },
+       {
+          'title': 'Lab Staff',
+          'role': 'labstaff',
+          'icon': Icons.biotech_rounded,
+          'cardColor': const Color(0xFFFDE6E0),   // light red
+          'iconColor': const Color(0xFFD9534F),   // red
+       },
+     ];
 
     return Scaffold(
       backgroundColor: bgColor,
