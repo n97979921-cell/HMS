@@ -218,9 +218,7 @@ class _UserListScreenState extends State<UserListScreen> {
           },
         ),
         title: Text(
-          _selectionMode
-              ? '${_selectedUids.length} selected'
-              : widget.title,
+          _selectionMode ? '${_selectedUids.length} selected' : widget.title,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w700,
@@ -232,8 +230,7 @@ class _UserListScreenState extends State<UserListScreen> {
             ? [
                 IconButton(
                   icon: const Icon(Icons.delete_rounded, color: Colors.white),
-                  onPressed:
-                      _selectedUids.isEmpty ? null : _confirmBulkDelete,
+                  onPressed: _selectedUids.isEmpty ? null : _confirmBulkDelete,
                 ),
               ]
             : [
@@ -276,7 +273,8 @@ class _UserListScreenState extends State<UserListScreen> {
                 _loadUsers();
               },
               backgroundColor: primaryColor,
-              child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+              child:
+                  const Icon(Icons.add_rounded, color: Colors.white, size: 28),
             ),
       body: Column(
         children: [
@@ -299,11 +297,14 @@ class _UserListScreenState extends State<UserListScreen> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search by name...',
-                    hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
-                    prefixIcon: const Icon(Icons.search_rounded, color: primaryColor),
+                    hintStyle:
+                        const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+                    prefixIcon:
+                        const Icon(Icons.search_rounded, color: primaryColor),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Color(0xFF9CA3AF)),
+                            icon: const Icon(Icons.close_rounded,
+                                color: Color(0xFF9CA3AF)),
                             onPressed: () => _searchController.clear(),
                           )
                         : null,
@@ -311,7 +312,8 @@ class _UserListScreenState extends State<UserListScreen> {
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 16),
                   ),
                 ),
               ),
@@ -324,10 +326,10 @@ class _UserListScreenState extends State<UserListScreen> {
                 children: [
                   Checkbox(
                     value: _filteredUsers
-                        .map((u) => u['uid'] as String)
-                        .where((uid) =>
-                            uid != FirebaseAuth.instance.currentUser?.uid)
-                        .every((uid) => _selectedUids.contains(uid)) &&
+                            .map((u) => u['uid'] as String)
+                            .where((uid) =>
+                                uid != FirebaseAuth.instance.currentUser?.uid)
+                            .every((uid) => _selectedUids.contains(uid)) &&
                         _filteredUsers.isNotEmpty,
                     activeColor: primaryColor,
                     onChanged: (_) => _toggleSelectAll(),
@@ -1098,8 +1100,8 @@ class _UserCardState extends State<_UserCard> {
             // sab kuch bilkul pehle jaisa hi hai. ──
             widget.selectionMode
                 ? Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: isActive
                           ? const Color(0xFFDCEFE9)
@@ -1111,7 +1113,8 @@ class _UserCardState extends State<_UserCard> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: isActive ? primaryColor : const Color(0xFFDB4437),
+                        color:
+                            isActive ? primaryColor : const Color(0xFFDB4437),
                       ),
                     ),
                   )
@@ -1234,9 +1237,7 @@ class _UserCardState extends State<_UserCard> {
                                 const Icon(Icons.payments_rounded,
                                     color: primaryColor, size: 18),
                                 const SizedBox(width: 8),
-                                Text(_hasFeeSetting
-                                    ? 'Update Fee'
-                                    : 'Set Fee'),
+                                Text(_hasFeeSetting ? 'Update Fee' : 'Set Fee'),
                               ]),
                             ),
                           if (isActive)

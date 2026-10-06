@@ -43,6 +43,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     super.initState();
     _load();
     _listenToAppointment();
+    _wakeUpTokenServer(); // server ko pehle hi jaga do
   }
 
   // Real-time listener — sirf is appointment document ko sunta hai.
@@ -138,18 +139,29 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 
   String get _roomName => 'FamilyWellCare-${widget.appointmentId}';
 
+  // Free server so jata hai, pehli request par late jagta hai.
+  void _wakeUpTokenServer() {
+    http
+        .get(Uri.parse(_tokenServerUrl))
+        .timeout(const Duration(seconds: 30))
+        .catchError((_) => http.Response('', 500));
+  }
+
+  // Token 3 dafa try karta hai, har dafa 20 second wait karta hai.
   Future<String?> _fetchToken() async {
-    try {
-      final patientEmail = FirebaseAuth.instance.currentUser?.email ?? '';
-      final uri = Uri.parse(
-        '$_tokenServerUrl/token?room=$_roomName&name=$_doctorName-Patient&email=$patientEmail&moderator=false',
-      );
-      final response = await http.get(uri);
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body)['token'] as String;
-      }
-    } catch (_) {
-      // token server na chal raha ho to bhi neeche fallback hai
+    final patientEmail = FirebaseAuth.instance.currentUser?.email ?? '';
+    final uri = Uri.parse(
+      '$_tokenServerUrl/token?room=$_roomName&name=$_doctorName-Patient&email=$patientEmail&moderator=false',
+    );
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        final response =
+            await http.get(uri).timeout(const Duration(seconds: 20));
+        if (response.statusCode == 200) {
+          return jsonDecode(response.body)['token'] as String;
+        }
+      } catch (_) {}
+      if (attempt < 3) await Future.delayed(const Duration(seconds: 2));
     }
     return null;
   }
@@ -157,16 +169,23 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   Future<void> _joinCall() async {
     setState(() => _isJoining = true);
     try {
+      final token = await _fetchToken();
+
+      // Token na mile to meet.jit.si par NAHI bhejna — wahan
+      // "moderator not set" aata hai.
+      if (token == null) {
+        _showError(
+            'Video server is starting. Please wait a moment and tap Join again.');
+        return;
+      }
+
       // patientJoinedAt set karo — yeh "join hua" ka proxy hai
       await FirebaseFirestore.instance
           .collection('appointments')
           .doc(widget.appointmentId)
           .update({'patientJoinedAt': FieldValue.serverTimestamp()});
 
-      final token = await _fetchToken();
-      final roomUrl = token != null
-          ? 'https://8x8.vc/$_jaasAppId/$_roomName?jwt=$token'
-          : 'https://meet.jit.si/$_roomName'; // token na mile to purana tareeqa
+      final roomUrl = 'https://8x8.vc/$_jaasAppId/$_roomName?jwt=$token';
 
       final uri = Uri.parse(roomUrl);
       final launched = await launchUrl(

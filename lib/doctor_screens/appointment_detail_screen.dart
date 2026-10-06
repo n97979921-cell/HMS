@@ -60,6 +60,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     _currentStatus = widget.appointment.status;
     _admissionRecommended = widget.appointment.admissionRecommended;
     _checkExistingPrescription();
+    _wakeUpTokenServer(); // server ko pehle hi jaga do
   }
 
   Future<void> _checkExistingPrescription() async {
@@ -164,17 +165,32 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 
   String get _roomName => 'FamilyWellCare-${widget.appointment.appointmentId}';
 
+  // Free server so jata hai, pehli request par late jagta hai.
+  // Screen khulte hi ek halki request bhej dete hain taake
+  // "Start" dabane tak server jag chuka ho.
+  void _wakeUpTokenServer() {
+    http
+        .get(Uri.parse(_tokenServerUrl))
+        .timeout(const Duration(seconds: 30))
+        .catchError((_) => http.Response('', 500));
+  }
+
+  // Token 3 dafa try karta hai, har dafa 20 second wait karta hai.
   Future<String?> _fetchToken() async {
-    try {
-      final uri = Uri.parse(
-        '$_tokenServerUrl/token?room=$_roomName&name=Dr.${widget.doctorId}&moderator=true',
-      );
-      final response = await http.get(uri);
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body)['token'] as String;
+    final uri = Uri.parse(
+      '$_tokenServerUrl/token?room=$_roomName&name=Dr.${widget.doctorId}&moderator=true',
+    );
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        final response =
+            await http.get(uri).timeout(const Duration(seconds: 20));
+        if (response.statusCode == 200) {
+          return jsonDecode(response.body)['token'] as String;
+        }
+      } catch (e) {
+        print('TOKEN FETCH ERROR (try $attempt): $e');
       }
-    } catch (e) {
-      print('TOKEN FETCH ERROR: $e');
+      if (attempt < 3) await Future.delayed(const Duration(seconds: 2));
     }
     return null;
   }
@@ -182,9 +198,22 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
   Future<void> _openJitsi() async {
     final token = await _fetchToken();
 
-    final roomUrl = token != null
-        ? 'https://8x8.vc/$_jaasAppId/$_roomName?jwt=$token'
-        : 'https://meet.jit.si/$_roomName'; // token na mile to purana tareeqa
+    // Token na mile to meet.jit.si par NAHI bhejna — wahan
+    // "moderator not set" aata hai. User ko dobara try karne ka bolo.
+    if (token == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Video server is starting. Please wait a moment and tap again.'),
+            backgroundColor: _DetailColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    final roomUrl = 'https://8x8.vc/$_jaasAppId/$_roomName?jwt=$token';
 
     final uri = Uri.parse(roomUrl);
     final launched = await launchUrl(
