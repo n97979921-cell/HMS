@@ -26,6 +26,11 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
     'Cancelled',
   ];
 
+  // FIX: orderBy('createdAt') hata diya — status filter ke saath
+  // combine hoke yeh Firestore composite index maangta tha
+  // (cloud_firestore/failed-precondition error). Ab sirf 'where'
+  // lagta hai (single-field, index ki zaroorat nahi), aur sorting
+  // neeche client-side (Dart mein) ho rahi hai.
   Query<Map<String, dynamic>> _buildQuery() {
     Query<Map<String, dynamic>> query =
         FirebaseFirestore.instance.collection('lab_tests');
@@ -34,7 +39,18 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
       query = query.where('status', isEqualTo: _statusFilter);
     }
 
-    return query.orderBy('createdAt', descending: true);
+    return query;
+  }
+
+  // Newest first — createdAt Timestamp ke hisaab se, client-side.
+  void _sortByCreatedAtDesc(
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> docs) {
+    docs.sort((a, b) {
+      final aTs = a.data()['createdAt'];
+      final bTs = b.data()['createdAt'];
+      if (aTs is! Timestamp || bTs is! Timestamp) return 0;
+      return bTs.compareTo(aTs);
+    });
   }
 
   Future<String> _getUserName(String? userId) async {
@@ -193,6 +209,9 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
                 }
 
                 final docs = snapshot.data?.docs ?? [];
+                // FIX: sorting ab yahan, client-side (orderBy Firestore
+                // se hata diya gaya — see _buildQuery() comment).
+                _sortByCreatedAtDesc(docs);
 
                 return FutureBuilder<List<Map<String, dynamic>>>(
                   future: _enrichWithNames(docs),

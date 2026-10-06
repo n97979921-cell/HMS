@@ -12,6 +12,17 @@ import 'bill_detail_screen.dart';
 /// saath) — yahin par status (Pending → Paid) badalta hai jab
 /// receptionist verify karta hai. Jab bhi kuch badle, purana
 /// `_loadBills()` khud-ba-khud dobara call ho jaata hai.
+///
+/// NAYA — DELETE (sirf "Paid" bills par): Har fully-paid bill card
+/// par ek individual "Delete" icon — us appointment ke SAARE payment
+/// records (consultation/lab/room jo bhi is bill mein shamil hain)
+/// permanent delete karta hai (batch write). Jab list mein koi bhi
+/// Paid bill ho, ek "Delete All" button bhi (header ke neeche) —
+/// woh EK SATH saare currently-Paid bills ke payment records delete
+/// kar deta hai. Dono jagah koi confirmation dialog nahi — seedha
+/// permanent delete, jaisa app ke baaki delete-patterns (Refunds,
+/// Lab Staff Completed tab) mein hai. "Pending" bills par delete
+/// nahi dikhta — unhe abhi collect/verify hona baaki hai.
 class BillingScreen extends StatefulWidget {
   const BillingScreen({super.key});
 
@@ -179,6 +190,63 @@ class _BillingScreenState extends State<BillingScreen> {
     ));
   }
 
+  void _showSuccess(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: _primary,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    ));
+  }
+
+  // ── Delete ek bill (ek appointment ke SAARE payment records) —
+  //    bina confirmation ke seedha permanent delete ──
+  Future<void> _deleteBill(Map<String, dynamic> group) async {
+    try {
+      final payments = group['payments'] as List<Map<String, dynamic>>;
+      final batch = FirebaseFirestore.instance.batch();
+      for (final p in payments) {
+        batch.delete(FirebaseFirestore.instance
+            .collection('payments')
+            .doc(p['paymentId']));
+      }
+      await batch.commit();
+      _showSuccess('Bill deleted');
+      _loadBills();
+    } catch (e) {
+      _showError('Error deleting bill: $e');
+    }
+  }
+
+  // ── Delete All — SAARE currently-Paid bills ke payment records ek
+  //    batch write mein, bina confirmation ke ──
+  Future<void> _deleteAllPaidBills() async {
+    try {
+      final paidGroups = _groups.where((g) => g['hasPending'] == false);
+      if (paidGroups.isEmpty) return;
+
+      final batch = FirebaseFirestore.instance.batch();
+      int count = 0;
+      for (final group in paidGroups) {
+        final payments = group['payments'] as List<Map<String, dynamic>>;
+        for (final p in payments) {
+          batch.delete(FirebaseFirestore.instance
+              .collection('payments')
+              .doc(p['paymentId']));
+          count++;
+        }
+      }
+      await batch.commit();
+      _showSuccess('$count paid bill record(s) deleted');
+      _loadBills();
+    } catch (e) {
+      _showError('Error deleting all: $e');
+    }
+  }
+
+  bool get _hasAnyPaidBill => _groups.any((g) => g['hasPending'] == false);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -187,6 +255,7 @@ class _BillingScreenState extends State<BillingScreen> {
         child: Column(
           children: [
             _buildHeader(),
+            if (!_isLoading && _hasAnyPaidBill) _buildDeleteAllBar(),
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -238,6 +307,28 @@ class _BillingScreenState extends State<BillingScreen> {
                   fontSize: 19,
                   fontWeight: FontWeight.bold)),
         ],
+      ),
+    );
+  }
+
+  // "Delete All" bar — sirf jab kam-se-kam ek Paid bill ho. Koi
+  // confirmation dialog nahi — seedha tap par saare currently-Paid
+  // bills ke payment records permanent delete ho jaate hain.
+  Widget _buildDeleteAllBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          onPressed: _deleteAllPaidBills,
+          icon: const Icon(Icons.delete_sweep_outlined,
+              size: 18, color: Color(0xFFD9534F)),
+          label: const Text('Delete All Paid',
+              style: TextStyle(
+                  color: Color(0xFFD9534F),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+        ),
       ),
     );
   }
@@ -308,24 +399,40 @@ class _BillingScreenState extends State<BillingScreen> {
                     ],
                   ),
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: hasPending
-                        ? const Color(0xFFFCEFD8)
-                        : const Color(0xFFDCEFE9),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    hasPending ? 'Pending' : 'Paid',
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
                         color: hasPending
-                            ? const Color(0xFFB8860B)
-                            : const Color(0xFF1F8A70)),
-                  ),
+                            ? const Color(0xFFFCEFD8)
+                            : const Color(0xFFDCEFE9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        hasPending ? 'Pending' : 'Paid',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: hasPending
+                                ? const Color(0xFFB8860B)
+                                : const Color(0xFF1F8A70)),
+                      ),
+                    ),
+                    // Individual delete — sirf Paid bills par (Pending
+                    // par nahi, wo abhi collect/verify hona baaki hai).
+                    if (!hasPending)
+                      IconButton(
+                        onPressed: () => _deleteBill(group),
+                        icon: const Icon(Icons.delete_outline,
+                            color: Color(0xFFD9534F), size: 20),
+                        tooltip: 'Delete',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                  ],
                 ),
               ],
             ),

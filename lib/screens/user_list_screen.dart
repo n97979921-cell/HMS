@@ -543,9 +543,17 @@ class _UserCardState extends State<_UserCard> {
                       color: Color(0xFF1A1A2E)),
                 ),
                 onTap: () async {
+                  // FIX: entryMode: dial — TimePicker ka "keyboard se
+                  // type karo" toggle (neeche-left icon) ek known Flutter
+                  // framework bug trigger karta hai ("BoxConstraints has
+                  // non-normalized height constraints") jab dialog ek
+                  // custom Theme ke andar wrapped ho. Dial-only mode is
+                  // crash ko bilkul avoid karta hai — time set karna dial
+                  // se bilkul normal chalta hai.
                   final picked = await showTimePicker(
                     context: context,
                     initialTime: startTime,
+                    initialEntryMode: TimePickerEntryMode.dial,
                     builder: (context, child) => Theme(
                       data: Theme.of(context).copyWith(
                         colorScheme: const ColorScheme.light(
@@ -575,9 +583,12 @@ class _UserCardState extends State<_UserCard> {
                       color: Color(0xFF1A1A2E)),
                 ),
                 onTap: () async {
+                  // Same fix as Start Time — dial-only mode avoids the
+                  // Flutter keyboard-entry crash.
                   final picked = await showTimePicker(
                     context: context,
                     initialTime: endTime,
+                    initialEntryMode: TimePickerEntryMode.dial,
                     builder: (context, child) => Theme(
                       data: Theme.of(context).copyWith(
                         colorScheme: const ColorScheme.light(

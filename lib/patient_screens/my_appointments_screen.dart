@@ -22,7 +22,7 @@ import 'patient_profile_screen.dart';
 ///    Priority: status=='Confirmed' (Doctor never started) → FULL
 ///    refund, patientJoinedAt irrelevant. status=='InProgress' +
 ///    patientJoinedAt==null → HALF refund.
-/// 5.  REAL-TIME (Rule 2): Data kai collections (appointments +
+/// 5. ✅ REAL-TIME (Rule 2): Data kai collections (appointments +
 ///    users + doctor_profiles + slots) se milkar banta hai, is liye
 ///    poori screen StreamBuilder mein convert NAHI ki. Iski jagah ek
 ///    lightweight listener sirf `appointments` collection ko sunta
@@ -665,11 +665,13 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     final isCompleted = appt['status'] == 'Completed';
     final isCancelled = appt['status'] == 'Cancelled';
     final isNoShow = appt['status'] == 'NoShow';
-    // Delete sirf Cancelled ya NoShow cards par, ya Completed cards par
-    // jab feedback pehle hi de diya gaya ho — is se purana, ab bekaar
-    // data record se hat jata hai.
+    final isCheckedIn = appt['status'] == 'CheckedIn';
+    // Delete sirf Cancelled, NoShow ya CheckedIn cards par, ya Completed
+    // cards par jab feedback pehle hi de diya gaya ho — is se purana,
+    // ab bekaar data record se hat jata hai.
     final canDelete = isCancelled ||
         isNoShow ||
+        isCheckedIn ||
         (isCompleted && appt['hasFeedback'] == true);
     // Reminder sirf in-clinic + abhi tak upcoming (cancel ho sakne
     // wali) appointments par dikhta hai — completed/cancelled/noshow
