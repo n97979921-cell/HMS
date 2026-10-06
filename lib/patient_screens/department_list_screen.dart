@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'doctor_list_screen.dart';
+import '../screens/department_icons.dart';
 
 class DepartmentListScreen extends StatefulWidget {
   final String appointmentType; // 'IN_PERSON' | 'VIDEO_CALL'
@@ -20,33 +21,6 @@ class _DepartmentListScreenState extends State<DepartmentListScreen> {
 
   bool _isLoading = true;
   List<Map<String, dynamic>> _departments = [];
-
-  static const List<Color> _bgColors = [
-    Color(0xFFDCEFE9),
-    Color(0xFFEAE3F7),
-    Color(0xFFFCF1D6),
-    Color(0xFFFADCE3),
-    Color(0xFFD9ECF8),
-    Color(0xFFFDE6E0),
-  ];
-
-  static const List<Color> _iconColors = [
-    Color(0xFF1F8A70),
-    Color(0xFF7E57C2),
-    Color(0xFFC98A1B),
-    Color(0xFFD1497A),
-    Color(0xFF1565C0),
-    Color(0xFFD9534F),
-  ];
-
-  static const List<IconData> _icons = [
-    Icons.favorite_outline,
-    Icons.child_friendly_outlined,
-    Icons.medical_services_outlined,
-    Icons.wb_sunny_outlined,
-    Icons.psychology_outlined,
-    Icons.visibility_outlined,
-  ];
 
   @override
   void initState() {
@@ -235,9 +209,9 @@ class _DepartmentListScreenState extends State<DepartmentListScreen> {
   }
 
   Widget _departmentCard(Map<String, dynamic> dept, int index) {
-    final bgColor = _bgColors[index % _bgColors.length];
-    final iconColor = _iconColors[index % _iconColors.length];
-    final icon = _icons[index % _icons.length];
+    final iconColor = getDepartmentColor(dept['colorKey']);
+    final bgColor = iconColor.withOpacity(0.15);
+    final icon = getDepartmentIcon(dept['iconName']);
 
     return GestureDetector(
       onTap: () {
