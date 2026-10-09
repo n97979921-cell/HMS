@@ -19,6 +19,7 @@ class PrescriptionsScreen extends StatefulWidget {
 class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
   static const Color _primary = Color(0xFF1F8A70);
   static const Color _primaryDark = Color(0xFF0D6B5A);
+  static const Color _error = Color(0xFFD9534F);
 
   bool _isLoading = true;
   List<Map<String, dynamic>> _prescriptions = [];
@@ -107,6 +108,65 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
     }
   }
 
+  // Deletes the prescription doc plus its medicines — same
+  // "no confirmation, permanent batch delete" pattern used on
+  // Refunds / Lab Staff Completed / Billing Paid bills.
+  Future<void> _deletePrescription(String prescriptionId) async {
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+
+      final medsSnap = await FirebaseFirestore.instance
+          .collection('prescription_medicines')
+          .where('prescriptionId', isEqualTo: prescriptionId)
+          .get();
+      for (final med in medsSnap.docs) {
+        batch.delete(med.reference);
+      }
+
+      batch.delete(FirebaseFirestore.instance
+          .collection('prescriptions')
+          .doc(prescriptionId));
+
+      await batch.commit();
+
+      setState(() {
+        _prescriptions
+            .removeWhere((p) => p['prescriptionId'] == prescriptionId);
+      });
+    } catch (e) {
+      _showError('Error deleting prescription: $e');
+    }
+  }
+
+  Future<void> _deleteAllPrescriptions() async {
+    if (_prescriptions.isEmpty) return;
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+
+      for (final presc in _prescriptions) {
+        final prescriptionId = presc['prescriptionId'] as String;
+
+        final medsSnap = await FirebaseFirestore.instance
+            .collection('prescription_medicines')
+            .where('prescriptionId', isEqualTo: prescriptionId)
+            .get();
+        for (final med in medsSnap.docs) {
+          batch.delete(med.reference);
+        }
+
+        batch.delete(FirebaseFirestore.instance
+            .collection('prescriptions')
+            .doc(prescriptionId));
+      }
+
+      await batch.commit();
+
+      setState(() => _prescriptions.clear());
+    } catch (e) {
+      _showError('Error deleting prescriptions: $e');
+    }
+  }
+
   void _showError(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -137,11 +197,14 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                           child: ListView.separated(
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                            itemCount: _prescriptions.length,
+                            itemCount: _prescriptions.length + 1,
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 12),
-                            itemBuilder: (ctx, i) =>
-                                _prescriptionCard(_prescriptions[i]),
+                            itemBuilder: (ctx, i) {
+                              if (i == 0) return _buildDeleteAllBar();
+                              return _prescriptionCard(
+                                  _prescriptions[i - 1]);
+                            },
                           ),
                         ),
             ),
@@ -178,6 +241,38 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                   fontWeight: FontWeight.bold)),
         ],
       ),
+    );
+  }
+
+  // "X prescriptions" count + Delete All — same bar style as
+  // Refunds / Billing Paid bills screens.
+  Widget _buildDeleteAllBar() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          '${_prescriptions.length} prescription${_prescriptions.length == 1 ? '' : 's'}',
+          style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF6B7280)),
+        ),
+        GestureDetector(
+          onTap: _deleteAllPrescriptions,
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.delete_sweep_outlined, size: 16, color: _error),
+              SizedBox(width: 4),
+              Text('Delete All',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _error)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -233,17 +328,40 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(presc['doctorName'],
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A2F3A))),
-            const SizedBox(height: 2),
-            Text(presc['specialization'],
-                style: const TextStyle(fontSize: 12, color: Colors.black54)),
-            const SizedBox(height: 2),
-            Text(presc['dateLabel'],
-                style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(presc['doctorName'],
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1A2F3A))),
+                      const SizedBox(height: 2),
+                      Text(presc['specialization'],
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.black54)),
+                      const SizedBox(height: 2),
+                      Text(presc['dateLabel'],
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.grey)),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () =>
+                      _deletePrescription(presc['prescriptionId']),
+                  child: const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Icon(Icons.delete_outline,
+                        size: 20, color: _error),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
             const Divider(height: 1),
             const SizedBox(height: 10),

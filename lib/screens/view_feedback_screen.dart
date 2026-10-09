@@ -65,6 +65,62 @@ class _ViewFeedbackScreenState extends State<ViewFeedbackScreen> {
     return total / feedbackList.length;
   }
 
+  // ── NAYA: Delete (single) — koi confirmation nahi, seedha permanent
+  //    delete. Har card ke top par icon hamesha available. StreamBuilder
+  //    khud-ba-khud list refresh kar dega.
+  Future<void> _deleteFeedback(BuildContext context, String id) async {
+    try {
+      await FirebaseFirestore.instance.collection('feedback').doc(id).delete();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Feedback deleted'),
+          backgroundColor: _primary,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error deleting: $e'),
+          backgroundColor: const Color(0xFFDB4437),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    }
+  }
+
+  // ── NAYA: Delete All — jo bhi feedback is waqt list mein dikh raha
+  //    hai, sab ek batch write mein permanent delete — bina
+  //    confirmation ke.
+  Future<void> _deleteAllFeedback(
+      BuildContext context, List<Map<String, dynamic>> feedbackList) async {
+    if (feedbackList.isEmpty) return;
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      for (final f in feedbackList) {
+        batch.delete(
+            FirebaseFirestore.instance.collection('feedback').doc(f['id']));
+      }
+      await batch.commit();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('${feedbackList.length} feedback record(s) deleted'),
+          backgroundColor: _primary,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error deleting all: $e'),
+          backgroundColor: const Color(0xFFDB4437),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -149,25 +205,41 @@ class _ViewFeedbackScreenState extends State<ViewFeedbackScreen> {
                                 color: Color(0xFFF4B400), size: 24),
                           ),
                           const SizedBox(width: 14),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                avgRating.toStringAsFixed(1),
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF1A1A2E),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  avgRating.toStringAsFixed(1),
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF1A1A2E),
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                'Average rating \u2022 ${feedbackList.length} review${feedbackList.length == 1 ? '' : 's'}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Color(0xFF6B7280),
+                                Text(
+                                  'Average rating \u2022 ${feedbackList.length} review${feedbackList.length == 1 ? '' : 's'}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF6B7280),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                          ),
+                          // ── NAYA: Delete All — jo bhi feedback abhi
+                          // list mein dikh raha hai, sab delete. Koi
+                          // confirmation nahi.
+                          TextButton.icon(
+                            onPressed: () =>
+                                _deleteAllFeedback(context, feedbackList),
+                            icon: const Icon(Icons.delete_sweep_outlined,
+                                size: 16, color: Color(0xFFDB4437)),
+                            label: const Text('Delete All',
+                                style: TextStyle(
+                                    color: Color(0xFFDB4437),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600)),
                           ),
                         ],
                       ),
@@ -215,8 +287,12 @@ class _ViewFeedbackScreenState extends State<ViewFeedbackScreen> {
                             separatorBuilder: (_, __) =>
                                 const SizedBox(height: 10),
                             itemBuilder: (context, index) {
+                              final fb = feedbackList[index];
                               return _FeedbackCard(
-                                  feedback: feedbackList[index]);
+                                feedback: fb,
+                                onDelete: () =>
+                                    _deleteFeedback(context, fb['id']),
+                              );
                             },
                           ),
                   ),
@@ -232,8 +308,9 @@ class _ViewFeedbackScreenState extends State<ViewFeedbackScreen> {
 
 class _FeedbackCard extends StatelessWidget {
   final Map<String, dynamic> feedback;
+  final VoidCallback onDelete;
 
-  const _FeedbackCard({required this.feedback});
+  const _FeedbackCard({required this.feedback, required this.onDelete});
 
   static const Color _primary = Color(0xFF1F8A70);
 
@@ -269,7 +346,7 @@ class _FeedbackCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top row: patient name + rating stars
+          // Top row: patient name + rating stars + delete
           Row(
             children: [
               Container(
@@ -301,6 +378,21 @@ class _FeedbackCard extends StatelessWidget {
                     color: const Color(0xFFF4B400),
                   );
                 }),
+              ),
+              // ── NAYA: delete icon, har card ke top par — admin kisi
+              // bhi feedback ko individually delete kar sake.
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onDelete,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDB4437).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(Icons.delete_outline,
+                      size: 16, color: Color(0xFFDB4437)),
+                ),
               ),
             ],
           ),

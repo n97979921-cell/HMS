@@ -185,10 +185,8 @@ class _LabStaffProfileScreenState extends State<LabStaffProfileScreen> {
                             controller: _nameController,
                             decoration: _inputDecoration(Icons.person_outline),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
-                                return 'Phone is required';
-                              if (!RegExp(r'^03\d{9}$').hasMatch(v.trim())) {
-                                return 'Enter valid Pakistani number (03XXXXXXXXX)';
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Name is required';
                               }
                               return null;
                             },
@@ -204,8 +202,15 @@ class _LabStaffProfileScreenState extends State<LabStaffProfileScreen> {
                             controller: _phoneController,
                             keyboardType: TextInputType.phone,
                             decoration: _inputDecoration(Icons.phone_outlined),
-                            validator: (v) =>
-                                v!.trim().isEmpty ? 'Phone is required' : null,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Phone is required';
+                              }
+                              if (!RegExp(r'^03\d{9}$').hasMatch(v.trim())) {
+                                return 'Enter valid Pakistani number (03XXXXXXXXX)';
+                              }
+                              return null;
+                            },
                           ),
                         ]),
                         const SizedBox(height: 20),

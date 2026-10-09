@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../login_screen.dart';
 
-
 class AdminProfileScreen extends StatefulWidget {
   const AdminProfileScreen({super.key});
 
@@ -266,10 +265,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                             decoration:
                                 _inputDecoration(Icons.person_outline_rounded),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty)
-                                return 'Phone is required';
-                              if (!RegExp(r'^03\d{9}$').hasMatch(v.trim())) {
-                                return 'Enter valid Pakistani number (03XXXXXXXXX)';
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Name is required';
                               }
                               return null;
                             },
@@ -282,8 +279,15 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                             controller: _phoneController,
                             keyboardType: TextInputType.phone,
                             decoration: _inputDecoration(Icons.phone_outlined),
-                            validator: (v) =>
-                                v!.trim().isEmpty ? 'Phone is required' : null,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Phone is required';
+                              }
+                              if (!RegExp(r'^03\d{9}$').hasMatch(v.trim())) {
+                                return 'Enter valid Pakistani number (03XXXXXXXXX)';
+                              }
+                              return null;
+                            },
                           ),
                         ],
                       ),

@@ -163,6 +163,68 @@ class _ViewPaymentRecordsScreenState extends State<ViewPaymentRecordsScreen> {
     }
   }
 
+  // ── NAYA: Delete (single payment line) — koi confirmation nahi,
+  //    seedha permanent delete. StreamBuilder khud-ba-khud refresh
+  //    kar dega.
+  Future<void> _deletePayment(BuildContext context, String id) async {
+    try {
+      await FirebaseFirestore.instance.collection('payments').doc(id).delete();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Payment record deleted'),
+          backgroundColor: _primary,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error deleting: $e'),
+          backgroundColor: const Color(0xFFDB4437),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    }
+  }
+
+  // ── NAYA: Delete All — jo bhi groups is waqt screen par (currently
+  //    applied type/status filters ke baad) dikh rahe hain, un sab
+  //    groups ki SAARI payment lines ek batch write mein permanent
+  //    delete — bina confirmation ke.
+  Future<void> _deleteAllPayments(
+      BuildContext context, List<_PaymentGroup> groups) async {
+    if (groups.isEmpty) return;
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      int count = 0;
+      for (final g in groups) {
+        for (final p in g.payments) {
+          batch.delete(FirebaseFirestore.instance
+              .collection('payments')
+              .doc(p['id']));
+          count++;
+        }
+      }
+      await batch.commit();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('$count payment record(s) deleted'),
+          backgroundColor: _primary,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error deleting all: $e'),
+          backgroundColor: const Color(0xFFDB4437),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasActiveFilters = _typeFilter != 'All' || _statusFilter != 'All';
@@ -314,13 +376,35 @@ class _ViewPaymentRecordsScreenState extends State<ViewPaymentRecordsScreen> {
                           color: const Color(0xFFDCEFE9),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
-                          child: Text(
-                            '${groups.length} appointment bill${groups.length == 1 ? '' : 's'} found',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: _primary,
-                            ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${groups.length} appointment bill${groups.length == 1 ? '' : 's'} found',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: _primary,
+                                  ),
+                                ),
+                              ),
+                              // ── NAYA: Delete All — jo bhi filter abhi
+                              // lagi hai, usi ke andar jo groups (aur
+                              // unki saari payment lines) dikh rahe
+                              // hain, sab delete. Koi confirmation nahi.
+                              if (groups.isNotEmpty)
+                                TextButton.icon(
+                                  onPressed: () =>
+                                      _deleteAllPayments(context, groups),
+                                  icon: const Icon(Icons.delete_sweep_outlined,
+                                      size: 16, color: Color(0xFFDB4437)),
+                                  label: const Text('Delete All',
+                                      style: TextStyle(
+                                          color: Color(0xFFDB4437),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600)),
+                                ),
+                            ],
                           ),
                         ),
                         Expanded(
@@ -373,6 +457,8 @@ class _ViewPaymentRecordsScreenState extends State<ViewPaymentRecordsScreen> {
                                       statusColor: _statusColor,
                                       statusLabel: _statusLabel,
                                       typeIcon: _typeIcon,
+                                      onDeletePayment: (id) =>
+                                          _deletePayment(context, id),
                                     );
                                   },
                                 ),
@@ -474,12 +560,14 @@ class _PaymentGroupCard extends StatelessWidget {
   final Color Function(String) statusColor;
   final String Function(String) statusLabel;
   final IconData Function(String) typeIcon;
+  final ValueChanged<String> onDeletePayment;
 
   const _PaymentGroupCard({
     required this.group,
     required this.statusColor,
     required this.statusLabel,
     required this.typeIcon,
+    required this.onDeletePayment,
   });
 
   static const Color _primary = Color(0xFF1F8A70);
@@ -562,6 +650,7 @@ class _PaymentGroupCard extends StatelessWidget {
             final status = p['status'] ?? 'Unknown';
             final amount = p['amount'] ?? 0;
             final method = p['paymentMethod'] ?? 'N/A';
+            final paymentId = p['id'] as String;
 
             return Container(
               decoration: BoxDecoration(
@@ -629,6 +718,22 @@ class _PaymentGroupCard extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                  // ── NAYA: delete icon, har payment line ke end
+                  // mein — status se qata-nazar, admin kisi bhi ek
+                  // payment record ko individually delete kar sake.
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () => onDeletePayment(paymentId),
+                    child: Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDB4437).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Icon(Icons.delete_outline,
+                          size: 14, color: Color(0xFFDB4437)),
+                    ),
                   ),
                 ],
               ),

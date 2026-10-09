@@ -21,6 +21,12 @@ import 'package:intl/intl.dart';
 /// In Progress | Completed | Cancelled. Client-side filtering hai
 /// (data ek hi baar load hota hai, tab badalne par sirf list filter
 /// hoti hai — extra Firestore query nahi lagti).
+///
+///  NAYA — Delete / Delete All (sirf Completed aur Cancelled par):
+/// lab_tests doctor, lab staff, admin aur payments sab ke liye shared
+/// record hai, is liye patient ke "Delete" par document asal mein
+/// delete nahi hota — us par 'patientHidden: true' lag jata hai aur
+/// patient ki list se hat jata hai. Baaqi roles ka data safe rehta hai.
 class LabReportsScreen extends StatefulWidget {
   const LabReportsScreen({super.key});
 
@@ -31,6 +37,7 @@ class LabReportsScreen extends StatefulWidget {
 class _LabReportsScreenState extends State<LabReportsScreen> {
   static const Color _primary = Color(0xFF1F8A70);
   static const Color _primaryDark = Color(0xFF0D6B5A);
+  static const Color _danger = Color(0xFFDB4437);
 
   bool _isLoading = true;
   List<Map<String, dynamic>> _tests = [];
@@ -62,6 +69,10 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
 
       for (final doc in testsSnap.docs) {
         final data = doc.data();
+
+        // Patient ne jo tests "delete" (hide) kar diye, wo dobara
+        // list mein nahi aate.
+        if (data['patientHidden'] == true) continue;
 
         final doctorDoc = await FirebaseFirestore.instance
             .collection('users')
@@ -113,9 +124,52 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
     return _tests.where((t) => t['status'] == _selectedFilter).toList();
   }
 
+  // Sirf Completed aur Cancelled tests delete ho sakte hain.
+  static bool _isDeletable(Map<String, dynamic> t) =>
+      t['status'] == 'Completed' || t['status'] == 'Cancelled';
+
   void _changeFilter(String? filter) {
     if (_selectedFilter == filter) return;
     setState(() => _selectedFilter = filter);
+  }
+
+  // ── Delete (single) — patient ki list se hata deta hai ──
+  Future<void> _deleteTest(String testId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('lab_tests')
+          .doc(testId)
+          .update({'patientHidden': true});
+      if (!mounted) return;
+      setState(() => _tests.removeWhere((t) => t['testId'] == testId));
+      _showSuccess('Lab test removed');
+    } catch (e) {
+      _showError('Error deleting: $e');
+    }
+  }
+
+  // ── Delete All — jo Completed/Cancelled tests abhi (current filter
+  //    ke andar) list mein dikh rahe hain, sab ek batch mein ──
+  Future<void> _deleteAllDeletable() async {
+    final deletable = _filteredTests.where(_isDeletable).toList();
+    if (deletable.isEmpty) return;
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final ids = <String>{};
+      for (final t in deletable) {
+        final id = t['testId'] as String;
+        ids.add(id);
+        batch.update(
+            FirebaseFirestore.instance.collection('lab_tests').doc(id),
+            {'patientHidden': true});
+      }
+      await batch.commit();
+      if (!mounted) return;
+      setState(() => _tests.removeWhere((t) => ids.contains(t['testId'])));
+      _showSuccess('${ids.length} lab test(s) removed');
+    } catch (e) {
+      _showError('Error deleting all: $e');
+    }
   }
 
   void _viewReport(String base64Str) {
@@ -160,7 +214,17 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: _danger,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    ));
+  }
+
+  void _showSuccess(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: _primary,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -168,6 +232,8 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final deletableCount = _filteredTests.where(_isDeletable).length;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F6),
       body: SafeArea(
@@ -175,6 +241,33 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
           children: [
             _buildHeader(),
             _buildFilterTabs(),
+            // ── Delete All bar — sirf tab jab list mein koi Completed
+            //    ya Cancelled test ho ──
+            if (!_isLoading && deletableCount > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(22, 0, 14, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '$deletableCount completed/cancelled test${deletableCount == 1 ? '' : 's'}',
+                        style: const TextStyle(
+                            fontSize: 12, color: Color(0xFF6B7280)),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _deleteAllDeletable,
+                      icon: const Icon(Icons.delete_sweep_outlined,
+                          size: 16, color: _danger),
+                      label: const Text('Delete All',
+                          style: TextStyle(
+                              color: _danger,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ),
+              ),
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -330,6 +423,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
         reportBase64 != null &&
         reportBase64.isNotEmpty;
     final isPaid = test['paymentStatus'] == 'Paid';
+    final canDelete = _isDeletable(test);
 
     return Container(
       width: double.infinity,
@@ -446,6 +540,20 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
             const SizedBox(height: 2),
             Text('Reason: ${test['cancelReason']}',
                 style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          ],
+          // ── NAYA: Delete — sirf Completed aur Cancelled cards par ──
+          if (canDelete) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => _deleteTest(test['testId']),
+                icon: const Icon(Icons.delete_outline,
+                    size: 16, color: _danger),
+                label: const Text('Delete',
+                    style: TextStyle(color: _danger, fontSize: 12)),
+              ),
+            ),
           ],
         ],
       ),

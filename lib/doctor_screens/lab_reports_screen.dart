@@ -162,7 +162,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
@@ -170,15 +170,19 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6)
         ],
       ),
-      child: Row(
-        children: filters.entries.map((entry) {
-          final isSelected = _selectedFilter == entry.value;
-          return Expanded(
-            child: GestureDetector(
+      // Horizontal scroll — tabs ab chipakte nahi, agar width kam pare to swipe ho jate hain
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: filters.entries.map((entry) {
+            final isSelected = _selectedFilter == entry.value;
+            return GestureDetector(
               onTap: () => _changeFilter(entry.value),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 18),
                 decoration: BoxDecoration(
                   color: isSelected ? _LabColors.primary : Colors.transparent,
                   borderRadius: BorderRadius.circular(26),
@@ -193,9 +197,9 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                   ),
                 ),
               ),
-            ),
-          );
-        }).toList(),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

@@ -26,11 +26,11 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
     'Cancelled',
   ];
 
-  // FIX: orderBy('createdAt') hata diya — status filter ke saath
-  // combine hoke yeh Firestore composite index maangta tha
-  // (cloud_firestore/failed-precondition error). Ab sirf 'where'
-  // lagta hai (single-field, index ki zaroorat nahi), aur sorting
-  // neeche client-side (Dart mein) ho rahi hai.
+  // orderBy('createdAt') hata diya — status filter ke saath combine
+  // hoke yeh Firestore composite index maangta tha (cloud_firestore/
+  // failed-precondition error). Ab sirf 'where' lagta hai (single-field,
+  // index ki zaroorat nahi), aur sorting neeche client-side (Dart mein)
+  // ho rahi hai.
   Query<Map<String, dynamic>> _buildQuery() {
     Query<Map<String, dynamic>> query =
         FirebaseFirestore.instance.collection('lab_tests');
@@ -115,6 +115,65 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
         return Icons.cancel_outlined;
       default:
         return Icons.help_outline_rounded;
+    }
+  }
+
+  // ── NAYA: Delete (single) — koi confirmation nahi, seedha permanent
+  //    delete. Har card ke top par icon hamesha available, status se
+  //    qata-nazar. StreamBuilder khud-ba-khud list refresh kar dega.
+  Future<void> _deleteTest(BuildContext context, String id) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('lab_tests')
+          .doc(id)
+          .delete();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Lab test deleted'),
+          backgroundColor: _primary,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error deleting: $e'),
+          backgroundColor: const Color(0xFFDB4437),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    }
+  }
+
+  // ── NAYA: Delete All — jo bhi lab tests is waqt screen par (currently
+  //    applied status filter ke baad) dikh rahe hain, sab ek batch write
+  //    mein permanent delete — bina confirmation ke.
+  Future<void> _deleteAllTests(
+      BuildContext context, List<Map<String, dynamic>> tests) async {
+    if (tests.isEmpty) return;
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      for (final t in tests) {
+        batch.delete(
+            FirebaseFirestore.instance.collection('lab_tests').doc(t['id']));
+      }
+      await batch.commit();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('${tests.length} lab test(s) deleted'),
+          backgroundColor: _primary,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error deleting all: $e'),
+          backgroundColor: const Color(0xFFDB4437),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
     }
   }
 
@@ -209,8 +268,6 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
                 }
 
                 final docs = snapshot.data?.docs ?? [];
-                // FIX: sorting ab yahan, client-side (orderBy Firestore
-                // se hata diya gaya — see _buildQuery() comment).
                 _sortByCreatedAtDesc(docs);
 
                 return FutureBuilder<List<Map<String, dynamic>>>(
@@ -231,13 +288,34 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
                           color: const Color(0xFFDCEFE9),
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
-                          child: Text(
-                            '${tests.length} lab test${tests.length == 1 ? '' : 's'} found',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: _primary,
-                            ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${tests.length} lab test${tests.length == 1 ? '' : 's'} found',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: _primary,
+                                  ),
+                                ),
+                              ),
+                              // ── NAYA: Delete All — jo bhi filter abhi
+                              // lagi hai usi ke andar jo list dikh rahi
+                              // hai, sab delete. Koi confirmation nahi.
+                              if (tests.isNotEmpty)
+                                TextButton.icon(
+                                  onPressed: () =>
+                                      _deleteAllTests(context, tests),
+                                  icon: const Icon(Icons.delete_sweep_outlined,
+                                      size: 16, color: Color(0xFFDB4437)),
+                                  label: const Text('Delete All',
+                                      style: TextStyle(
+                                          color: Color(0xFFDB4437),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600)),
+                                ),
+                            ],
                           ),
                         ),
                         Expanded(
@@ -291,6 +369,8 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
                                       test: test,
                                       statusColor: _statusColor(status),
                                       statusIcon: _statusIcon(status),
+                                      onDelete: () =>
+                                          _deleteTest(context, test['id']),
                                     );
                                   },
                                 ),
@@ -366,11 +446,13 @@ class _LabTestCard extends StatelessWidget {
   final Map<String, dynamic> test;
   final Color statusColor;
   final IconData statusIcon;
+  final VoidCallback onDelete;
 
   const _LabTestCard({
     required this.test,
     required this.statusColor,
     required this.statusIcon,
+    required this.onDelete,
   });
 
   static const Color _primary = Color(0xFF1F8A70);
@@ -408,7 +490,7 @@ class _LabTestCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top row: test type + status
+          // Top row: test type + status + delete
           Row(
             children: [
               Expanded(
@@ -459,6 +541,22 @@ class _LabTestCard extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+              // ── NAYA: delete icon, har card ke top par, status se
+              // qata-nazar — admin kisi bhi lab test ko individually
+              // delete kar sake, "Delete All" ke ilawa.
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onDelete,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDB4437).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(Icons.delete_outline,
+                      size: 16, color: Color(0xFFDB4437)),
                 ),
               ),
             ],

@@ -8,6 +8,8 @@ import 'login_screen.dart';
 /// (login() jaisa hi), is liye _register() mein result['error'] se
 /// asal Firebase/Firestore error dikhaya jata hai — generic
 /// "Registration failed" ke peeche chhupa nahi rehta.
+/// NOTE: "Continue with Google" button, OR divider aur Google handler
+/// hata diye gaye hain — sirf email/password signup rakha gaya hai.
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -26,7 +28,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
   String? _selectedGender;
   bool _obscurePassword = true;
   bool _isLoading = false;
-  bool _isGoogleLoading = false;
 
   final authService = AuthService();
 
@@ -111,50 +112,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         SnackBar(
           content: Text('Error: $e'),
           backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _handleGoogleSignIn() async {
-    setState(() => _isGoogleLoading = true);
-
-    final result = await authService.signInWithGoogle();
-
-    setState(() => _isGoogleLoading = false);
-    if (!mounted) return;
-
-    if (result['success'] == true) {
-      if (result['isNewUser'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content:
-                Text('Signed in with Google! Please complete your profile.'),
-            backgroundColor: Color(0xFF1F8A70),
-          ),
-        );
-        // NOTE: agar aapke paas "complete profile" screen banai hui hai
-        // to yahan us par navigate kar dein, e.g.:
-        // Navigator.push(context, MaterialPageRoute(
-        //   builder: (_) => CompleteGoogleProfileScreen(googleUser: result['googleUser']),
-        // ));
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Welcome back! Logging you in...'),
-            backgroundColor: Color(0xFF1F8A70),
-          ),
-        );
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['error'] ?? 'Google sign-in failed'),
-          backgroundColor: Colors.redAccent,
         ),
       );
     }
@@ -416,14 +373,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 ),
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      const _OrDivider(),
-                      const SizedBox(height: 20),
-                      _GoogleButton(
-                        isLoading: _isGoogleLoading,
-                        onPressed:
-                            _isGoogleLoading ? null : _handleGoogleSignIn,
-                      ),
                     ],
                   ),
                 ),
@@ -523,80 +472,6 @@ class _FieldLabel extends StatelessWidget {
         color: Color(0xFF1A2F5A),
         fontSize: 13,
         fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-}
-
-class _OrDivider extends StatelessWidget {
-  const _OrDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: const [
-        Expanded(child: Divider(color: Colors.black26)),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            'OR',
-            style: TextStyle(color: Colors.black45, fontSize: 12),
-          ),
-        ),
-        Expanded(child: Divider(color: Colors.black26)),
-      ],
-    );
-  }
-}
-
-class _GoogleButton extends StatelessWidget {
-  final bool isLoading;
-  final VoidCallback? onPressed;
-
-  const _GoogleButton({required this.isLoading, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: Colors.white,
-          side: const BorderSide(color: Color(0xFFE0E6E5)),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-        ),
-        child: isLoading
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  color: Color(0xFF1F8A70),
-                  strokeWidth: 2.5,
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Image(
-                    image: AssetImage('assets/google_logo.png'),
-                    width: 20,
-                    height: 20,
-                  ),
-                  SizedBox(width: 10),
-                  Text(
-                    'Continue with Google',
-                    style: TextStyle(
-                      color: Color(0xFF1A2F5A),
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
       ),
     );
   }
