@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Theme colors — matched to Admin Dashboard's green palette
   static const Color _navy = Color(0xFF1A2F5A);
-  static const Color _teal = Color(0xFF1F8A70);
+  static const Color _teal = Color(0xFF0E6E68);
   static const Color _bg = Color(0xFFF4F7F6);
 
   @override
@@ -86,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Login Successful! Welcome '),
-        backgroundColor: Color(0xFF1F8A70),
+        backgroundColor: Color(0xFF0E6E68),
       ),
     );
 
@@ -133,7 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please sign up first to complete your profile.'),
-            backgroundColor: Color(0xFF1F8A70),
+            backgroundColor: Color(0xFF0E6E68),
           ),
         );
       } else {
@@ -482,7 +482,7 @@ class _GoogleButton extends StatelessWidget {
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(
-                  color: Color(0xFF1F8A70),
+                  color: Color(0xFF0E6E68),
                   strokeWidth: 2.5,
                 ),
               )

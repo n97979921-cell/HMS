@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/notification_service.dart';
+import '../widgets/app_ui.dart';
 
 /// REFUNDS SCREEN (Receptionist)
 ///
@@ -35,8 +36,7 @@ class RefundsPendingScreen extends StatefulWidget {
 }
 
 class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
+  static const Color _primary = Color(0xFF0B2E33);
 
   // 'Pending' | 'Processed'
   String _selectedTab = 'Pending';
@@ -194,13 +194,16 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Confirm refund paid?'),
         content:
             Text('Have you given Rs. $refundAmt to ${refund['patientName']} '
                 '(${refund['paymentMethod']})? This cannot be undone.'),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.muted),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Not yet'),
           ),
@@ -284,7 +287,7 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -294,7 +297,7 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: _primary,
+      backgroundColor: AppColors.teal,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -303,84 +306,51 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildTabToggle(),
-            if (_selectedTab == 'Processed' &&
-                !_isLoading &&
-                _refunds.isNotEmpty)
-              _buildDeleteAllBar(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : _refunds.isEmpty
-                      ? _buildEmpty()
-                      : RefreshIndicator(
-                          onRefresh: _loadRefunds,
-                          color: _primary,
-                          child: ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
-                            itemCount: _refunds.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (ctx, i) => _refundCard(_refunds[i]),
-                          ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          if (_selectedTab == 'Processed' && !_isLoading && _refunds.isNotEmpty)
+            _buildDeleteAllBar(),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : _refunds.isEmpty
+                    ? _buildEmpty()
+                    : RefreshIndicator(
+                        onRefresh: _loadRefunds,
+                        color: AppColors.teal,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                              20, _selectedTab == 'Processed' ? 4 : 16, 20, 24),
+                          itemCount: _refunds.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (ctx, i) => _refundCard(_refunds[i]),
                         ),
-            ),
-          ],
-        ),
+                      ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 14),
-          const Text('Refunds',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold)),
-        ],
-      ),
+    return AppHeader(
+      title: 'Refunds',
+      subtitle: 'Pay patients and mark done',
+      bottom: _buildTabToggle(),
     );
   }
 
   Widget _buildTabToggle() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(18, 14, 18, 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-          ),
-        ],
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
@@ -396,18 +366,19 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () => _changeTab(value),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          height: 40,
           decoration: BoxDecoration(
-            color: isSelected ? _primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(26),
+            color: isSelected ? AppColors.mint : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.grey,
-              fontWeight: FontWeight.w600,
+              color: isSelected ? AppColors.header : Colors.white,
+              fontWeight: FontWeight.w800,
               fontSize: 13,
             ),
           ),
@@ -420,49 +391,68 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
   // Koi confirmation dialog nahi — seedha tap par saare processed
   // refund records permanent delete ho jaate hain.
   Widget _buildDeleteAllBar() {
+    final n = _refunds.length;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: TextButton.icon(
-          onPressed: _deleteAllProcessed,
-          icon: const Icon(Icons.delete_sweep_outlined,
-              size: 18, color: Color(0xFFD9534F)),
-          label: const Text('Delete All',
-              style: TextStyle(
-                  color: Color(0xFFD9534F),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600)),
-        ),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '$n processed record${n == 1 ? '' : 's'}',
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.teal),
+            ),
+          ),
+          GestureDetector(
+            onTap: _deleteAllProcessed,
+            child: Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppColors.dangerSoft,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.delete_sweep_outlined,
+                      size: 16, color: AppColors.danger),
+                  SizedBox(width: 6),
+                  Text('Delete All',
+                      style: TextStyle(
+                          color: AppColors.danger,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildEmpty() {
     final isProcessed = _selectedTab == 'Processed';
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.check_circle_outline,
-              size: 64, color: _primary.withValues(alpha: 0.3)),
-          const SizedBox(height: 16),
-          Text(
-            isProcessed ? 'No processed refunds' : 'No pending refunds',
-            style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF6B7280)),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            isProcessed
-                ? 'Refunds you\'ve paid out will show up here'
-                : 'All refunds have been paid',
-            style: const TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
-          ),
-        ],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      child: AppEmptyState(
+        icon: Icons.check_circle_outline,
+        title: isProcessed ? 'No processed refunds' : 'No pending refunds',
+        subtitle: isProcessed
+            ? 'Refunds you\'ve paid out will show up here'
+            : 'All refunds have been paid',
       ),
+    );
+  }
+
+  Widget _subLine(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 3),
+      child: Text(text,
+          style: const TextStyle(fontSize: 12, color: AppColors.muted)),
     );
   }
 
@@ -472,23 +462,13 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
     final refundAmt = refund['refundAmount'] ??
         (isHalf ? (refund['amount'] / 2) : refund['amount']);
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
@@ -497,44 +477,26 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
                     Text(refund['patientName'],
                         style: const TextStyle(
                             fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A2F3A))),
-                    const SizedBox(height: 2),
-                    Text('Dr. ${refund['doctorName']}',
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.black54)),
-                    const SizedBox(height: 2),
-                    Text('${refund['type']} · ${refund['paymentMethod']}',
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.black54)),
-                    if (refund['type'] == 'Lab') ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        '${refund['testType']}',
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.black54),
-                      ),
-                    ],
-                    if (refund['type'] == 'Consultation') ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        '${refund['apptTime']}',
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.black54),
-                      ),
-                    ],
-                    const SizedBox(height: 2),
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.text)),
+                    _subLine('Dr. ${refund['doctorName']}'),
+                    _subLine('${refund['type']} · ${refund['paymentMethod']}'),
+                    if (refund['type'] == 'Lab')
+                      _subLine('${refund['testType']}'),
+                    if (refund['type'] == 'Consultation')
+                      _subLine('${refund['apptTime']}'),
+                    const SizedBox(height: 5),
                     Row(
                       children: [
-                        const Icon(Icons.phone,
-                            size: 12, color: Colors.black54),
-                        const SizedBox(width: 4),
+                        const Icon(Icons.phone_outlined,
+                            size: 13, color: AppColors.teal),
+                        const SizedBox(width: 5),
                         Text(
                           refund['patientPhone'],
                           style: const TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF0D6B6B),
-                            fontWeight: FontWeight.w600,
+                            color: AppColors.teal,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
@@ -542,49 +504,35 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
                   ],
                 ),
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: isHalf
-                      ? const Color(0xFFFCEFD8)
-                      : const Color(0xFFFDE6E0),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  isHalf ? 'Half Refund' : 'Full Refund',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: isHalf
-                        ? const Color(0xFFB8860B)
-                        : const Color(0xFFD9534F),
-                  ),
-                ),
+              const SizedBox(width: 8),
+              AppStatusChip(
+                label: isHalf ? 'Half Refund' : 'Full Refund',
+                colors: isHalf
+                    ? const AppChipColors(Color(0xFF8A6D00), Color(0xFFF6F2E2))
+                    : const AppChipColors(Color(0xFF9A2E16), Color(0xFFFBE6E0)),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF4F7F6),
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.bg,
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                    isProcessed
-                        ? 'Amount refunded'
-                        : 'Amount to refund',
+                Text(isProcessed ? 'Amount refunded' : 'Amount to refund',
                     style: const TextStyle(
-                        fontSize: 12, color: Colors.black54)),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.muted)),
                 Text('Rs. $refundAmt',
                     style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: _primaryDark)),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0B5E57))),
               ],
             ),
           ),
@@ -595,12 +543,16 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
               child: OutlinedButton.icon(
                 onPressed: () => _deleteRefund(refund['paymentId']),
                 icon: const Icon(Icons.delete_outline,
-                    size: 18, color: Color(0xFFD9534F)),
+                    size: 18, color: Color(0xFF9A2E16)),
                 label: const Text('Delete',
-                    style: TextStyle(color: Color(0xFFD9534F))),
+                    style: TextStyle(
+                        color: Color(0xFF9A2E16),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800)),
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFFD9534F)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFFF0C9BE)),
+                  minimumSize: const Size.fromHeight(44),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
@@ -611,12 +563,17 @@ class _RefundsPendingScreenState extends State<RefundsPendingScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () => _markRefunded(refund),
-                icon: const Icon(Icons.check, size: 18, color: Colors.white),
+                icon: const Icon(Icons.check_rounded,
+                    size: 18, color: AppColors.mint),
                 label: const Text('Mark as Refunded',
-                    style: TextStyle(color: Colors.white)),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _primary,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  backgroundColor: AppColors.header,
+                  elevation: 0,
+                  minimumSize: const Size.fromHeight(46),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../Services/admin_service.dart';
 import 'invite_form_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/app_ui.dart';
 
 class UserListScreen extends StatefulWidget {
   final String role;
@@ -35,8 +36,8 @@ class _UserListScreenState extends State<UserListScreen> {
   final Set<String> _selectedUids = {};
 
   // Theme colors — matched to Admin Dashboard's green palette
-  static const Color primaryColor = Color(0xFF1F8A70);
-  static const Color bgColor = Color(0xFFF4F7F6);
+  static const Color primaryColor = AppColors.teal;
+  static const Color bgColor = AppColors.bg;
 
   @override
   void initState() {
@@ -161,7 +162,7 @@ class _UserListScreenState extends State<UserListScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text(
           'Delete selected users?',
           style: TextStyle(fontWeight: FontWeight.w700, color: Colors.red),
@@ -201,71 +202,10 @@ class _UserListScreenState extends State<UserListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: primaryColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            _selectionMode ? Icons.close_rounded : Icons.arrow_back_ios_rounded,
-            color: Colors.white,
-          ),
-          onPressed: () {
-            if (_selectionMode) {
-              _cancelSelectionMode();
-            } else {
-              Navigator.pop(context);
-            }
-          },
-        ),
-        title: Text(
-          _selectionMode
-              ? '${_selectedUids.length} selected'
-              : widget.title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
-        ),
-        centerTitle: true,
-        actions: _selectionMode
-            ? [
-                IconButton(
-                  icon: const Icon(Icons.delete_rounded, color: Colors.white),
-                  onPressed:
-                      _selectedUids.isEmpty ? null : _confirmBulkDelete,
-                ),
-              ]
-            : [
-                TextButton(
-                  onPressed: _enterSelectionMode,
-                  child: const Text(
-                    'Select',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => DeletedUsersScreen(
-                          role: widget.role,
-                          title: widget.title,
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'Deleted',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                ),
-              ],
-      ),
       floatingActionButton: _selectionMode
           ? null
-          : FloatingActionButton(
+          : AppFab(
+              label: 'Invite ${widget.title}',
               onPressed: () async {
                 await Navigator.push(
                   context,
@@ -275,69 +215,89 @@ class _UserListScreenState extends State<UserListScreen> {
                 );
                 _loadUsers();
               },
-              backgroundColor: primaryColor,
-              child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
             ),
       body: Column(
         children: [
-          if (!_selectionMode)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search by name...',
-                    hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
-                    prefixIcon: const Icon(Icons.search_rounded, color: primaryColor),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Color(0xFF9CA3AF)),
-                            onPressed: () => _searchController.clear(),
-                          )
-                        : null,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          AppHeader(
+            title: _selectionMode
+                ? '${_selectedUids.length} selected'
+                : widget.title,
+            subtitle: _selectionMode || _isLoading
+                ? null
+                : '${_users.length} user${_users.length == 1 ? '' : 's'}',
+            leadingIcon: _selectionMode
+                ? Icons.close_rounded
+                : Icons.arrow_back_ios_new_rounded,
+            onBack: () {
+              if (_selectionMode) {
+                _cancelSelectionMode();
+              } else {
+                Navigator.pop(context);
+              }
+            },
+            trailing: _selectionMode
+                ? AppHeaderPill(
+                    label: 'Delete',
+                    icon: Icons.delete_outline_rounded,
+                    danger: true,
+                    onTap: _selectedUids.isEmpty ? null : _confirmBulkDelete,
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppHeaderPill(
+                        label: 'Select',
+                        onTap: _enterSelectionMode,
+                      ),
+                      const SizedBox(width: 6),
+                      AppHeaderPill(
+                        label: 'Deleted',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DeletedUsersScreen(
+                                role: widget.role,
+                                title: widget.title,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                ),
-              ),
-            ),
-          // ── NAYA: "Select all" row — sirf selection mode mein dikhta hai ──
+            bottom: _selectionMode
+                ? null
+                : AppHeaderSearch(
+                    controller: _searchController,
+                    hint: 'Search by name...',
+                    onClear: () => _searchController.clear(),
+                  ),
+          ),
+          // ── "Select all" row — sirf selection mode mein dikhta hai ──
           if (_selectionMode && _filteredUsers.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              padding: const EdgeInsets.fromLTRB(12, 12, 20, 0),
               child: Row(
                 children: [
                   Checkbox(
                     value: _filteredUsers
-                        .map((u) => u['uid'] as String)
-                        .where((uid) =>
-                            uid != FirebaseAuth.instance.currentUser?.uid)
-                        .every((uid) => _selectedUids.contains(uid)) &&
+                            .map((u) => u['uid'] as String)
+                            .where((uid) =>
+                                uid != FirebaseAuth.instance.currentUser?.uid)
+                            .every((uid) => _selectedUids.contains(uid)) &&
                         _filteredUsers.isNotEmpty,
-                    activeColor: primaryColor,
+                    activeColor: AppColors.header,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(5)),
                     onChanged: (_) => _toggleSelectAll(),
                   ),
                   const Text(
                     'Select all',
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A1A2E),
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.text,
                     ),
                   ),
                 ],
@@ -348,44 +308,27 @@ class _UserListScreenState extends State<UserListScreen> {
                 ? const Center(
                     child: CircularProgressIndicator(color: primaryColor))
                 : _filteredUsers.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              _users.isEmpty
-                                  ? _roleIcon
-                                  : Icons.search_off_rounded,
-                              size: 64,
-                              color: primaryColor.withOpacity(0.3),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              _users.isEmpty
-                                  ? 'No ${widget.title} yet'
-                                  : 'No results found',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF6B7280),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _users.isEmpty
-                                  ? 'Tap + to send an invite'
-                                  : 'Try a different name',
-                              style: const TextStyle(
-                                  fontSize: 14, color: primaryColor),
-                            ),
-                          ],
-                        ),
+                    ? ListView(
+                        padding: const EdgeInsets.all(20),
+                        children: [
+                          AppEmptyState(
+                            icon: _users.isEmpty
+                                ? _roleIcon
+                                : Icons.search_off_rounded,
+                            title: _users.isEmpty
+                                ? 'No ${widget.title} yet'
+                                : 'No results found',
+                            subtitle: _users.isEmpty
+                                ? 'Tap Invite to send an invite'
+                                : 'Try a different name',
+                          ),
+                        ],
                       )
                     : RefreshIndicator(
                         onRefresh: _loadUsers,
                         color: primaryColor,
                         child: ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
                           itemCount: _filteredUsers.length,
                           itemBuilder: (context, index) {
                             final user = _filteredUsers[index];
@@ -423,7 +366,7 @@ class _UserCard extends StatefulWidget {
   final bool isCurrentUser;
   final VoidCallback onToggleSelect;
 
-  static const Color primaryColor = Color(0xFF1F8A70);
+  static const Color primaryColor = AppColors.teal;
 
   const _UserCard({
     required this.user,
@@ -440,7 +383,7 @@ class _UserCard extends StatefulWidget {
 }
 
 class _UserCardState extends State<_UserCard> {
-  static const Color primaryColor = Color(0xFF1F8A70);
+  static const Color primaryColor = AppColors.teal;
   bool _hasTimingSetting = false;
   String _startTime = '';
   String _endTime = '';
@@ -523,7 +466,7 @@ class _UserCardState extends State<_UserCard> {
       builder: (_) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
           title: const Text('Set Timing',
               style: TextStyle(fontWeight: FontWeight.w700)),
           content: Column(
@@ -687,7 +630,7 @@ class _UserCardState extends State<_UserCard> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Set Consultation Fee',
             style: TextStyle(fontWeight: FontWeight.w700)),
         content: SingleChildScrollView(
@@ -817,7 +760,7 @@ class _UserCardState extends State<_UserCard> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Edit User',
             style: TextStyle(fontWeight: FontWeight.w700)),
         content: Column(
@@ -883,7 +826,7 @@ class _UserCardState extends State<_UserCard> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Delete User',
             style: TextStyle(fontWeight: FontWeight.w700, color: Colors.red)),
         content: Text(
@@ -926,21 +869,14 @@ class _UserCardState extends State<_UserCard> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: widget.selectionMode && widget.isSelected
-            ? primaryColor.withOpacity(0.06)
+            ? AppColors.tealSoft
             : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: widget.selectionMode && widget.isSelected
-            ? Border.all(color: primaryColor, width: 1.5)
+            ? Border.all(color: AppColors.header, width: 1.5)
             : isIncomplete
-                ? Border.all(color: const Color(0xFFF4B400), width: 1.5)
+                ? Border.all(color: const Color(0xFFE0C35A), width: 1.5)
                 : null,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -953,19 +889,18 @@ class _UserCardState extends State<_UserCard> {
                 padding: const EdgeInsets.only(right: 4, top: 4),
                 child: Checkbox(
                   value: widget.isSelected,
-                  activeColor: primaryColor,
+                  activeColor: AppColors.header,
                   onChanged: widget.isCurrentUser
                       ? null
                       : (_) => widget.onToggleSelect(),
                 ),
               ),
             Container(
-              width: 50,
-              height: 50,
+              width: 46,
+              height: 46,
               decoration: BoxDecoration(
-                color: isIncomplete
-                    ? const Color(0xFFFEF7E0)
-                    : primaryColor.withOpacity(0.1),
+                color:
+                    isIncomplete ? const Color(0xFFF6F2E2) : AppColors.tealSoft,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(widget.roleIcon,
@@ -983,7 +918,7 @@ class _UserCardState extends State<_UserCard> {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
+                      color: AppColors.text,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -1099,54 +1034,26 @@ class _UserCardState extends State<_UserCard> {
             // single-action na ho jaye. Selection mode band hone par
             // sab kuch bilkul pehle jaisa hi hai. ──
             widget.selectionMode
-                ? Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? const Color(0xFFDCEFE9)
-                          : const Color(0xFFFCE8E6),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      isActive ? 'Active' : 'Inactive',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: isActive ? primaryColor : const Color(0xFFDB4437),
-                      ),
-                    ),
+                ? AppStatusChip(
+                    label: isActive ? 'Active' : 'Inactive',
+                    colors: isActive ? AppChipColors.green : AppChipColors.red,
                   )
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isActive
-                              ? const Color(0xFFDCEFE9)
-                              : const Color(0xFFFCE8E6),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          isActive ? 'Active' : 'Inactive',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: isActive
-                                ? primaryColor
-                                : const Color(0xFFDB4437),
-                          ),
-                        ),
+                      AppStatusChip(
+                        label: isActive ? 'Active' : 'Inactive',
+                        colors:
+                            isActive ? AppChipColors.green : AppChipColors.red,
                       ),
                       const SizedBox(height: 8),
                       PopupMenuButton<String>(
                         icon: const Icon(Icons.more_vert_rounded,
-                            color: Color(0xFF6B7280), size: 20),
+                            color: AppColors.muted, size: 20),
+                        color: Colors.white,
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(16)),
                         onSelected: (value) async {
                           final currentUid =
                               FirebaseAuth.instance.currentUser?.uid;
@@ -1236,9 +1143,7 @@ class _UserCardState extends State<_UserCard> {
                                 const Icon(Icons.payments_rounded,
                                     color: primaryColor, size: 18),
                                 const SizedBox(width: 8),
-                                Text(_hasFeeSetting
-                                    ? 'Update Fee'
-                                    : 'Set Fee'),
+                                Text(_hasFeeSetting ? 'Update Fee' : 'Set Fee'),
                               ]),
                             ),
                           if (isActive)
@@ -1321,8 +1226,8 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
   List<Map<String, dynamic>> _deletedUsers = [];
   bool _isLoading = true;
 
-  static const Color primaryColor = Color(0xFF1F8A70);
-  static const Color bgColor = Color(0xFFF4F7F6);
+  static const Color primaryColor = AppColors.teal;
+  static const Color bgColor = AppColors.bg;
 
   @override
   void initState() {
@@ -1351,100 +1256,76 @@ class _DeletedUsersScreenState extends State<DeletedUsersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: primaryColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Deleted ${widget.title}',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
+      body: Column(
+        children: [
+          AppHeader(
+            title: 'Deleted ${widget.title}',
+            subtitle: _isLoading ? null : '${_deletedUsers.length} deleted',
           ),
-        ),
-        centerTitle: true,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: primaryColor))
-          : _deletedUsers.isEmpty
-              ? const Center(
-                  child: Text('No deleted users',
-                      style: TextStyle(fontSize: 16, color: Color(0xFF6B7280))))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _deletedUsers.length,
-                  itemBuilder: (context, index) {
-                    final user = _deletedUsers[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: primaryColor))
+                : _deletedUsers.isEmpty
+                    ? ListView(
+                        padding: const EdgeInsets.all(20),
+                        children: const [
+                          AppEmptyState(
+                            icon: Icons.person_off_outlined,
+                            title: 'No deleted users',
                           ),
                         ],
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: const Icon(Icons.person_off_rounded,
-                                color: Colors.red, size: 24),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                        itemCount: _deletedUsers.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final user = _deletedUsers[index];
+                          return AppCard(
+                            child: Row(
                               children: [
-                                Text(
-                                  user['name'] ?? 'Unknown',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF1A1A2E),
+                                const AppIconTile(
+                                  icon: Icons.person_off_rounded,
+                                  color: Color(0xFF9A2E16),
+                                  background: Color(0xFFFBE6E0),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        user['name'] ?? 'Unknown',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.text,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(user['email'] ?? '',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              fontSize: 12,
+                                              color: AppColors.muted)),
+                                    ],
                                   ),
                                 ),
-                                Text(user['email'] ?? '',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF6B7280))),
+                                const AppStatusChip(
+                                  label: 'Deleted',
+                                  colors: AppChipColors.red,
+                                ),
                               ],
                             ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text('Deleted',
-                                style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.red)),
-                          ),
-                        ],
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+          ),
+        ],
+      ),
     );
   }
 }

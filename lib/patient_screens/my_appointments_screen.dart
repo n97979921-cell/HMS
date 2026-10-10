@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/app_ui.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -50,9 +51,6 @@ class MyAppointmentsScreen extends StatefulWidget {
 }
 
 class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   final int _currentNavIndex = 1;
   String _selectedFilter = 'All';
 
@@ -246,7 +244,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
               '$_autoProcessed video call(s) auto-processed (no-show/refund)'),
-          backgroundColor: const Color(0xFFB8860B),
+          backgroundColor: const Color(0xFF8A6D00),
           behavior: SnackBarBehavior.floating,
         ));
       }
@@ -349,7 +347,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -359,7 +357,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: _primary,
+      backgroundColor: AppColors.teal,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -370,18 +368,22 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Cancel appointment?'),
         content: const Text(
             'This will cancel your appointment and free up the slot.'),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.muted),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('No'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB23A1E), elevation: 0),
             child: const Text('Yes, cancel',
                 style: TextStyle(color: Colors.white)),
           ),
@@ -488,41 +490,36 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-              child: _buildFilterTabs(),
-            ),
-            if (_selectedFilter == 'NoShow' &&
-                !_isLoading &&
-                _filteredAppointments.isNotEmpty)
-              _buildDeleteAllBar(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : _filteredAppointments.isEmpty
-                      ? _buildEmptyState()
-                      : RefreshIndicator(
-                          onRefresh: _loadAppointments,
-                          color: _primary,
-                          child: ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(18, 0, 18, 80),
-                            itemCount: _filteredAppointments.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (ctx, i) =>
-                                _appointmentCard(_filteredAppointments[i]),
-                          ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          if (_selectedFilter == 'NoShow' &&
+              !_isLoading &&
+              _filteredAppointments.isNotEmpty)
+            _buildDeleteAllBar(),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : _filteredAppointments.isEmpty
+                    ? _buildEmptyState()
+                    : RefreshIndicator(
+                        onRefresh: _loadAppointments,
+                        color: AppColors.teal,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                              20, _selectedFilter == 'NoShow' ? 4 : 16, 20, 24),
+                          itemCount: _filteredAppointments.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (ctx, i) =>
+                              _appointmentCard(_filteredAppointments[i]),
                         ),
-            ),
-          ],
-        ),
+                      ),
+          ),
+        ],
       ),
       bottomNavigationBar: _buildBottomNav(),
     );
@@ -534,45 +531,10 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_primary, _primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'My Appointments',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return AppHeader(
+      title: 'My Appointments',
+      subtitle: _isLoading ? null : '${_appointments.length} appointments',
+      bottom: _buildFilterTabs(),
     );
   }
 
@@ -588,25 +550,25 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
           final isSelected = filter == _selectedFilter;
           return GestureDetector(
             onTap: () => setState(() => _selectedFilter = filter),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                color: isSelected ? _primary : Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2))
-                ],
+                color: isSelected
+                    ? AppColors.mint
+                    : Colors.white.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(999),
+                border: isSelected
+                    ? null
+                    : Border.all(color: Colors.white.withOpacity(0.16)),
               ),
               alignment: Alignment.center,
               child: Text(
                 filter,
                 style: TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? Colors.white : const Color(0xFF1A2F3A),
+                  fontWeight: FontWeight.w800,
+                  color: isSelected ? AppColors.header : Colors.white,
                 ),
               ),
             ),
@@ -616,44 +578,57 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     );
   }
 
-  // "Delete All" bar — sirf NoShow filter tab par, jab list khali na
-  // ho. Koi confirmation dialog nahi — seedha tap par saare NoShow
-  // records permanent delete ho jaate hain.
+  // "Delete All" — sirf NoShow filter par, bina confirmation (pehle jaisa)
   Widget _buildDeleteAllBar() {
+    final n = _filteredAppointments.length;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: TextButton.icon(
-          onPressed: _deleteAllNoShow,
-          icon: const Icon(Icons.delete_sweep_outlined,
-              size: 18, color: Colors.red),
-          label: const Text('Delete All',
-              style: TextStyle(
-                  color: Colors.red,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600)),
-        ),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '$n no-show record${n == 1 ? '' : 's'}',
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.muted),
+            ),
+          ),
+          GestureDetector(
+            onTap: _deleteAllNoShow,
+            child: Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppColors.dangerSoft,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.delete_sweep_outlined,
+                      size: 16, color: AppColors.danger),
+                  SizedBox(width: 6),
+                  Text('Delete All',
+                      style: TextStyle(
+                          color: AppColors.danger,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.calendar_today_outlined,
-              size: 64, color: _primary.withValues(alpha: 0.3)),
-          const SizedBox(height: 16),
-          const Text(
-            'No appointments found',
-            style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF6B7280)),
-          ),
-        ],
+    return const SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
+      child: AppEmptyState(
+        icon: Icons.calendar_today_outlined,
+        title: 'No appointments found',
       ),
     );
   }
@@ -666,18 +641,15 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     final isCancelled = appt['status'] == 'Cancelled';
     final isNoShow = appt['status'] == 'NoShow';
     final isCheckedIn = appt['status'] == 'CheckedIn';
-    // Delete sirf Cancelled, NoShow ya CheckedIn cards par, ya Completed
-    // cards par jab feedback pehle hi de diya gaya ho — is se purana,
-    // ab bekaar data record se hat jata hai.
+    // Delete: Cancelled, NoShow, CheckedIn, ya Completed + feedback diya
     final canDelete = isCancelled ||
         isNoShow ||
         isCheckedIn ||
         (isCompleted && appt['hasFeedback'] == true);
-    // Reminder sirf in-clinic + abhi tak upcoming (cancel ho sakne
-    // wali) appointments par dikhta hai — completed/cancelled/noshow
-    // purani appointments par bewajah nahi.
+    final canGiveFeedback = isCompleted && appt['hasFeedback'] != true;
     final showArrivalReminder =
         appt['appointmentType'] == 'IN_PERSON' && canCancel;
+    final isVideo = appt['appointmentType'] == 'VIDEO_CALL';
 
     return GestureDetector(
       onTap: () async {
@@ -695,23 +667,29 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
-          ],
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: _primary.withValues(alpha: 0.15),
-                  child: const Icon(Icons.person, color: _primary, size: 26),
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color:
+                        isVideo ? AppColors.tealSoft : const Color(0xFFEEE8FB),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isVideo
+                        ? Icons.videocam_outlined
+                        : Icons.local_hospital_outlined,
+                    size: 21,
+                    color: isVideo ? AppColors.teal : const Color(0xFF5B3FA8),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -720,134 +698,118 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                     children: [
                       Text(appt['doctorName'],
                           style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A2F3A))),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.text)),
                       const SizedBox(height: 2),
                       Text(appt['specialization'],
                           style: const TextStyle(
-                              fontSize: 12, color: Colors.black54)),
-                      const SizedBox(height: 6),
+                              fontSize: 12, color: AppColors.muted)),
+                      const SizedBox(height: 5),
                       Row(
                         children: [
-                          const Icon(Icons.access_time,
-                              size: 13, color: Colors.grey),
+                          const Icon(Icons.access_time_rounded,
+                              size: 13, color: AppColors.text),
                           const SizedBox(width: 4),
                           Text(
                             appt['dateLabel'].isEmpty
                                 ? 'Date unavailable'
                                 : appt['dateLabel'],
                             style: const TextStyle(
-                                fontSize: 12, color: Colors.grey),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.text),
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: statusColors['bg'],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    appt['status'],
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: statusColors['text'],
-                    ),
-                  ),
+                const SizedBox(width: 8),
+                AppStatusChip(
+                  label: appt['status'],
+                  colors:
+                      AppChipColors(statusColors['text']!, statusColors['bg']!),
                 ),
               ],
             ),
             if (showArrivalReminder) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               _buildArrivalReminder(),
             ],
-            if (canCancel) ...[
-              const SizedBox(height: 10),
-              const Divider(height: 1),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => _cancelAppointment(appt),
-                  icon: const Icon(Icons.close, size: 16, color: Colors.red),
-                  label: const Text('Cancel',
-                      style: TextStyle(color: Colors.red, fontSize: 12)),
+            if (isCompleted && appt['hasFeedback'] == true) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.tealSoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.star_rounded, size: 16, color: AppColors.teal),
+                    SizedBox(width: 6),
+                    Text('Feedback submitted',
+                        style: TextStyle(
+                            color: Color(0xFF0B5E57),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800)),
+                  ],
                 ),
               ),
             ],
-            if (isCompleted) ...[
-              const SizedBox(height: 10),
-              const Divider(height: 1),
-              const SizedBox(height: 8),
-              if (appt['hasFeedback'] == true)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDCEFE9),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.star, size: 15, color: _primary),
-                      SizedBox(width: 6),
-                      Text('Feedback submitted',
-                          style: TextStyle(
-                              color: _primary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                )
-              else
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => FeedbackScreen(
-                            appointmentId: appt['appointmentId'],
-                            doctorId: appt['doctorId'] ?? '',
-                            doctorName: appt['doctorName'],
-                            specialization: appt['specialization'],
-                          ),
-                        ),
-                      );
-                      _loadAppointments(); // refresh to show "submitted" state
-                    },
-                    icon: const Icon(Icons.star_outline,
-                        size: 16, color: _primary),
-                    label: const Text('Give Feedback',
-                        style: TextStyle(color: _primary, fontSize: 12)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: _primary),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+            if (canCancel || canGiveFeedback || canDelete) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  if (canCancel)
+                    Expanded(
+                      child: _cardAction(
+                        icon: Icons.close_rounded,
+                        label: 'Cancel',
+                        fg: const Color(0xFF9A2E16),
+                        bg: Colors.white,
+                        border: const Color(0xFFF0C9BE),
+                        onTap: () => _cancelAppointment(appt),
+                      ),
                     ),
-                  ),
-                ),
-            ],
-            if (canDelete) ...[
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => _deleteAppointment(appt),
-                  icon: const Icon(Icons.delete_outline,
-                      size: 16, color: Colors.red),
-                  label: const Text('Delete',
-                      style: TextStyle(color: Colors.red, fontSize: 12)),
-                ),
+                  if (canGiveFeedback)
+                    Expanded(
+                      child: _cardAction(
+                        icon: Icons.star_outline_rounded,
+                        iconColor: AppColors.mint,
+                        label: 'Give Feedback',
+                        fg: Colors.white,
+                        bg: AppColors.header,
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => FeedbackScreen(
+                                appointmentId: appt['appointmentId'],
+                                doctorId: appt['doctorId'] ?? '',
+                                doctorName: appt['doctorName'],
+                                specialization: appt['specialization'],
+                              ),
+                            ),
+                          );
+                          _loadAppointments(); // refresh to show "submitted"
+                        },
+                      ),
+                    ),
+                  if (canDelete)
+                    Expanded(
+                      child: _cardAction(
+                        icon: Icons.delete_outline_rounded,
+                        label: 'Delete',
+                        fg: AppColors.danger,
+                        bg: AppColors.dangerSoft,
+                        onTap: () => _deleteAppointment(appt),
+                      ),
+                    ),
+                ],
               ),
             ],
           ],
@@ -856,31 +818,60 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     );
   }
 
-  // Simple, plain-English reminder — only shown on upcoming IN_PERSON
-  // appointment cards. Purely informational, no logic attached.
+  Widget _cardAction({
+    required IconData icon,
+    required String label,
+    required Color fg,
+    required Color bg,
+    Color? border,
+    Color? iconColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 40,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(12),
+          border: border != null ? Border.all(color: border) : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: iconColor ?? fg),
+            const SizedBox(width: 6),
+            Text(label,
+                style: TextStyle(
+                    color: fg, fontSize: 13, fontWeight: FontWeight.w800)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Sirf upcoming IN_PERSON cards par — informational only.
   Widget _buildArrivalReminder() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       decoration: BoxDecoration(
-        color: const Color(0xFFFCEFD8),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFB8860B).withValues(alpha: 0.3)),
+        color: const Color(0xFFF6F2E2),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
+      child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.access_time_filled_rounded,
-              color: Color(0xFFB8860B), size: 16),
-          const SizedBox(width: 8),
-          const Expanded(
+          Icon(Icons.access_time_rounded, color: Color(0xFF8A6D00), size: 15),
+          SizedBox(width: 8),
+          Expanded(
             child: Text(
               'Please arrive 10 minutes early, or your appointment may be cancelled.',
               style: TextStyle(
-                fontSize: 11.5,
-                color: Color(0xFF6B4E00),
-                height: 1.3,
-                fontWeight: FontWeight.w500,
+                fontSize: 12,
+                color: Color(0xFF6B5500),
+                height: 1.35,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -892,48 +883,65 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
   Map<String, Color> _statusColor(String status) {
     switch (status) {
       case 'Confirmed':
-        return {'bg': const Color(0xFFDCEFE9), 'text': const Color(0xFF1F8A70)};
+        return {'bg': const Color(0xFFDDF3EE), 'text': const Color(0xFF0B5E57)};
       case 'Completed':
-        return {'bg': const Color(0xFFD9ECF8), 'text': const Color(0xFF1565C0)};
+        return {'bg': AppColors.blueSoft, 'text': AppColors.blue};
       case 'Requested':
-        return {'bg': const Color(0xFFFCEFD8), 'text': const Color(0xFFB8860B)};
+        return {'bg': const Color(0xFFF6F2E2), 'text': const Color(0xFF8A6D00)};
       case 'Cancelled':
-        return {'bg': const Color(0xFFFDE6E0), 'text': const Color(0xFFD9534F)};
+        return {'bg': const Color(0xFFFBE6E0), 'text': const Color(0xFF9A2E16)};
       case 'InProgress':
-        return {'bg': const Color(0xFFEAE3F7), 'text': const Color(0xFF7E57C2)};
+        return {'bg': const Color(0xFFEEE8FB), 'text': const Color(0xFF5B3FA8)};
       case 'NoShow':
-        return {'bg': Colors.grey.withValues(alpha: 0.15), 'text': Colors.grey};
+        return {'bg': const Color(0xFFEEF1F1), 'text': AppColors.muted};
       default:
-        return {'bg': Colors.grey.withValues(alpha: 0.15), 'text': Colors.grey};
+        return {'bg': const Color(0xFFEEF1F1), 'text': AppColors.muted};
     }
   }
 
   Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: _currentNavIndex,
-      onTap: (index) {
-        if (index == 0) {
-          Navigator.pop(context); // Home pehle se stack mein hai
-        } else if (index == 2) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const PatientProfileScreen()),
-          );
-        }
-        // index == 1 → already yahin hain, kuch mat karo
-      },
-      backgroundColor: Colors.white,
-      selectedItemColor: _primary,
-      unselectedItemColor: Colors.grey,
-      type: BottomNavigationBarType.fixed,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined),
-            label: 'My appointments'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline), label: 'Profile'),
-      ],
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.divider)),
+      ),
+      child: BottomNavigationBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        selectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        currentIndex: _currentNavIndex,
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.pop(context); // Home pehle se stack mein hai
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PatientProfileScreen()),
+            );
+          }
+          // index == 1 → already yahin hain, kuch mat karo
+        },
+        selectedItemColor: AppColors.header,
+        unselectedItemColor: AppColors.faint,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home_rounded),
+              label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_today_outlined),
+              activeIcon: Icon(Icons.calendar_today_rounded),
+              label: 'My appointments'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person_rounded),
+              label: 'Profile'),
+        ],
+      ),
     );
   }
 }

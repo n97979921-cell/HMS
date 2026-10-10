@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_ui.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -29,9 +30,6 @@ class AppointmentDetailScreen extends StatefulWidget {
 }
 
 class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   bool _isLoading = true;
   bool _isJoining = false;
   Map<String, dynamic>? _appt;
@@ -207,7 +205,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -220,43 +218,55 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     final ended =
         status == 'NoShow' || status == 'Cancelled' || status == 'Completed';
 
-    // Session khatam ho chuki, ya abhi appointment Requested hai
-    // (payment/receptionist verify hona baaki hai)
+    // Session khatam, ya abhi Requested (payment verify baaki)
     if (ended || status == 'Requested') {
-      return Container(
-        width: double.infinity,
-        margin: const EdgeInsets.only(top: 16),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.info_outline, color: Colors.grey.shade600, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                ended
-                    ? 'This video session has ended.'
-                    : 'Waiting for payment/booking confirmation.',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-              ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 20),
+          _sectionLabel('VIDEO CONSULTATION'),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
             ),
-          ],
-        ),
+            child: Row(
+              children: [
+                const Icon(Icons.videocam_outlined,
+                    color: AppColors.faint, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    ended
+                        ? 'This video session has ended.'
+                        : 'Waiting for payment/booking confirmation.',
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.muted),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       );
     }
 
-    // Confirmed YA InProgress — patient apna independent 5-min window
-    // follow karta hai, doctor ke start karne ka intezaar nahi karta.
+    // Confirmed YA InProgress — same 5-min window logic
     final canJoin = _canJoinNow;
-    return Container(
-      margin: const EdgeInsets.only(top: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ElevatedButton.icon(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 20),
+        _sectionLabel('VIDEO CONSULTATION'),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 54,
+          child: ElevatedButton.icon(
             onPressed: (_isJoining || !canJoin) ? null : _joinCall,
             icon: _isJoining
                 ? const SizedBox(
@@ -264,107 +274,109 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                     height: 18,
                     child: CircularProgressIndicator(
                         color: Colors.white, strokeWidth: 2))
-                : const Icon(Icons.videocam, color: Colors.white),
+                : Icon(Icons.videocam_rounded,
+                    color: canJoin ? AppColors.mint : AppColors.faint),
             label: Text(
               canJoin ? 'Join Video Call' : 'Available 5 min before slot time',
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(
+                color: canJoin ? Colors.white : AppColors.faint,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _primary,
-              disabledBackgroundColor: Colors.grey.shade400,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: AppColors.header,
+              disabledBackgroundColor: const Color(0xFFE6ECEC),
+              elevation: 0,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30)),
+                  borderRadius: BorderRadius.circular(16)),
             ),
           ),
-          if (canJoin) ...[
-            const SizedBox(height: 8),
-            Text(
-              status == 'InProgress'
-                  ? 'The doctor is ready for your consultation.'
-                  : 'You can join now — the doctor will join shortly.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
-            ),
-          ],
+        ),
+        if (canJoin) ...[
+          const SizedBox(height: 8),
+          Text(
+            status == 'InProgress'
+                ? 'The doctor is ready for your consultation.'
+                : 'You can join now — the doctor will join shortly.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.teal),
+          ),
         ],
-      ),
+      ],
     );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Text(text,
+        style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.8,
+            color: AppColors.muted));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: _primary))
-            : _appt == null
-                ? const Center(child: Text('Appointment not found'))
-                : Column(
-                    children: [
-                      _buildHeader(),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(18),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildDoctorCard(),
-                              const SizedBox(height: 16),
-                              _buildInfoRow(),
-                              _buildJoinSection(),
-                            ],
-                          ),
+      backgroundColor: AppColors.bg,
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.teal))
+          : _appt == null
+              ? const Center(child: Text('Appointment not found'))
+              : Column(
+                  children: [
+                    _buildHeader(),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildDoctorCard(),
+                            const SizedBox(height: 12),
+                            _buildInfoRow(),
+                            _buildJoinSection(),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-      ),
+                    ),
+                  ],
+                ),
     );
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_primary, _primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Appointment Detail',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final type = _appt?['appointmentType'] ?? '';
+    return AppHeader(
+      title: 'Appointment Detail',
+      subtitle: type == 'VIDEO_CALL'
+          ? 'Video consult'
+          : type == 'WALK_IN'
+              ? 'Walk-in'
+              : 'In-clinic visit',
     );
+  }
+
+  Map<String, Color> _statusColors(String status) {
+    switch (status) {
+      case 'Confirmed':
+        return {'bg': const Color(0xFFDDF3EE), 'text': const Color(0xFF0B5E57)};
+      case 'Completed':
+        return {'bg': AppColors.blueSoft, 'text': AppColors.blue};
+      case 'Requested':
+        return {'bg': const Color(0xFFF6F2E2), 'text': const Color(0xFF8A6D00)};
+      case 'Cancelled':
+        return {'bg': const Color(0xFFFBE6E0), 'text': const Color(0xFF9A2E16)};
+      case 'InProgress':
+        return {'bg': const Color(0xFFEEE8FB), 'text': const Color(0xFF5B3FA8)};
+      default:
+        return {'bg': const Color(0xFFEEF1F1), 'text': AppColors.muted};
+    }
   }
 
   Widget _buildDoctorCard() {
@@ -374,29 +386,27 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         : type == 'WALK_IN'
             ? 'Walk-in'
             : 'In-clinic visit';
+    final String status = '${_appt?['status'] ?? '—'}';
+    final sc = _statusColors(status);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2)),
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 26,
-            backgroundColor: _primary.withValues(alpha: 0.15),
+            backgroundColor: AppColors.tealSoft,
             child: Text(
               _doctorName.isNotEmpty ? _doctorName[0].toUpperCase() : '?',
               style: const TextStyle(
-                  color: _primary, fontWeight: FontWeight.bold, fontSize: 20),
+                  color: AppColors.teal,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 19),
             ),
           ),
           const SizedBox(width: 14),
@@ -406,12 +416,19 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
               children: [
                 Text(_doctorName,
                     style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.text)),
+                const SizedBox(height: 2),
                 Text(typeLabel,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    style:
+                        const TextStyle(fontSize: 12, color: AppColors.muted)),
               ],
             ),
+          ),
+          AppStatusChip(
+            label: status,
+            colors: AppChipColors(sc['text']!, sc['bg']!),
           ),
         ],
       ),
@@ -424,11 +441,11 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         Expanded(
             child: _infoTile(
                 Icons.calendar_today_outlined, 'Date', _slot?['date'] ?? '—')),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Expanded(
             child: _infoTile(
                 Icons.access_time, 'Time', _slot?['startTime'] ?? '—')),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         Expanded(
             child: _infoTile(
                 Icons.info_outline, 'Status', _appt?['status'] ?? '—')),
@@ -438,27 +455,27 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 
   Widget _infoTile(IconData icon, String label, String value) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2)),
-        ],
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: _primary),
+          Icon(icon, size: 18, color: AppColors.teal),
           const SizedBox(height: 6),
-          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.faint)),
           const SizedBox(height: 2),
           Text(value,
-              textAlign: TextAlign.center,
-              style:
-                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.text)),
         ],
       ),
     );

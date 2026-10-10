@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'payment_upload_screen.dart';
+import '../widgets/app_ui.dart';
 
 /// FIXES IS FILE MEIN:
 /// 1. Past-time slots: aaj ki date par guzre hue times ab disabled hain
@@ -39,9 +40,6 @@ class BookAppointmentScreen extends StatefulWidget {
 }
 
 class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   bool _isLoadingSettings = true;
   bool _isLoadingSlots = false;
   bool _isBooking = false;
@@ -257,7 +255,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -450,7 +448,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         // Payment submit ho gayi
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Booking requested! Awaiting reception confirmation.'),
-          backgroundColor: _primary,
+          backgroundColor: AppColors.teal,
         ));
         Navigator.pop(context);
       } else {
@@ -469,184 +467,205 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: _isLoadingSettings
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDoctorCard(),
-                          // ── IN_PERSON ARRIVAL NOTICE ──
-                          // Sirf in-clinic (IN_PERSON) appointments ke
-                          // liye — video call ke liye "arrive" ka
-                          // concept nahi banta, is liye wahan nahi dikhta.
-                          if (widget.appointmentType == 'IN_PERSON') ...[
-                            const SizedBox(height: 14),
-                            _buildArrivalNotice(),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: _isLoadingSettings
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDoctorCard(),
+                        // ── IN_PERSON ARRIVAL NOTICE ── (sirf in-clinic)
+                        if (widget.appointmentType == 'IN_PERSON') ...[
+                          const SizedBox(height: 12),
+                          _buildArrivalNotice(),
+                        ],
+                        const SizedBox(height: 20),
+                        _sectionLabel('SELECT DATE'),
+                        const SizedBox(height: 10),
+                        _buildDateSelector(),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Expanded(child: _sectionLabel('AVAILABLE SLOTS')),
+                            _legendDot(Colors.white, 'Free', border: true),
+                            const SizedBox(width: 10),
+                            _legendDot(const Color(0xFFE6ECEC), 'Taken'),
                           ],
-                          const SizedBox(height: 20),
-                          const Text('Select date',
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A2F3A))),
-                          const SizedBox(height: 10),
-                          _buildDateSelector(),
-                          const SizedBox(height: 20),
-                          const Text('Available slots',
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A2F3A))),
-                          const SizedBox(height: 10),
-                          _isLoadingSlots
-                              ? const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 20),
-                                  child: Center(
-                                      child: CircularProgressIndicator(
-                                          color: _primary)),
-                                )
-                              : _buildSlotsGrid(),
-                          const SizedBox(height: 20),
-                          const Text('Symptoms (optional)',
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A2F3A))),
-                          const SizedBox(height: 10),
-                          TextField(
-                            controller: _symptomsController,
-                            maxLines: 3,
-                            decoration: InputDecoration(
-                              hintText: 'Briefly describe your symptoms...',
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
+                        ),
+                        const SizedBox(height: 10),
+                        _isLoadingSlots
+                            ? const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 20),
+                                child: Center(
+                                    child: CircularProgressIndicator(
+                                        color: AppColors.teal)),
+                              )
+                            : _buildSlotsGrid(),
+                        const SizedBox(height: 20),
+                        _sectionLabel('SYMPTOMS (OPTIONAL)'),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _symptomsController,
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            hintText: 'Briefly describe your symptoms...',
+                            hintStyle: const TextStyle(color: AppColors.faint),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.all(14),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide:
+                                  const BorderSide(color: AppColors.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide:
+                                  const BorderSide(color: AppColors.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(
+                                  color: AppColors.teal, width: 1.5),
                             ),
                           ),
-                          const SizedBox(height: 20),
-                          const Text('Attach previous report (optional)',
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A2F3A))),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Share an old prescription or test result, if relevant.',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                          const SizedBox(height: 10),
-                          _buildReportPicker(),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 20),
+                        _sectionLabel('ATTACH PREVIOUS REPORT (OPTIONAL)'),
+                        const SizedBox(height: 3),
+                        const Text(
+                          'Share an old prescription or test result, if relevant.',
+                          style:
+                              TextStyle(fontSize: 12, color: AppColors.faint),
+                        ),
+                        const SizedBox(height: 10),
+                        _buildReportPicker(),
+                      ],
                     ),
-            ),
-            if (!_isLoadingSettings) _buildCheckoutBar(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
+                  ),
           ),
-          const SizedBox(width: 14),
-          const Text('Book appointment',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold)),
+          if (!_isLoadingSettings) _buildCheckoutBar(),
         ],
       ),
     );
   }
 
+  Widget _sectionLabel(String text) {
+    return Text(text,
+        style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.8,
+            color: AppColors.muted));
+  }
+
+  Widget _legendDot(Color color, String label, {bool border = false}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+            border: border ? Border.all(color: AppColors.border) : null,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppColors.faint)),
+      ],
+    );
+  }
+
+  Widget _buildHeader() {
+    return AppHeader(
+      title: 'Book appointment',
+      subtitle: widget.appointmentType == 'VIDEO_CALL'
+          ? 'Video consult'
+          : 'In-clinic visit',
+    );
+  }
+
   Widget _buildDoctorCard() {
+    final name = widget.doctorName;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(widget.doctorName,
+          CircleAvatar(
+            radius: 23,
+            backgroundColor: AppColors.tealSoft,
+            child: Text(
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
               style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A2F3A))),
-          const SizedBox(height: 2),
-          Text(
-            '${widget.specialization} - ${widget.appointmentType == 'VIDEO_CALL' ? 'Video consult' : 'In-clinic visit'}',
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  color: AppColors.teal,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name,
+                    style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.text)),
+                const SizedBox(height: 2),
+                Text(
+                  '${widget.specialization} - ${widget.appointmentType == 'VIDEO_CALL' ? 'Video consult' : 'In-clinic visit'}',
+                  style: const TextStyle(fontSize: 12, color: AppColors.muted),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Simple, plain-English notice — only shown for IN_PERSON bookings.
-  // Purely informational; does not affect booking logic in any way.
+  // Sirf IN_PERSON ke liye — informational, booking logic par asar nahi.
   Widget _buildArrivalNotice() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFCEFD8),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFB8860B).withOpacity(0.3)),
+        color: const Color(0xFFF6F2E2),
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
+      child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.access_time_filled_rounded,
-              color: Color(0xFFB8860B), size: 20),
-          const SizedBox(width: 10),
-          const Expanded(
+          Icon(Icons.access_time_rounded, color: Color(0xFF8A6D00), size: 18),
+          SizedBox(width: 10),
+          Expanded(
             child: Text(
               'Please arrive 10 minutes before your appointment time. '
               'Arriving late may result in your appointment being cancelled.',
               style: TextStyle(
                 fontSize: 12.5,
-                color: Color(0xFF6B4E00),
-                height: 1.4,
-                fontWeight: FontWeight.w500,
+                color: Color(0xFF6B5500),
+                height: 1.45,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -657,7 +676,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
   Widget _buildDateSelector() {
     return SizedBox(
-      height: 64,
+      height: 66,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _weekdays.length,
@@ -671,17 +690,12 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
               setState(() => _selectedDateIndex = i);
               _loadSlotsForSelectedDate();
             },
-            child: Container(
-              width: 48,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              width: 52,
               decoration: BoxDecoration(
-                color: isSelected ? _primary : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2))
-                ],
+                color: isSelected ? AppColors.header : Colors.white,
+                borderRadius: BorderRadius.circular(16),
               ),
               alignment: Alignment.center,
               child: Column(
@@ -690,15 +704,16 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                   Text(dayNames[d.weekday - 1],
                       style: TextStyle(
                           fontSize: 11,
-                          color: isSelected ? Colors.white70 : Colors.grey)),
+                          fontWeight: FontWeight.w700,
+                          color: isSelected
+                              ? AppColors.headerMuted
+                              : AppColors.faint)),
                   const SizedBox(height: 2),
                   Text('${d.day}',
                       style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected
-                              ? Colors.white
-                              : const Color(0xFF1A2F3A))),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: isSelected ? Colors.white : AppColors.text)),
                 ],
               ),
             ),
@@ -711,22 +726,23 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   Widget _buildSlotsGrid() {
     if (_allTimes.isEmpty) {
       return const Text('No slots configured for this doctor.',
-          style: TextStyle(color: Colors.grey));
+          style: TextStyle(color: AppColors.faint));
     }
     return GridView.builder(
       shrinkWrap: true,
+      padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: _allTimes.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
         childAspectRatio: 2.4,
       ),
       itemBuilder: (context, index) {
         final time = _allTimes[index];
-        // FIX 1: slot unavailable hai agar HELD/BOOKED hai
-        // YA aaj ki date par time guzar chuka hai
+        // Slot unavailable: HELD/BOOKED, time guzar gaya, ya patient ki
+        // apni booking — same check as before
         final isAvailable = !_unavailableTimes.contains(time) &&
             !_isPastTime(time) &&
             !_patientBookedTimes.contains(time);
@@ -738,31 +754,30 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
           child: Container(
             decoration: BoxDecoration(
               color: isSelected
-                  ? _primary
+                  ? AppColors.mint
                   : isAvailable
                       ? Colors.white
-                      : const Color(0xFFF0F0F0),
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: isAvailable
-                  ? [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2))
-                    ]
-                  : [],
+                      : const Color(0xFFE6ECEC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected
+                    ? AppColors.header
+                    : isAvailable
+                        ? AppColors.border
+                        : const Color(0xFFE6ECEC),
+                width: isSelected ? 1.5 : 1,
+              ),
             ),
             alignment: Alignment.center,
             child: Text(
               time,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isSelected
-                    ? Colors.white
-                    : isAvailable
-                        ? const Color(0xFF1A2F3A)
-                        : Colors.grey,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: isAvailable ? AppColors.header : const Color(0xFF9DB0B0),
+                decoration: isAvailable
+                    ? TextDecoration.none
+                    : TextDecoration.lineThrough,
               ),
             ),
           ),
@@ -773,56 +788,88 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
   Widget _buildReportPicker() {
     if (_reportBase64 != null) {
-      return Column(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.memory(
-              base64Decode(_reportBase64!),
-              height: 160,
-              width: double.infinity,
-              fit: BoxFit.cover,
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.memory(
+                base64Decode(_reportBase64!),
+                height: 160,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextButton.icon(
-                onPressed: _pickReport,
-                icon: const Icon(Icons.refresh, size: 16, color: _primary),
-                label: const Text('Change', style: TextStyle(color: _primary)),
-              ),
-              const SizedBox(width: 8),
-              TextButton.icon(
-                onPressed: _removeReport,
-                icon: const Icon(Icons.close, size: 16, color: Colors.red),
-                label:
-                    const Text('Remove', style: TextStyle(color: Colors.red)),
-              ),
-            ],
-          ),
-        ],
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _smallAction(Icons.refresh_rounded, 'Change',
+                      AppColors.teal, AppColors.tealSoft, _pickReport),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _smallAction(Icons.close_rounded, 'Remove',
+                      AppColors.danger, AppColors.dangerSoft, _removeReport),
+                ),
+              ],
+            ),
+          ],
+        ),
       );
     }
 
     return GestureDetector(
       onTap: _pickReport,
-      child: Container(
-        width: double.infinity,
-        height: 100,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _primary.withOpacity(0.4), width: 1.5),
+      child: CustomPaint(
+        painter: _DashedBorderPainter(),
+        child: Container(
+          width: double.infinity,
+          height: 96,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.attach_file_rounded, size: 24, color: AppColors.muted),
+              SizedBox(height: 6),
+              Text('Tap to attach a report',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.muted)),
+            ],
+          ),
         ),
-        child: Column(
+      ),
+    );
+  }
+
+  Widget _smallAction(
+      IconData icon, String label, Color fg, Color bg, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 38,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.attach_file, size: 28, color: _primary.withOpacity(0.6)),
-            const SizedBox(height: 6),
-            const Text('Tap to attach a report',
-                style: TextStyle(fontSize: 12, color: Colors.black54)),
+            Icon(icon, size: 16, color: fg),
+            const SizedBox(width: 6),
+            Text(label,
+                style: TextStyle(
+                    color: fg, fontSize: 13, fontWeight: FontWeight.w800)),
           ],
         ),
       ),
@@ -831,13 +878,11 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
   Widget _buildCheckoutBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+      padding: EdgeInsets.fromLTRB(
+          20, 12, 20, 16 + MediaQuery.of(context).padding.bottom),
       decoration: const BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))
-        ],
+        border: Border(top: BorderSide(color: AppColors.divider)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -846,26 +891,31 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Consultation fee',
-                  style: TextStyle(fontSize: 13, color: Colors.grey)),
-              // FIX 2: live fee dikhao, purani widget wali nahi
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.muted)),
+              // live fee — same value as before
               Text('Rs. ${_displayFee ?? widget.consultationFee}',
                   style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A2F3A))),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0B5E57))),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
+            height: 50,
             child: ElevatedButton(
               onPressed: _isBooking ? null : _bookAppointment,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _primary,
+                backgroundColor: AppColors.header,
+                disabledBackgroundColor: AppColors.header.withOpacity(0.5),
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 13),
+                elevation: 0,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(14)),
               ),
               child: _isBooking
                   ? const SizedBox(
@@ -876,11 +926,35 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                     )
                   : const Text('Request appointment',
                       style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+/// Dashed rounded border for the "attach report" box (UI only).
+class _DashedBorderPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFB9CFCC)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    final rrect =
+        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(16));
+    final path = Path()..addRRect(rrect);
+    for (final metric in path.computeMetrics()) {
+      double d = 0;
+      while (d < metric.length) {
+        canvas.drawPath(metric.extractPath(d, d + 6), paint);
+        d += 11;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

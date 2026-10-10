@@ -11,6 +11,7 @@ import 'patient_profile_screen.dart';
 import 'help_screen.dart';
 import 'package:logger/logger.dart';
 import '../widgets/notification_bell_icon.dart';
+import '../widgets/app_ui.dart';
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -22,9 +23,6 @@ class PatientHomeScreen extends StatefulWidget {
 class _PatientHomeScreenState extends State<PatientHomeScreen> {
   int _currentNavIndex = 0;
   final Logger _logger = Logger();
-
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
 
   bool _isLoading = true;
   String _patientName = '';
@@ -225,166 +223,153 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(
-                  color: _primary,
-                ),
-              )
-            : RefreshIndicator(
-                onRefresh: _loadHomeData,
-                color: _primary,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 16,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildGreetingCard(),
-                      const SizedBox(height: 16),
-                      _buildAssistanceCard(),
-                      const SizedBox(height: 16),
-                      if (_nextAppointment != null) ...[
-                        _buildAppointmentCard(),
-                        const SizedBox(height: 20),
-                      ],
-                      const Text(
-                        'Our services',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A2F3A),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildServicesGrid(),
-                      const SizedBox(height: 12),
-                      _buildBillingCard(),
-                      const SizedBox(height: 24),
-                      if (_topDoctors.isNotEmpty) ...[
-                        const Text(
-                          'Top doctors',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A2F3A),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildDoctorsRow(),
-                      ],
-                      const SizedBox(height: 80),
-                    ],
-                  ),
-                ),
-              ),
-      ),
-      bottomNavigationBar: _buildBottomNav(),
-    );
-  }
-
-  // ✅ CHANGED: sirf logo add kiya gaya hai (left side, round). Baqi
-  // sab — gradient, "Hello,", name, tagline, bell icon — bilkul
-  // pehle jaisa hi hai, kuch nahi hataya.
-  Widget _buildGreetingCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_primary, _primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          // Logo mark — round, no white box background.
-          ClipOval(
-            child: Image.asset(
-              'assets/Logo.png',
-              width: 70,
-              height: 70,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                // Asset path galat ho to app crash nahi hogi, ye
-                // fallback icon dikhega taake pata chal jaye.
-                return Container(
-                  width: 44,
-                  height: 44,
-                  color: Colors.white24,
-                  child: const Icon(
-                    Icons.local_hospital,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: AppColors.bg,
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.teal),
+            )
+          : Column(
               children: [
-                const Text(
-                  'Hello,',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _patientName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Your health, our priority',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
+                _buildGreetingCard(),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _loadHomeData,
+                    color: AppColors.teal,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_nextAppointment != null) ...[
+                            _buildAppointmentCard(),
+                            const SizedBox(height: 18),
+                          ],
+                          _sectionTitle('Our services'),
+                          const SizedBox(height: 12),
+                          _buildServicesGrid(),
+                          const SizedBox(height: 12),
+                          _buildBillingCard(),
+                          if (_topDoctors.isNotEmpty) ...[
+                            const SizedBox(height: 22),
+                            _sectionTitle('Top doctors'),
+                            const SizedBox(height: 12),
+                            _buildDoctorsRow(),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
+      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
 
-          // Notification Bell
-          const NotificationBellIcon(),
-        ],
+  Widget _sectionTitle(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w800,
+        color: AppColors.text,
       ),
     );
   }
 
+  // Dark header: logo, "Hello,", name, tagline, bell + next appointment
+  // card (agar ho) — sab wahi data, sirf naya look.
+  Widget _buildGreetingCard() {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: AppColors.header,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  ClipOval(
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      color: Colors.white,
+                      child: Image.asset(
+                        'assets/Logo.png',
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.local_hospital,
+                            color: AppColors.header,
+                            size: 24,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Hello,',
+                          style: TextStyle(
+                            color: AppColors.headerMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          _patientName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const Text(
+                          'Your health, our priority',
+                          style: TextStyle(
+                            color: AppColors.headerLabel,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const NotificationBellIcon(),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildAssistanceCard(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Header ke andar — same Help navigation, sirf look badla
   Widget _buildAssistanceCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 14,
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.07),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -392,13 +377,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           const Text(
             'Need assistance?',
             style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1A2F3A),
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
             ),
           ),
-          ElevatedButton.icon(
-            onPressed: () {
+          GestureDetector(
+            onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -406,23 +391,27 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 ),
               );
             },
-            icon: const Icon(
-              Icons.support_agent,
-              size: 16,
-              color: Colors.white,
-            ),
-            label: const Text(
-              'Help',
-              style: TextStyle(color: Colors.white),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _primary,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 8,
+            child: Container(
+              height: 36,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: AppColors.mint,
+                borderRadius: BorderRadius.circular(999),
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.support_agent, size: 16, color: AppColors.header),
+                  SizedBox(width: 6),
+                  Text(
+                    'Help',
+                    style: TextStyle(
+                      color: AppColors.header,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -436,34 +425,18 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 14,
-      ),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: _primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.calendar_today,
-              color: _primary,
-              size: 20,
-            ),
+          const AppIconTile(
+            icon: Icons.calendar_today_rounded,
+            color: AppColors.teal,
+            background: AppColors.tealSoft,
+            size: 44,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -474,16 +447,19 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   'Next appointment',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey,
+                    color: AppColors.faint,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   _nextAppointment!['doctorName'],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A2F3A),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -491,27 +467,25 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   _formatAppointmentTime(dt),
                   style: const TextStyle(
                     fontSize: 12,
-                    color: Colors.grey,
+                    color: AppColors.muted,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 4,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: _primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: AppColors.header,
+              borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
               _relativeCountdown(dt),
               style: const TextStyle(
-                fontSize: 11,
-                color: _primary,
-                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                color: AppColors.mint,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
@@ -524,16 +498,17 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
+      padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 1.5,
+      childAspectRatio: 1.3,
       children: [
         _serviceCard(
           Icons.videocam_outlined,
           'Video consult',
           'Connect with doctors online',
-          const Color(0xFFDCEFE9),
+          const AppChipColors(AppColors.teal, AppColors.tealSoft),
           () {
             Navigator.push(
               context,
@@ -549,7 +524,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           Icons.local_hospital_outlined,
           'In-clinic visit',
           'Book physical appointment',
-          const Color(0xFFE3E0F7),
+          const AppChipColors(Color(0xFF5B3FA8), Color(0xFFEEE8FB)),
           () {
             Navigator.push(
               context,
@@ -565,7 +540,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           Icons.science_outlined,
           'Lab reports',
           'View results',
-          const Color(0xFFFDE6E0),
+          const AppChipColors(Color(0xFF9A2E16), Color(0xFFFBE6E0)),
           () {
             Navigator.push(
               context,
@@ -579,7 +554,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           Icons.medication_outlined,
           'Prescription',
           'Your medicine',
-          const Color(0xFFD9ECF8),
+          const AppChipColors(AppColors.blue, AppColors.blueSoft),
           () {
             Navigator.push(
               context,
@@ -597,7 +572,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     IconData icon,
     String title,
     String subtitle,
-    Color bgColor,
+    AppChipColors colors,
     VoidCallback onTap,
   ) {
     return GestureDetector(
@@ -605,32 +580,35 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              color: const Color(0xFF1A2F3A),
-              size: 22,
+            AppIconTile(
+              icon: icon,
+              color: colors.fg,
+              background: colors.bg,
+              size: 42,
             ),
-            const SizedBox(height: 8),
+            const Spacer(),
             Text(
               title,
               style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A2F3A),
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: AppColors.text,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 11,
-                color: Colors.black54,
+                fontSize: 11.5,
+                color: AppColors.muted,
               ),
             ),
           ],
@@ -651,39 +629,43 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFFFCEFD8),
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
         ),
-        child: Row(
+        child: const Row(
           children: [
-            const Icon(
-              Icons.receipt_long_outlined,
-              color: Color(0xFF1A2F3A),
-              size: 22,
+            AppIconTile(
+              icon: Icons.receipt_long_outlined,
+              color: Color(0xFF8A6D00),
+              background: Color(0xFFF6F2E2),
             ),
-            const SizedBox(width: 10),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Billing',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A2F3A),
+            SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Billing',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.text,
+                    ),
                   ),
-                ),
-                Text(
-                  'Payments & dues',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.black54,
+                  SizedBox(height: 2),
+                  Text(
+                    'Payments & dues',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.muted,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
+            Icon(Icons.chevron_right_rounded, color: AppColors.faint),
           ],
         ),
       ),
@@ -692,77 +674,85 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
   Widget _buildDoctorsRow() {
     return SizedBox(
-      height: 130,
+      height: 150,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _topDoctors.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (ctx, i) {
           final doc = _topDoctors[i];
+          final String name = '${doc['name']}';
 
           return Container(
-            width: 130,
+            width: 138,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
-                  radius: 22,
-                  backgroundColor: _primary.withOpacity(0.15),
-                  child: const Icon(
-                    Icons.person,
-                    color: _primary,
-                    size: 24,
+                  radius: 24,
+                  backgroundColor: AppColors.tealSoft,
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      color: AppColors.teal,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  doc['name'],
+                  name,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A2F3A),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   doc['specialty'],
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.black54,
+                    fontSize: 11,
+                    color: AppColors.muted,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.star,
-                      color: Colors.amber,
-                      size: 12,
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      doc['rating'],
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.black87,
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF6E0),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.star_rounded,
+                        color: Color(0xFFF2B233),
+                        size: 13,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 3),
+                      Text(
+                        doc['rating'],
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF8A6D00),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -773,47 +763,61 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   }
 
   Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: _currentNavIndex,
-      onTap: (index) {
-        if (index == 1) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const MyAppointmentsScreen(),
-            ),
-          );
-        } else if (index == 2) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const PatientProfileScreen(),
-            ),
-          );
-        } else {
-          setState(
-            () => _currentNavIndex = index,
-          );
-        }
-      },
-      backgroundColor: Colors.white,
-      selectedItemColor: _primary,
-      unselectedItemColor: Colors.grey,
-      type: BottomNavigationBarType.fixed,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.calendar_today_outlined),
-          label: 'My appointments',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          label: 'Profile',
-        ),
-      ],
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.divider)),
+      ),
+      child: BottomNavigationBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        selectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        currentIndex: _currentNavIndex,
+        onTap: (index) {
+          if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const MyAppointmentsScreen(),
+              ),
+            );
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const PatientProfileScreen(),
+              ),
+            );
+          } else {
+            setState(
+              () => _currentNavIndex = index,
+            );
+          }
+        },
+        selectedItemColor: AppColors.header,
+        unselectedItemColor: AppColors.faint,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home_rounded),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today_outlined),
+            activeIcon: Icon(Icons.calendar_today_rounded),
+            label: 'My appointments',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
   }
 }

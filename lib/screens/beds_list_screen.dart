@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/app_ui.dart';
 
 class BedsListScreen extends StatefulWidget {
   final String roomId;
@@ -27,13 +28,13 @@ class _BedsListScreenState extends State<BedsListScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'Available':
-        return const Color(0xFF0F9D58);
+        return const Color(0xFF0B5E57);
       case 'Occupied':
-        return const Color(0xFFDB4437);
+        return const Color(0xFF9A2E16);
       case 'Under Maintenance':
-        return const Color(0xFFF4B400);
+        return const Color(0xFF8A6D00);
       default:
-        return const Color(0xFF6B7280);
+        return AppColors.muted;
     }
   }
 
@@ -123,10 +124,12 @@ class _BedsListScreenState extends State<BedsListScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text(
-          'Change Status',
-          style: TextStyle(fontWeight: FontWeight.w700),
+          'Change status',
+          style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.text),
         ),
         content: Text(
           'Change bed status to "$newStatus"?',
@@ -141,11 +144,14 @@ class _BedsListScreenState extends State<BedsListScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: _statusColor(newStatus),
+              backgroundColor: AppColors.header,
+              elevation: 0,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('Confirm', style: TextStyle(color: Colors.white)),
+            child: const Text('Confirm',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w800)),
           ),
         ],
       ),
@@ -181,35 +187,7 @@ class _BedsListScreenState extends State<BedsListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
-      appBar: AppBar(
-        backgroundColor: widget.roomTypeColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Room ${widget.roomNumber}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 18,
-              ),
-            ),
-            Text(
-              widget.roomType,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-      ),
+      backgroundColor: AppColors.bg,
       floatingActionButton: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('beds')
@@ -226,7 +204,10 @@ class _BedsListScreenState extends State<BedsListScreen> {
 
           return FloatingActionButton.extended(
             onPressed: _isAdding ? null : _addBed,
-            backgroundColor: widget.roomTypeColor,
+            backgroundColor: AppColors.header,
+            elevation: 6,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
             icon: _isAdding
                 ? const SizedBox(
                     width: 18,
@@ -234,113 +215,115 @@ class _BedsListScreenState extends State<BedsListScreen> {
                     child: CircularProgressIndicator(
                         color: Colors.white, strokeWidth: 2),
                   )
-                : const Icon(Icons.add, color: Colors.white),
-            label: const Text('Add Bed', style: TextStyle(color: Colors.white)),
+                : const Icon(Icons.add_rounded,
+                    color: AppColors.mint, size: 24),
+            label: const Text('Add bed',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800)),
           );
         },
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('beds')
-            .where('roomId', isEqualTo: widget.roomId)
-            .orderBy('bedNumber')
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-                child: CircularProgressIndicator(color: widget.roomTypeColor));
-          }
+      body: Column(
+        children: [
+          AppHeader(
+            title: 'Room ${widget.roomNumber}',
+            subtitle: '${widget.roomType} · tap a bed status to change it',
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('beds')
+                  .where('roomId', isEqualTo: widget.roomId)
+                  .orderBy('bedNumber')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                      child: CircularProgressIndicator(color: AppColors.teal));
+                }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text(
-                  'Error: ${snapshot.error}',
-                  style: const TextStyle(color: Colors.red),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        'Error: ${snapshot.error}',
+                        style: const TextStyle(color: AppColors.danger),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
 
-          final beds = snapshot.data?.docs ?? [];
+                final beds = snapshot.data?.docs ?? [];
 
-          final available = beds
-              .where((b) => (b.data() as Map)['availability'] == 'Available')
-              .length;
-          final occupied = beds
-              .where((b) => (b.data() as Map)['availability'] == 'Occupied')
-              .length;
-          final maintenance = beds
-              .where((b) =>
-                  (b.data() as Map)['availability'] == 'Under Maintenance')
-              .length;
+                final available = beds
+                    .where(
+                        (b) => (b.data() as Map)['availability'] == 'Available')
+                    .length;
+                final occupied = beds
+                    .where(
+                        (b) => (b.data() as Map)['availability'] == 'Occupied')
+                    .length;
+                final maintenance = beds
+                    .where((b) =>
+                        (b.data() as Map)['availability'] ==
+                        'Under Maintenance')
+                    .length;
 
-          return Column(
-            children: [
-              if (beds.isNotEmpty)
-                Container(
-                  color: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                  child: Row(
-                    children: [
-                      _StatChip(
-                          label: 'Available',
-                          count: available,
-                          color: const Color(0xFF0F9D58)),
-                      const SizedBox(width: 8),
-                      _StatChip(
-                          label: 'Occupied',
-                          count: occupied,
-                          color: const Color(0xFFDB4437)),
-                      const SizedBox(width: 8),
-                      _StatChip(
-                          label: 'Maintenance',
-                          count: maintenance,
-                          color: const Color(0xFFF4B400)),
+                if (beds.isEmpty) {
+                  return ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: const [
+                      AppEmptyState(
+                        icon: Icons.bed_outlined,
+                        title: 'No beds added yet',
+                        subtitle: 'Tap Add bed to get started',
+                      ),
                     ],
-                  ),
-                ),
-              Expanded(
-                child: beds.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.bed_outlined,
-                                size: 64,
-                                color: widget.roomTypeColor.withOpacity(0.4)),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'No beds added yet',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF6B7280),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Tap + Add Bed to get started',
-                              style: TextStyle(
-                                  fontSize: 13, color: Color(0xFF9CA3AF)),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-                        itemCount: beds.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final bed = beds[index];
-                          final data = bed.data() as Map<String, dynamic>;
-                          final status = data['availability'] ?? 'Available';
-                          final bedNumber = data['bedNumber'] ?? (index + 1);
+                  );
+                }
 
-                          return _BedCard(
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 100),
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 14, horizontal: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          _StatChip(
+                              label: 'Available',
+                              count: available,
+                              color: _statusColor('Available')),
+                          _StatChip(
+                              label: 'Occupied',
+                              count: occupied,
+                              color: _statusColor('Occupied')),
+                          _StatChip(
+                              label: 'Maintenance',
+                              count: maintenance,
+                              color: _statusColor('Under Maintenance')),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    for (int index = 0; index < beds.length; index++)
+                      Builder(builder: (context) {
+                        final bed = beds[index];
+                        final data = bed.data() as Map<String, dynamic>;
+                        final status = data['availability'] ?? 'Available';
+                        final bedNumber = data['bedNumber'] ?? (index + 1);
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _BedCard(
                             bedNumber: bedNumber,
                             status: status,
                             pricePerHour: data['pricePerHour'] ?? 0,
@@ -348,13 +331,15 @@ class _BedsListScreenState extends State<BedsListScreen> {
                             statusIcon: _statusIcon(status),
                             roomTypeColor: widget.roomTypeColor,
                             onStatusTap: () => _updateBedStatus(bed.id, status),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          );
-        },
+                          ),
+                        );
+                      }),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -374,32 +359,26 @@ class _StatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          children: [
-            Text(
-              '$count',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: color,
-              ),
+      child: Column(
+        children: [
+          Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: color,
             ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: color,
-              ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.muted,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -426,34 +405,11 @@ class _BedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: statusColor.withOpacity(0.3),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return AppCard(
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(Icons.bed_outlined, color: statusColor, size: 24),
-          ),
-          const SizedBox(width: 16),
+          AppIconTile(icon: Icons.bed_outlined, color: statusColor),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -462,16 +418,16 @@ class _BedCard extends StatelessWidget {
                   'Bed $bedNumber',
                   style: const TextStyle(
                     fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
-                  'Rs. $pricePerHour / hour',
+                  'Rs $pricePerHour / hour',
                   style: const TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF6B7280),
+                    color: AppColors.muted,
                   ),
                 ),
               ],
@@ -483,8 +439,7 @@ class _BedCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: statusColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: statusColor.withOpacity(0.3)),
+                borderRadius: BorderRadius.circular(999),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -495,7 +450,7 @@ class _BedCard extends StatelessWidget {
                     status,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w800,
                       color: statusColor,
                     ),
                   ),

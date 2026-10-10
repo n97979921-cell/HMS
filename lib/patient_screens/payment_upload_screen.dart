@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
+import '../widgets/app_ui.dart';
 
 /// PAYMENT UPLOAD SCREEN (Phase 1)
 ///
@@ -40,9 +41,6 @@ class PaymentUploadScreen extends StatefulWidget {
 }
 
 class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   // Hospital ka EasyPaisa (baad me badal sakte ho)
   static const String _easypaisaNumber = '03165853792';
   static const String _easypaisaName = 'Family Well Care Hospital';
@@ -126,7 +124,7 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
       Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Payment submitted! Awaiting reception confirmation.'),
-        backgroundColor: _primary,
+        backgroundColor: AppColors.teal,
       ));
     } catch (e) {
       _showError('Could not submit payment: $e');
@@ -140,18 +138,22 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Cancel booking?'),
         content: const Text(
             'Your slot will be released and you will need to book again.'),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.muted),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('No, continue'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB23A1E), elevation: 0),
             child: const Text('Yes, cancel',
                 style: TextStyle(color: Colors.white)),
           ),
@@ -189,7 +191,7 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -204,86 +206,75 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
         if (!didPop && !_isSubmitting && !_cancelling) _cancelBooking();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4F7F6),
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildAmountCard(),
-                      const SizedBox(height: 20),
-                      _buildInstructions(),
-                      const SizedBox(height: 20),
-                      const Text('Transaction ID (optional)',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A2F3A))),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _transactionIdController,
-                        decoration: InputDecoration(
-                          hintText: 'e.g. EasyPaisa TID',
-                          filled: true,
-                          fillColor: Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
+        backgroundColor: AppColors.bg,
+        body: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildAmountCard(),
+                    const SizedBox(height: 12),
+                    _buildInstructions(),
+                    const SizedBox(height: 20),
+                    _sectionLabel('TRANSACTION ID (OPTIONAL)'),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _transactionIdController,
+                      decoration: InputDecoration(
+                        hintText: 'e.g. EasyPaisa TID',
+                        hintStyle: const TextStyle(color: AppColors.faint),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                              color: AppColors.teal, width: 1.5),
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      const Text('Payment screenshot',
-                          style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A2F3A))),
-                      const SizedBox(height: 8),
-                      _buildScreenshotPicker(),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 20),
+                    _sectionLabel('PAYMENT SCREENSHOT'),
+                    const SizedBox(height: 8),
+                    _buildScreenshotPicker(),
+                  ],
                 ),
               ),
-              _buildBottomBar(),
-            ],
-          ),
+            ),
+            _buildBottomBar(),
+          ],
         ),
       ),
     );
   }
 
+  Widget _sectionLabel(String text) {
+    return Text(text,
+        style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.8,
+            color: AppColors.muted));
+  }
+
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: _cancelBooking, // back = cancel (with confirm)
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 14),
-          const Text('Payment',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold)),
-        ],
-      ),
+    return AppHeader(
+      title: 'Payment',
+      subtitle: 'EasyPaisa · upload screenshot',
+      onBack: _cancelBooking, // back = cancel (with confirm)
     );
   }
 
@@ -292,27 +283,29 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_primary, _primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
+        color: AppColors.header,
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Amount to pay',
-              style: TextStyle(color: Colors.white70, fontSize: 13)),
+              style: TextStyle(
+                  color: AppColors.headerMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           Text('Rs. ${widget.amount}',
               style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold)),
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
           Text('Consultation — ${widget.doctorName}',
-              style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              style: const TextStyle(
+                  color: Color(0xFFD5E6E4),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -324,30 +317,26 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('How to pay',
               style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A2F3A))),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.text)),
           const SizedBox(height: 12),
           _payRow('1', 'Send Rs. ${widget.amount} on EasyPaisa to:'),
           const SizedBox(height: 8),
           Container(
-            padding: const EdgeInsets.all(12),
+            width: double.infinity,
+            margin: const EdgeInsets.only(left: 34),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFDCEFE9),
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.tealSoft,
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,17 +344,21 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
                 Text(_easypaisaNumber,
                     style: const TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: _primaryDark)),
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                        color: Color(0xFF0B5E57))),
+                const SizedBox(height: 2),
                 Text(_easypaisaName,
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.black54)),
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.muted)),
               ],
             ),
           ),
           const SizedBox(height: 12),
           _payRow('2', 'Take a screenshot of the confirmation'),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           _payRow('3', 'Upload it below and submit'),
         ],
       ),
@@ -377,23 +370,23 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 22,
-          height: 22,
-          decoration:
-              const BoxDecoration(color: _primary, shape: BoxShape.circle),
+          width: 24,
+          height: 24,
+          decoration: const BoxDecoration(
+              color: AppColors.teal, shape: BoxShape.circle),
           alignment: Alignment.center,
           child: Text(num,
               style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
-                  fontWeight: FontWeight.bold)),
+                  fontWeight: FontWeight.w800)),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.only(top: 3),
             child: Text(text,
-                style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                style: const TextStyle(fontSize: 13, color: AppColors.text)),
           ),
         ),
       ],
@@ -402,25 +395,73 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
 
   Widget _buildScreenshotPicker() {
     if (_screenshotBase64 != null) {
-      return Column(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.memory(
-              base64Decode(_screenshotBase64!),
-              height: 200,
-              width: double.infinity,
-              fit: BoxFit.cover,
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                color: AppColors.bg,
+                child: Image.memory(
+                  base64Decode(_screenshotBase64!),
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: _pickScreenshot,
-            icon: const Icon(Icons.refresh, size: 16, color: _primary),
-            label: const Text('Change screenshot',
-                style: TextStyle(color: _primary)),
-          ),
-        ],
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Container(
+                  width: 26,
+                  height: 26,
+                  decoration: const BoxDecoration(
+                      color: AppColors.mint, shape: BoxShape.circle),
+                  child: const Icon(Icons.check_rounded,
+                      size: 16, color: AppColors.header),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text('Screenshot attached',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.text)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: _pickScreenshot,
+              child: Container(
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.tealSoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.refresh_rounded,
+                        size: 16, color: AppColors.teal),
+                    SizedBox(width: 6),
+                    Text('Change screenshot',
+                        style: TextStyle(
+                            color: AppColors.teal,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -431,22 +472,26 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
         height: 140,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: _primary.withValues(alpha: 0.4),
-              width: 1.5,
-              style: BorderStyle.solid),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFB9CFCC), width: 1.5),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.cloud_upload_outlined,
-                size: 36, color: _primary.withValues(alpha: 0.6)),
+            const AppIconTile(
+              icon: Icons.cloud_upload_outlined,
+              color: AppColors.teal,
+              background: AppColors.tealSoft,
+            ),
             const SizedBox(height: 8),
             const Text('Tap to upload screenshot',
-                style: TextStyle(fontSize: 13, color: Colors.black54)),
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text)),
+            const SizedBox(height: 2),
             const Text('(from gallery)',
-                style: TextStyle(fontSize: 11, color: Colors.grey)),
+                style: TextStyle(fontSize: 12, color: AppColors.faint)),
           ],
         ),
       ),
@@ -455,59 +500,67 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
 
   Widget _buildBottomBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+      padding: EdgeInsets.fromLTRB(
+          20, 12, 20, 16 + MediaQuery.of(context).padding.bottom),
       decoration: const BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))
-        ],
+        border: Border(top: BorderSide(color: AppColors.divider)),
       ),
       child: Row(
         children: [
           Expanded(
-            child: OutlinedButton(
-              onPressed: (_isSubmitting || _cancelling) ? null : _cancelBooking,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                side: const BorderSide(color: Color(0xFFD9534F)),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+            child: SizedBox(
+              height: 50,
+              child: OutlinedButton(
+                onPressed:
+                    (_isSubmitting || _cancelling) ? null : _cancelBooking,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFFF0C9BE)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+                child: _cancelling
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: Color(0xFF9A2E16), strokeWidth: 2.5))
+                    : const Text('Cancel',
+                        style: TextStyle(
+                            color: Color(0xFF9A2E16),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800)),
               ),
-              child: _cancelling
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          color: Color(0xFFD9534F), strokeWidth: 2.5))
-                  : const Text('Cancel',
-                      style: TextStyle(
-                          color: Color(0xFFD9534F),
-                          fontWeight: FontWeight.w600)),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             flex: 2,
-            child: ElevatedButton(
-              onPressed: (_isSubmitting || _cancelling) ? null : _submitPayment,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _primary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+            child: SizedBox(
+              height: 50,
+              child: ElevatedButton(
+                onPressed:
+                    (_isSubmitting || _cancelling) ? null : _submitPayment,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.header,
+                  disabledBackgroundColor: AppColors.header.withOpacity(0.5),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2.5))
+                    : const Text('Submit Payment',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800)),
               ),
-              child: _isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2.5))
-                  : const Text('Submit Payment',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600)),
             ),
           ),
         ],

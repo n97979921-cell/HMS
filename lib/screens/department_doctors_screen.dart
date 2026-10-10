@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/app_ui.dart';
 
 class DepartmentDoctorsScreen extends StatefulWidget {
   final String departmentId;
@@ -62,116 +63,113 @@ class _DepartmentDoctorsScreenState extends State<DepartmentDoctorsScreen> {
     }
   }
 
+  String _initials(String name) {
+    final parts = name
+        .replaceFirst('Dr. ', '')
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .toList();
+    return parts.take(2).map((w) => w[0].toUpperCase()).join();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: primaryColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          widget.departmentName,
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20),
-        ),
-        centerTitle: true,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: primaryColor))
-          : _doctors.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.medical_services_outlined,
-                          size: 64, color: primaryColor.withOpacity(0.3)),
-                      const SizedBox(height: 16),
-                      const Text('No doctors in this department',
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF6B7280))),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _doctors.length,
-                  itemBuilder: (context, index) {
-                    final doc = _doctors[index];
-                    final isActive = doc['status'] == 'active';
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4)),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: const Icon(Icons.medical_services_rounded,
-                                color: primaryColor, size: 24),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          AppHeader(
+            title: widget.departmentName,
+            subtitle: _isLoading
+                ? null
+                : '${_doctors.length} doctor${_doctors.length == 1 ? '' : 's'}',
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : _doctors.isEmpty
+                    ? ListView(
+                        padding: const EdgeInsets.all(20),
+                        children: const [
+                          AppEmptyState(
+                            icon: Icons.medical_services_outlined,
+                            title: 'No doctors in this department',
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        ],
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                        itemCount: _doctors.length + 1,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return const Text(
+                              'DOCTORS IN THIS DEPARTMENT',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                                color: AppColors.muted,
+                              ),
+                            );
+                          }
+                          final doc = _doctors[index - 1];
+                          final isActive = doc['status'] == 'active';
+                          return AppCard(
+                            child: Row(
                               children: [
-                                Text(doc['name'],
+                                CircleAvatar(
+                                  radius: 23,
+                                  backgroundColor: AppColors.tealSoft,
+                                  child: Text(
+                                    _initials(doc['name'] ?? ''),
                                     style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF1A1A2E))),
-                                const SizedBox(height: 2),
-                                Text(doc['specialization'],
-                                    style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF6B7280))),
+                                      color: AppColors.teal,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        doc['name'],
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.text,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        doc['specialization'],
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.muted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                AppStatusChip(
+                                  label: isActive ? 'Active' : 'Inactive',
+                                  colors: isActive
+                                      ? AppChipColors.green
+                                      : AppChipColors.red,
+                                ),
                               ],
                             ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: isActive
-                                  ? const Color(0xFFDCEFE9)
-                                  : const Color(0xFFFCE8E6),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              isActive ? 'Active' : 'Inactive',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: isActive
-                                    ? primaryColor
-                                    : const Color(0xFFDB4437),
-                              ),
-                            ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/app_ui.dart';
 
 // Bottom sheet version of the doctor detail view. Used inside
 // showModalBottomSheet + DraggableScrollableSheet from
@@ -29,7 +30,7 @@ class DoctorPerformanceDetailSheet extends StatefulWidget {
 
 class _DoctorPerformanceDetailSheetState
     extends State<DoctorPerformanceDetailSheet> {
-  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _primary = Color(0xFF0B2E33);
 
   bool _isLoading = true;
   Map<String, dynamic> _detail = {};
@@ -122,6 +123,15 @@ class _DoctorPerformanceDetailSheetState
     return '${((part / total) * 100).toStringAsFixed(0)}%';
   }
 
+  String _initials(String name) {
+    final parts = name
+        .replaceFirst('Dr. ', '')
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .toList();
+    return parts.take(2).map((w) => w[0].toUpperCase()).join();
+  }
+
   @override
   Widget build(BuildContext context) {
     final total = _detail['total'] ?? 0;
@@ -133,8 +143,8 @@ class _DoctorPerformanceDetailSheetState
 
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFF4F7F6),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         children: [
@@ -145,17 +155,29 @@ class _DoctorPerformanceDetailSheetState
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFFD1D5DB),
+                color: AppColors.border,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
 
-          // Header with close button
+          // Header with avatar + close button
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 12, 12),
+            padding: const EdgeInsets.fromLTRB(20, 4, 16, 14),
             child: Row(
               children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: const Color(0xFFEEE8FB),
+                  child: Text(
+                    _initials(widget.doctorName),
+                    style: const TextStyle(
+                      color: Color(0xFF5B3FA8),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,133 +186,50 @@ class _DoctorPerformanceDetailSheetState
                         widget.doctorName,
                         style: const TextStyle(
                           fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A2E),
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.text,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
-                        widget.monthLabel,
+                        _isLoading
+                            ? widget.monthLabel
+                            : '${widget.monthLabel} · $total appointment${total == 1 ? '' : 's'}',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.muted,
                         ),
                       ),
                     ],
                   ),
                 ),
-                IconButton(
-                  icon:
-                      const Icon(Icons.close_rounded, color: Color(0xFF6B7280)),
-                  onPressed: () => Navigator.pop(context),
+                Material(
+                  color: AppColors.bg,
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => Navigator.pop(context),
+                    child: const SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Icon(Icons.close_rounded,
+                          color: AppColors.muted, size: 20),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
 
-          const Divider(height: 1, color: Color(0xFFE5E7EB)),
-
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(color: _primary))
+                    child: CircularProgressIndicator(color: AppColors.teal))
                 : ListView(
                     controller: widget.scrollController,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     children: [
-                      // Department + Avg Rating card
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Department',
-                                    style: TextStyle(
-                                        fontSize: 11, color: Color(0xFF6B7280)),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _detail['department'] ?? 'N/A',
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF1A1A2E),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(Icons.star_rounded,
-                                        size: 18, color: Color(0xFFF4B400)),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      reviewCount == 0
-                                          ? 'N/A'
-                                          : avgRating.toStringAsFixed(1),
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w800,
-                                        color: Color(0xFF1A1A2E),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Text(
-                                  '$reviewCount review${reviewCount == 1 ? '' : 's'}',
-                                  style: const TextStyle(
-                                      fontSize: 11, color: Color(0xFF6B7280)),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Total appointments hero
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _primary,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(
-                              '$total',
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const Text(
-                              'Total Appointments',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.white70,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-
-                      // Breakdown
+                      // Breakdown tiles
                       Row(
                         children: [
                           Expanded(
@@ -298,41 +237,113 @@ class _DoctorPerformanceDetailSheetState
                               label: 'Completed',
                               count: completed,
                               percentage: _pct(completed, total),
-                              color: const Color(0xFF0F9D58),
-                              icon: Icons.check_circle_outline_rounded,
+                              colors: AppChipColors.green,
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: _BreakdownCard(
                               label: 'Cancelled',
                               count: cancelled,
                               percentage: _pct(cancelled, total),
-                              color: const Color(0xFFDB4437),
-                              icon: Icons.cancel_outlined,
+                              colors: AppChipColors.red,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _BreakdownCard(
+                              label: 'No-show',
+                              count: noShow,
+                              percentage: _pct(noShow, total),
+                              colors: AppChipColors.yellow,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _BreakdownCard(
-                              label: 'No-Show',
-                              count: noShow,
-                              percentage: _pct(noShow, total),
-                              color: const Color(0xFF6B7280),
-                              icon: Icons.person_off_outlined,
+                      const SizedBox(height: 12),
+
+                      // Department + rating rows
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.bg,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Column(
+                          children: [
+                            _infoLine(
+                              'Department',
+                              Text(
+                                _detail['department'] ?? 'N/A',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.text,
+                                ),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          const Expanded(child: SizedBox()),
-                        ],
+                            const Divider(height: 1, color: AppColors.divider),
+                            _infoLine(
+                              'Patient rating',
+                              reviewCount == 0
+                                  ? const Text(
+                                      'No reviews',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppColors.faint,
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.star_rounded,
+                                            size: 16, color: Color(0xFFE0A800)),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          avgRating.toStringAsFixed(1),
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w800,
+                                            color: Color(0xFF8A6D00),
+                                          ),
+                                        ),
+                                        Text(
+                                          ' · $reviewCount review${reviewCount == 1 ? '' : 's'}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.muted,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoLine(String label, Widget value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 13),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.muted,
+              ),
+            ),
+          ),
+          value,
         ],
       ),
     );
@@ -343,67 +354,49 @@ class _BreakdownCard extends StatelessWidget {
   final String label;
   final int count;
   final String percentage;
-  final Color color;
-  final IconData icon;
+  final AppChipColors colors;
 
   const _BreakdownCard({
     required this.label,
     required this.count,
     required this.percentage,
-    required this.color,
-    required this.icon,
+    required this.colors,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.bg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            ],
+          Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: colors.fg,
+            ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '$count',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1A1A2E),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 3),
-                child: Text(
-                  percentage,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6B7280),
-                  ),
-                ),
-              ),
-            ],
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: colors.fg,
+            ),
+          ),
+          Text(
+            percentage,
+            style: TextStyle(
+              fontSize: 11,
+              color: colors.fg.withOpacity(0.75),
+            ),
           ),
         ],
       ),

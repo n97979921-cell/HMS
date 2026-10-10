@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../widgets/app_ui.dart';
 
 class ViewAppointmentsScreen extends StatefulWidget {
   const ViewAppointmentsScreen({super.key});
@@ -215,9 +216,7 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
   // status par available hai.
   static bool _isDeleteEligible(Map<String, dynamic> appt) {
     final status = appt['status'];
-    if (status == 'Cancelled' ||
-        status == 'NoShow' ||
-        status == 'CheckedIn') {
+    if (status == 'Cancelled' || status == 'NoShow' || status == 'CheckedIn') {
       return true;
     }
     if (status == 'Completed' && appt['hasFeedback'] == true) {
@@ -264,147 +263,167 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
     }
   }
 
+  AppChipColors _chipColors(String status) {
+    switch (status) {
+      case 'Requested':
+        return AppChipColors.yellow;
+      case 'Confirmed':
+        return AppChipColors.blue;
+      case 'CheckedIn':
+        return AppChipColors.purple;
+      case 'Completed':
+        return AppChipColors.green;
+      case 'Cancelled':
+        return AppChipColors.red;
+      case 'NoShow':
+        return AppChipColors.grey;
+      default:
+        return AppChipColors.grey;
+    }
+  }
+
+  String _statusText(String status) {
+    switch (status) {
+      case 'NoShow':
+        return 'No-show';
+      case 'CheckedIn':
+        return 'Checked in';
+      default:
+        return status;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasActiveFilters =
         _selectedDate != null || _statusFilter != 'All' || _typeFilter != 'All';
 
     return Scaffold(
-      backgroundColor: _bg,
-      appBar: AppBar(
-        backgroundColor: _primary,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'View Appointments',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
-        ),
-      ),
+      backgroundColor: AppColors.bg,
       body: Column(
         children: [
-          // Filters section
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // Filters section (header)
+          AppHeader(
+            title: 'Appointments',
+            subtitle: 'All appointments',
+            bottom: Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: _pickDate,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: _selectedDate != null
-                                ? _primary.withOpacity(0.1)
-                                : const Color(0xFFF4F7F6),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: _selectedDate != null
-                                  ? _primary
-                                  : const Color(0xFFE5E7EB),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.calendar_today_outlined,
-                                  size: 16,
+                Expanded(
+                  child: AppHeaderDropdown(
+                    label: 'Status',
+                    value: _statusFilter,
+                    options: _statusOptions,
+                    displayOf: (o) =>
+                        o == 'All' ? 'All statuses' : _statusText(o),
+                    dotColorOf: (o) =>
+                        o == 'All' ? AppColors.faint : _statusColor(o),
+                    onChanged: (v) {
+                      setState(() => _statusFilter = v);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: AppHeaderDropdown(
+                    label: 'Type',
+                    value: _typeFilter,
+                    options: _typeOptions,
+                    displayOf: (o) => o == 'All' ? 'All types' : _typeLabel(o),
+                    onChanged: (v) {
+                      setState(() => _typeFilter = v);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Date filter + clear
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Material(
+                    color: _selectedDate != null
+                        ? AppColors.tealSoft
+                        : Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: _selectedDate != null
+                            ? AppColors.teal
+                            : AppColors.border,
+                      ),
+                    ),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: _pickDate,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_today_outlined,
+                                size: 16,
+                                color: _selectedDate != null
+                                    ? AppColors.teal
+                                    : AppColors.text),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _selectedDate != null
+                                    ? DateFormat('MMM d, yyyy')
+                                        .format(_selectedDate!)
+                                    : 'Filter by date',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
                                   color: _selectedDate != null
-                                      ? _primary
-                                      : const Color(0xFF6B7280)),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  _selectedDate != null
-                                      ? DateFormat('MMM d, yyyy')
-                                          .format(_selectedDate!)
-                                      : 'Filter by date',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: _selectedDate != null
-                                        ? _primary
-                                        : const Color(0xFF6B7280),
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                                      ? AppColors.teal
+                                      : AppColors.text,
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              if (_selectedDate != null)
-                                GestureDetector(
-                                  onTap: _clearDateFilter,
-                                  child: const Icon(Icons.close_rounded,
-                                      size: 16, color: _primary),
-                                ),
-                            ],
-                          ),
+                            ),
+                            if (_selectedDate != null)
+                              GestureDetector(
+                                onTap: _clearDateFilter,
+                                child: const Icon(Icons.close_rounded,
+                                    size: 16, color: AppColors.teal),
+                              ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _DropdownFilter(
-                        label: 'Status',
-                        value: _statusFilter,
-                        options: _statusOptions,
-                        color: _primary,
-                        onChanged: (v) {
-                          setState(() => _statusFilter = v);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _DropdownFilter(
-                        label: 'Type',
-                        value: _typeFilter,
-                        options: _typeOptions,
-                        color: _primary,
-                        displayLabel: _typeLabel,
-                        onChanged: (v) {
-                          setState(() => _typeFilter = v);
-                        },
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 if (hasActiveFilters) ...[
-                  const SizedBox(height: 10),
-                  GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedDate = null;
-                        _statusFilter = 'All';
-                        _typeFilter = 'All';
-                      });
-                    },
-                    child: const Row(
-                      children: [
-                        Icon(Icons.refresh_rounded,
-                            size: 14, color: Color(0xFFDB4437)),
-                        SizedBox(width: 4),
-                        Text(
-                          'Clear all filters',
+                  const SizedBox(width: 8),
+                  Material(
+                    color: const Color(0xFFE3ECEC),
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        setState(() {
+                          _selectedDate = null;
+                          _statusFilter = 'All';
+                          _typeFilter = 'All';
+                        });
+                      },
+                      child: const Padding(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+                        child: Text(
+                          'Clear filters',
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFFDB4437),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.teal,
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ],
@@ -413,9 +432,6 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
           ),
 
           // Real-time stream of appointments based on current filters.
-          // A fresh stream is created on every build, so changing any
-          // filter (via setState above) automatically attaches a new
-          // listener with the updated query.
           Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: _buildQuery().snapshots(),
@@ -427,13 +443,13 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDB4437).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          color: AppColors.dangerSoft,
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
                           'Error loading appointments: ${snapshot.error}',
                           style: const TextStyle(
-                            color: Color(0xFFDB4437),
+                            color: AppColors.danger,
                             fontSize: 13,
                           ),
                         ),
@@ -444,7 +460,7 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                      child: CircularProgressIndicator(color: _primary));
+                      child: CircularProgressIndicator(color: AppColors.teal));
                 }
 
                 final docs = snapshot.data?.docs ?? [];
@@ -456,39 +472,29 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
                     if (nameSnapshot.connectionState ==
                         ConnectionState.waiting) {
                       return const Center(
-                          child: CircularProgressIndicator(color: _primary));
+                          child:
+                              CircularProgressIndicator(color: AppColors.teal));
                     }
 
                     final appointments = nameSnapshot.data ?? [];
 
                     return Column(
                       children: [
-                        Container(
-                          width: double.infinity,
-                          color: const Color(0xFFDCEFE9),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
                           child: Row(
                             children: [
                               Expanded(
                                 child: Text(
                                   '${appointments.length} appointment${appointments.length == 1 ? '' : 's'} found',
                                   style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: _primary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.teal,
                                   ),
                                 ),
                               ),
-                              // "Delete All" — sirf jab status-filter
-                              // specifically Cancelled/Completed/CheckedIn/
-                              // NoShow mein se ek ho (Requested/Confirmed/
-                              // InProgress/"All" par nahi dikhta), aur
-                              // list khali na ho. Jo bhi filters (date,
-                              // type) abhi lagi hain unhi ke andar jo
-                              // dikh raha hai, usi par delete-all chalta
-                              // hai. Koi confirmation nahi — seedha
-                              // eligible records permanent delete.
+                              // "Delete All" — same condition as before
                               if (const [
                                     'Cancelled',
                                     'Completed',
@@ -496,16 +502,9 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
                                     'NoShow'
                                   ].contains(_statusFilter) &&
                                   appointments.isNotEmpty)
-                                TextButton.icon(
-                                  onPressed: () =>
+                                AppDeleteAllButton(
+                                  onTap: () =>
                                       _deleteAllEligible(context, appointments),
-                                  icon: const Icon(Icons.delete_sweep_outlined,
-                                      size: 16, color: Color(0xFFDB4437)),
-                                  label: const Text('Delete All',
-                                      style: TextStyle(
-                                          color: Color(0xFFDB4437),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600)),
                                 ),
                             ],
                           ),
@@ -513,59 +512,34 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
                         Expanded(
                           child: appointments.isEmpty
                               ? ListView(
-                                  children: [
-                                    SizedBox(
-                                      height:
-                                          MediaQuery.of(context).size.height *
-                                              0.55,
-                                      child: Center(
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.event_busy_outlined,
-                                                size: 64,
-                                                color:
-                                                    _primary.withOpacity(0.3)),
-                                            const SizedBox(height: 16),
-                                            const Text(
-                                              'No appointments found',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                                color: Color(0xFF6B7280),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            const Text(
-                                              'Try adjusting your filters',
-                                              style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: Color(0xFF9CA3AF)),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                                  padding: const EdgeInsets.all(20),
+                                  children: const [
+                                    AppEmptyState(
+                                      icon: Icons.event_busy_outlined,
+                                      title: 'No appointments found',
+                                      subtitle: 'Try adjusting your filters',
                                     ),
                                   ],
                                 )
                               : ListView.separated(
-                                  padding: const EdgeInsets.all(16),
+                                  padding:
+                                      const EdgeInsets.fromLTRB(20, 8, 20, 24),
                                   itemCount: appointments.length,
                                   separatorBuilder: (_, __) =>
-                                      const SizedBox(height: 10),
+                                      const SizedBox(height: 12),
                                   itemBuilder: (context, index) {
                                     final appt = appointments[index];
+                                    final status = appt['status'] ?? '';
                                     return _AppointmentCard(
                                       appt: appt,
-                                      statusColor:
-                                          _statusColor(appt['status'] ?? ''),
+                                      chipColors: _chipColors(status),
+                                      statusText: _statusText(status),
                                       typeIcon: _typeIcon(
                                           appt['appointmentType'] ?? ''),
                                       typeLabel: _typeLabel(
                                           appt['appointmentType'] ?? ''),
-                                      onDelete: () =>
-                                          _deleteAppointment(context, appt['id']),
+                                      onDelete: () => _deleteAppointment(
+                                          context, appt['id']),
                                     );
                                   },
                                 ),
@@ -583,85 +557,28 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
   }
 }
 
-class _DropdownFilter extends StatelessWidget {
-  final String label;
-  final String value;
-  final List<String> options;
-  final Color color;
-  final ValueChanged<String> onChanged;
-  final String Function(String)? displayLabel;
-
-  const _DropdownFilter({
-    required this.label,
-    required this.value,
-    required this.options,
-    required this.color,
-    required this.onChanged,
-    this.displayLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isActive = value != 'All';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: isActive ? color.withOpacity(0.1) : const Color(0xFFF4F7F6),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isActive ? color : const Color(0xFFE5E7EB),
-        ),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          icon: Icon(Icons.keyboard_arrow_down_rounded,
-              color: isActive ? color : const Color(0xFF6B7280), size: 18),
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: isActive ? color : const Color(0xFF6B7280),
-          ),
-          items: options.map((opt) {
-            final display =
-                opt == 'All' ? '$label: All' : (displayLabel?.call(opt) ?? opt);
-            return DropdownMenuItem(
-              value: opt,
-              child: Text(display, overflow: TextOverflow.ellipsis),
-            );
-          }).toList(),
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
-        ),
-      ),
-    );
-  }
-}
-
 class _AppointmentCard extends StatelessWidget {
   final Map<String, dynamic> appt;
-  final Color statusColor;
+  final AppChipColors chipColors;
+  final String statusText;
   final IconData typeIcon;
   final String typeLabel;
   final VoidCallback onDelete;
 
   const _AppointmentCard({
     required this.appt,
-    required this.statusColor,
+    required this.chipColors,
+    required this.statusText,
     required this.typeIcon,
     required this.typeLabel,
     required this.onDelete,
   });
 
-  static const Color _primary = Color(0xFF1F8A70);
-
   String _formatDate(dynamic ts) {
     if (ts == null) return 'N/A';
     try {
       final date = (ts as Timestamp).toDate();
-      return DateFormat('MMM d, yyyy \u2022 h:mm a').format(date);
+      return DateFormat('MMM d, yyyy • h:mm a').format(date);
     } catch (e) {
       return 'N/A';
     }
@@ -669,23 +586,9 @@ class _AppointmentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = appt['status'] ?? 'Unknown';
     final fee = appt['consultationFee'];
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -693,141 +596,48 @@ class _AppointmentCard extends StatelessWidget {
             children: [
               Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: _primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
+                  color: AppColors.tealSoft,
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(typeIcon, size: 13, color: _primary),
+                    Icon(typeIcon, size: 13, color: AppColors.teal),
                     const SizedBox(width: 5),
                     Text(
                       typeLabel,
                       style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: _primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.teal,
                       ),
                     ),
                   ],
                 ),
               ),
               const Spacer(),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: statusColor,
-                  ),
-                ),
-              ),
-              // NAYA: delete icon ab har card ke top par, status se
-              // qata-nazar — admin kisi bhi appointment ko individually
-              // delete kar sake, "Delete All" ke ilawa.
+              AppStatusChip(label: statusText, colors: chipColors),
               const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onDelete,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDB4437).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(Icons.delete_outline,
-                      size: 16, color: Color(0xFFDB4437)),
-                ),
-              ),
+              AppDeleteButton(size: 34, onTap: onDelete),
             ],
           ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              const Icon(Icons.person_outline_rounded,
-                  size: 16, color: Color(0xFF6B7280)),
-              const SizedBox(width: 8),
-              const Text(
-                'Patient: ',
-                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-              ),
-              Expanded(
-                child: Text(
-                  appt['patientName'] ?? 'N/A',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Icon(Icons.medical_services_outlined,
-                  size: 16, color: Color(0xFF6B7280)),
-              const SizedBox(width: 8),
-              const Text(
-                'Doctor: ',
-                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-              ),
-              Expanded(
-                child: Text(
-                  appt['doctorName'] ?? 'N/A',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Icon(Icons.access_time_rounded,
-                  size: 16, color: Color(0xFF6B7280)),
-              const SizedBox(width: 8),
-              Text(
-                _formatDate(appt['createdAt']),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-            ],
-          ),
-          if (fee != null) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(Icons.payments_outlined,
-                    size: 16, color: Color(0xFF6B7280)),
-                const SizedBox(width: 8),
-                Text(
-                  'Fee: Rs. $fee',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF0F9D58),
-                  ),
-                ),
-              ],
-            ),
-          ],
+          const SizedBox(height: 12),
+          AppInfoRow(
+              label: 'Patient',
+              value: appt['patientName'] ?? 'N/A',
+              labelWidth: 70),
+          AppInfoRow(
+              label: 'Doctor',
+              value: appt['doctorName'] ?? 'N/A',
+              labelWidth: 70),
+          AppInfoRow(
+              label: 'Booked',
+              value: _formatDate(appt['createdAt']),
+              labelWidth: 70),
+          if (fee != null)
+            AppInfoRow(label: 'Fee', value: 'Rs $fee', labelWidth: 70),
         ],
       ),
     );

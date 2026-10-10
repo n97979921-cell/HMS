@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import '../widgets/app_ui.dart';
 
 /// NOTIFICATIONS SCREEN — reusable, sab 4 roles ke liye same.
 ///
@@ -32,9 +33,6 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   late final Stream<QuerySnapshot> _notificationsStream;
 
   @override
@@ -115,22 +113,30 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(22),
         ),
-        title: const Text('Clear all notifications?'),
+        title: const Text('Clear all notifications?',
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.danger)),
         content: const Text(
           'This will permanently delete all your notifications. This cannot be undone.',
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.muted),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.danger,
+              elevation: 0,
             ),
             child: const Text(
               'Clear all',
@@ -167,18 +173,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Color _colorForType(String type) {
     switch (type) {
       case 'Appointment':
-        return const Color(0xFF1F8A70);
+        return AppColors.teal;
       case 'Lab':
-        return const Color(0xFF1565C0);
+        return AppColors.blue;
       case 'Room':
       case 'RoomRecommendation':
-        return const Color(0xFF7E57C2);
+        return const Color(0xFF5B3FA8);
       case 'Payment':
-        return const Color(0xFFB8860B);
+        return const Color(0xFF8A6D00);
       case 'VideoConsultation':
-        return const Color(0xFFD9534F);
+        return const Color(0xFF9A2E16);
       default:
-        return Colors.grey;
+        return AppColors.faint;
     }
   }
 
@@ -195,148 +201,117 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Same single stream as before — header bhi isi se unread count
+    // dikhata hai (sirf UI), koi nayi query nahi.
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: _notificationsStream,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: _primary),
-                    );
-                  }
+      backgroundColor: AppColors.bg,
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _notificationsStream,
+        builder: (context, snapshot) {
+          final docs = snapshot.data?.docs ?? [];
 
-                  if (snapshot.hasError) {
-                    return const Center(
-                      child: Text(
-                        'Something went wrong. Please try again.',
-                        style: TextStyle(color: Color(0xFF6B7280)),
-                      ),
-                    );
-                  }
+          final notifications = docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return {
+              'notificationId': doc.id,
+              'type': data['type'] ?? '',
+              'referenceId': data['referenceId'],
+              'message': data['message'] ?? '',
+              'isRead': data['isRead'] ?? false,
+              'createdAt': data['createdAt'],
+            };
+          }).toList();
 
-                  final docs = snapshot.data?.docs ?? [];
+          // Newest first — client-side sort (Firestore composite
+          // index se bachne ke liye, chhoti list ke liye kaafi hai).
+          notifications.sort((a, b) {
+            final aTs = a['createdAt'];
+            final bTs = b['createdAt'];
+            if (aTs is! Timestamp || bTs is! Timestamp) return 0;
+            return bTs.compareTo(aTs);
+          });
 
-                  final notifications = docs.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    return {
-                      'notificationId': doc.id,
-                      'type': data['type'] ?? '',
-                      'referenceId': data['referenceId'],
-                      'message': data['message'] ?? '',
-                      'isRead': data['isRead'] ?? false,
-                      'createdAt': data['createdAt'],
-                    };
-                  }).toList();
+          final unread = notifications.where((n) => n['isRead'] != true).length;
 
-                  // Newest first — client-side sort (Firestore composite
-                  // index se bachne ke liye, chhoti list ke liye kaafi hai).
-                  notifications.sort((a, b) {
-                    final aTs = a['createdAt'];
-                    final bTs = b['createdAt'];
-                    if (aTs is! Timestamp || bTs is! Timestamp) return 0;
-                    return bTs.compareTo(aTs);
-                  });
-
-                  if (notifications.isEmpty) {
-                    return _buildEmpty();
-                  }
-
-                  return ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                    itemCount: notifications.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (ctx, i) => _card(notifications[i]),
-                  );
-                },
+          Widget body;
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            body = const Center(
+              child: CircularProgressIndicator(color: AppColors.teal),
+            );
+          } else if (snapshot.hasError) {
+            body = const Center(
+              child: Text(
+                'Something went wrong. Please try again.',
+                style: TextStyle(color: AppColors.muted),
               ),
+            );
+          } else if (notifications.isEmpty) {
+            body = _buildEmpty();
+          } else {
+            body = ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              itemCount: notifications.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (ctx, i) => _card(notifications[i]),
+            );
+          }
+
+          return Column(
+            children: [
+              _buildHeader(
+                snapshot.connectionState == ConnectionState.waiting
+                    ? null
+                    : (unread > 0 ? '$unread unread' : 'All caught up'),
+              ),
+              Expanded(child: body),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHeader(String? subtitle) {
+    return AppHeader(
+      title: 'Notifications',
+      subtitle: subtitle,
+      trailing: GestureDetector(
+        onTap: _confirmDeleteAll,
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.18)),
+          ),
+          child: const Text(
+            'Clear all',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  // ✅ CHANGED: "Clear all" button add kiya gaya hai, right side pe.
-  // Baqi header (back button, title) bilkul same hai.
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 14),
-          const Expanded(
-            child: Text('Notifications',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 19,
-                    fontWeight: FontWeight.bold)),
-          ),
-          TextButton(
-            onPressed: _confirmDeleteAll,
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 6,
-              ),
-            ),
-            child: const Text(
-              'Clear all',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.notifications_none_outlined,
-              size: 64, color: _primary.withValues(alpha: 0.3)),
-          const SizedBox(height: 16),
-          const Text('No notifications yet',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF6B7280))),
-        ],
+    return const SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
+      child: AppEmptyState(
+        icon: Icons.notifications_none_outlined,
+        title: 'No notifications yet',
       ),
     );
   }
 
-  // ✅ CHANGED: card ab Dismissible mein wrap hai — patient chahe to
-  // swipe karke bhi delete kar sakta hai (left ya right). Iske ilawa
-  // ek chhota trash icon bhi laga diya gaya hai (jinhe swipe pasand
-  // nahi, wo seedha icon tap kar ke delete kar saken). Baqi card ka
-  // content (icon, message, time, unread dot) bilkul same hai.
+  // Card: swipe (Dismissible) + trash icon dono pehle jaise hain,
+  // sirf look badla hai.
   Widget _card(Map<String, dynamic> n) {
     final isRead = n['isRead'] == true;
     final color = _colorForType(n['type']);
@@ -348,10 +323,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        margin: const EdgeInsets.only(bottom: 0),
         decoration: BoxDecoration(
-          color: const Color(0xFFD9534F),
-          borderRadius: BorderRadius.circular(14),
+          color: AppColors.danger,
+          borderRadius: BorderRadius.circular(18),
         ),
         child: const Icon(Icons.delete_outline, color: Colors.white),
       ),
@@ -365,29 +339,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: isRead ? Colors.white : const Color(0xFFF0FAF7),
-            borderRadius: BorderRadius.circular(14),
-            border: isRead
-                ? null
-                : Border.all(color: _primary.withValues(alpha: 0.3)),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2)),
-            ],
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: isRead ? Colors.transparent : const Color(0xFF9FD9C9),
+              width: 1.5,
+            ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(13),
                 ),
                 alignment: Alignment.center,
-                child: Icon(_iconForType(n['type']), color: color, size: 18),
+                child: Icon(_iconForType(n['type']), color: color, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -396,37 +365,45 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   children: [
                     Text(n['message'],
                         style: TextStyle(
-                            fontSize: 13,
+                            fontSize: 14,
+                            height: 1.4,
                             fontWeight:
-                                isRead ? FontWeight.w400 : FontWeight.w600,
-                            color: const Color(0xFF1A2F3A))),
+                                isRead ? FontWeight.w600 : FontWeight.w800,
+                            color: AppColors.text)),
                     const SizedBox(height: 4),
                     Text(_timeAgo(n['createdAt']),
                         style: const TextStyle(
-                            fontSize: 11, color: Color(0xFF9CA3AF))),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.faint)),
                   ],
                 ),
               ),
-              if (!isRead)
-                Container(
-                  width: 8,
-                  height: 8,
-                  margin: const EdgeInsets.only(top: 4, right: 6),
-                  decoration: const BoxDecoration(
-                    color: _primary,
-                    shape: BoxShape.circle,
+              const SizedBox(width: 6),
+              Column(
+                children: [
+                  if (!isRead)
+                    Container(
+                      width: 9,
+                      height: 9,
+                      margin: const EdgeInsets.only(top: 4, bottom: 6),
+                      decoration: const BoxDecoration(
+                        color: AppColors.teal,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  GestureDetector(
+                    onTap: () => _deleteNotification(notificationId),
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.delete_outline,
+                        size: 18,
+                        color: Color(0xFFB8806F),
+                      ),
+                    ),
                   ),
-                ),
-              GestureDetector(
-                onTap: () => _deleteNotification(notificationId),
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 2, top: 2),
-                  child: Icon(
-                    Icons.delete_outline,
-                    size: 18,
-                    color: Colors.grey.withValues(alpha: 0.7),
-                  ),
-                ),
+                ],
               ),
             ],
           ),

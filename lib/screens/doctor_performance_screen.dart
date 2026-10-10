@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'doctor_performance_detail_sheet.dart';
+import '../widgets/app_ui.dart';
+import 'reports_screen.dart';
 
 // Content-only widget for the Doctor Performance tab — no Scaffold/
 // AppBar of its own, since it lives inside ReportsScreen's TabBarView.
@@ -158,104 +160,78 @@ class _DoctorPerformanceTabState extends State<DoctorPerformanceTab> {
       color: _bg,
       child: Column(
         children: [
-          // Month navigation
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          // Month navigation (dark strip)
+          ReportsHeaderStrip(
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                IconButton(
-                  onPressed: _canGoPrevious() ? () => _navigate(-1) : null,
-                  icon: Icon(Icons.chevron_left_rounded,
-                      color: _canGoPrevious()
-                          ? _primary
-                          : const Color(0xFFD1D5DB)),
-                ),
-                Text(
-                  DateFormat('MMMM yyyy').format(_selectedMonth),
-                  style: const TextStyle(
-                    fontSize: 14,
+                const Text(
+                  'Month by month',
+                  style: TextStyle(
+                    color: AppColors.headerMuted,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
                   ),
                 ),
-                IconButton(
-                  onPressed: _canGoNext() ? () => _navigate(1) : null,
-                  icon: Icon(Icons.chevron_right_rounded,
-                      color: _canGoNext() ? _primary : const Color(0xFFD1D5DB)),
+                const Spacer(),
+                ReportsDateNav(
+                  label: DateFormat('MMMM yyyy').format(_selectedMonth),
+                  onPrev: _canGoPrevious() ? () => _navigate(-1) : null,
+                  onNext: _canGoNext() ? () => _navigate(1) : null,
                 ),
               ],
             ),
           ),
 
-          // Table header
-          if (!_isLoading && _doctorStats.isNotEmpty)
-            Container(
-              color: _headerTint,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: const Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Text('Doctor',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: _primary)),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Text('Appts',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: _primary)),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Text('Rating',
-                        textAlign: TextAlign.end,
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: _primary)),
-                  ),
-                ],
-              ),
-            ),
-
           // List
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(color: _primary))
+                    child: CircularProgressIndicator(color: AppColors.teal))
                 : _doctorStats.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.medical_services_outlined,
-                                size: 64, color: _primary.withOpacity(0.3)),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'No appointment data this month',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF6B7280),
-                              ),
-                            ),
-                          ],
-                        ),
+                    ? ListView(
+                        padding: const EdgeInsets.all(20),
+                        children: const [
+                          AppEmptyState(
+                            icon: Icons.medical_services_outlined,
+                            title: 'No appointment data this month',
+                          ),
+                        ],
                       )
                     : ListView.separated(
-                        itemCount: _doctorStats.length,
-                        separatorBuilder: (_, __) =>
-                            const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                        itemCount: _doctorStats.length + 1,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
-                          final doc = _doctorStats[index];
+                          if (index == 0) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 4),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'DOCTOR',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.8,
+                                        color: AppColors.muted,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    'APPOINTMENTS · RATING',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 0.8,
+                                      color: AppColors.muted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          final doc = _doctorStats[index - 1];
                           return _DoctorRow(
                             doctor: doc,
                             onTap: () {
@@ -264,7 +240,7 @@ class _DoctorPerformanceTabState extends State<DoctorPerformanceTab> {
                                 isScrollControlled: true,
                                 backgroundColor: Colors.transparent,
                                 builder: (_) => DraggableScrollableSheet(
-                                  initialChildSize: 0.7,
+                                  initialChildSize: 0.55,
                                   minChildSize: 0.4,
                                   maxChildSize: 0.9,
                                   expand: false,
@@ -297,75 +273,126 @@ class _DoctorRow extends StatelessWidget {
 
   const _DoctorRow({required this.doctor, required this.onTap});
 
-  static const Color _primary = Color(0xFF1F8A70);
+  String _initials(String name) {
+    final parts = name
+        .replaceFirst('Dr. ', '')
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .toList();
+    return parts.take(2).map((w) => w[0].toUpperCase()).join();
+  }
+
+  // NAYA (sirf dikhane ke liye): doctor ka department naam
+  // (doctor_profiles → departments), wahi tareeqa jo detail sheet
+  // pehle se use karti hai.
+  Future<String> _loadDepartment(String? doctorId) async {
+    if (doctorId == null) return '';
+    try {
+      final profile = await FirebaseFirestore.instance
+          .collection('doctor_profiles')
+          .doc(doctorId)
+          .get();
+      final deptId = profile.data()?['departmentId'];
+      if (deptId == null) return '';
+      final dept = await FirebaseFirestore.instance
+          .collection('departments')
+          .doc(deptId)
+          .get();
+      return dept.data()?['name'] ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final avgRating = (doctor['avgRating'] ?? 0.0) as double;
     final reviewCount = doctor['reviewCount'] ?? 0;
+    final String name = doctor['doctorName'] ?? 'Unknown';
+    final count = doctor['appointmentCount'];
 
-    return InkWell(
+    return AppCard(
       onTap: onTap,
-      child: Container(
-        color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 3,
-              child: Text(
-                doctor['doctorName'] ?? 'Unknown',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A1A2E),
-                ),
-                overflow: TextOverflow.ellipsis,
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: const Color(0xFFEEE8FB),
+            child: Text(
+              _initials(name),
+              style: const TextStyle(
+                color: Color(0xFF5B3FA8),
+                fontWeight: FontWeight.w800,
               ),
             ),
-            Expanded(
-              flex: 2,
-              child: Text(
-                '${doctor['appointmentCount']}',
-                textAlign: TextAlign.center,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                FutureBuilder<String>(
+                  future: _loadDepartment(doctor['doctorId']),
+                  builder: (context, snap) => Text(
+                    snap.data ?? '',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$count',
                 style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: _primary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.text,
                 ),
               ),
-            ),
-            Expanded(
-              flex: 2,
-              child: reviewCount == 0
+              reviewCount == 0
                   ? const Text(
-                      'N/A',
-                      textAlign: TextAlign.end,
-                      style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
+                      'No rating',
+                      style: TextStyle(fontSize: 11, color: AppColors.faint),
                     )
                   : Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.star_rounded,
-                            size: 14, color: Color(0xFFF4B400)),
-                        const SizedBox(width: 3),
+                            size: 13, color: Color(0xFFE0A800)),
+                        const SizedBox(width: 2),
                         Text(
                           avgRating.toStringAsFixed(1),
                           style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF1A1A2E),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF8A6D00),
                           ),
                         ),
                       ],
                     ),
-            ),
-            const SizedBox(width: 4),
-            const Icon(Icons.chevron_right_rounded,
-                size: 18, color: Color(0xFF9CA3AF)),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(width: 6),
+          const Icon(Icons.chevron_right_rounded,
+              size: 20, color: AppColors.faint),
+        ],
       ),
     );
   }

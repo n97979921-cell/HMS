@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/app_ui.dart';
+import 'reports_screen.dart';
 
 // Content-only widget for the Bed Occupancy tab — no Scaffold/AppBar
 // of its own, since it lives inside ReportsScreen's TabBarView.
@@ -11,8 +13,8 @@ class BedOccupancyTab extends StatefulWidget {
 }
 
 class _BedOccupancyTabState extends State<BedOccupancyTab> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _bg = Color(0xFFF4F7F6);
+  static const Color _primary = Color(0xFF0E6E68);
+  static const Color _bg = Color(0xFFF2F5F5);
 
   static const List<String> _roomTypes = ['ICU', 'General', 'Private'];
 
@@ -85,7 +87,7 @@ class _BedOccupancyTabState extends State<BedOccupancyTab> {
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -94,13 +96,13 @@ class _BedOccupancyTabState extends State<BedOccupancyTab> {
   Color _typeColor(String type) {
     switch (type) {
       case 'ICU':
-        return const Color(0xFFDB4437);
+        return const Color(0xFF9A2E16);
       case 'General':
-        return _primary;
+        return const Color(0xFF0E6E68);
       case 'Private':
-        return const Color(0xFF1A73E8);
+        return const Color(0xFF1D4F91);
       default:
-        return const Color(0xFF6B7280);
+        return const Color(0xFF52666A);
     }
   }
 
@@ -117,86 +119,135 @@ class _BedOccupancyTabState extends State<BedOccupancyTab> {
 
     return Container(
       color: _bg,
-      child: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: _primary))
-          : RefreshIndicator(
-              onRefresh: _loadOccupancy,
-              color: _primary,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Overall occupancy hero card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: _primary,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
+      child: Column(
+        children: [
+          const ReportsHeaderStrip(),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : RefreshIndicator(
+                    onRefresh: _loadOccupancy,
+                    color: AppColors.teal,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                       children: [
+                        // Overall occupancy card
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Overall occupancy',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.muted,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    '$overallPct%',
+                                    style: const TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.text,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 5),
+                                    child: Text(
+                                      '$totalOccupied of $totalBeds beds',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.muted,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              _OccupancyBar(
+                                fraction: totalBeds == 0
+                                    ? 0.0
+                                    : (totalOccupied / totalBeds).toDouble(),
+                                color: AppColors.teal,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+
                         const Text(
-                          'OVERALL OCCUPANCY',
+                          'BY ROOM TYPE',
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white70,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '$overallPct%',
-                          style: const TextStyle(
-                            fontSize: 36,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            color: AppColors.muted,
+                            letterSpacing: 0.8,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$totalOccupied of $totalBeds beds occupied',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.white70,
-                          ),
-                        ),
+                        const SizedBox(height: 10),
+
+                        // One card per room type
+                        ..._roomTypes.map((type) {
+                          final total = totalByType[type] ?? 0;
+                          final occupied = occupiedByType[type] ?? 0;
+                          final pct = total == 0 ? 0.0 : occupied / total;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: _RoomTypeOccupancyCard(
+                              type: type,
+                              total: total,
+                              occupied: occupied,
+                              percentage: pct,
+                              color: _typeColor(type),
+                            ),
+                          );
+                        }),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-                  const Text(
-                    'BY ROOM TYPE',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF6B7280),
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+class _OccupancyBar extends StatelessWidget {
+  final double fraction;
+  final Color color;
 
-                  // One card per room type
-                  ..._roomTypes.map((type) {
-                    final total = totalByType[type] ?? 0;
-                    final occupied = occupiedByType[type] ?? 0;
-                    final pct = total == 0 ? 0.0 : occupied / total;
+  const _OccupancyBar({required this.fraction, required this.color});
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _RoomTypeOccupancyCard(
-                        type: type,
-                        total: total,
-                        occupied: occupied,
-                        percentage: pct,
-                        color: _typeColor(type),
-                      ),
-                    );
-                  }),
-                ],
-              ),
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: SizedBox(
+        height: 8,
+        child: Stack(
+          children: [
+            Container(color: const Color(0xFFECEFEF)),
+            FractionallySizedBox(
+              widthFactor: fraction.clamp(0.0, 1.0),
+              child: Container(color: color),
             ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -224,76 +275,43 @@ class _RoomTypeOccupancyCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
+              Expanded(
+                child: Text(
+                  type == 'General' ? 'General ward' : type,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    type,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
-                    ),
-                  ),
-                ],
+                ),
               ),
               Text(
                 total == 0 ? 'No beds added' : '$occupied / $total beds',
                 style: const TextStyle(
                   fontSize: 12,
-                  color: Color(0xFF6B7280),
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.muted,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: SizedBox(
-              height: 10,
-              child: Stack(
-                children: [
-                  Container(color: const Color(0xFFF0F0F0)),
-                  FractionallySizedBox(
-                    widthFactor: percentage,
-                    child: Container(color: color),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
+          _OccupancyBar(fraction: percentage, color: color),
+          const SizedBox(height: 6),
           Align(
             alignment: Alignment.centerRight,
             child: Text(
               pctLabel,
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
                 color: color,
               ),
             ),

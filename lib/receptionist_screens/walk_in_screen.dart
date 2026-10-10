@@ -5,6 +5,7 @@ import '../services/notification_service.dart';
 import 'package:flutter/services.dart';
 import 'appointments_today_screen.dart';
 import 'receptionist_profile_screen.dart';
+import '../widgets/app_ui.dart';
 
 /// WALK-IN PATIENT SCREEN (Receptionist) — Phase 3
 ///
@@ -62,9 +63,6 @@ class WalkInScreen extends StatefulWidget {
 }
 
 class _WalkInScreenState extends State<WalkInScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   // ── Stage control ──
   int _stage = 0; // 0=search, 1=register, 2=book
 
@@ -304,13 +302,18 @@ class _WalkInScreenState extends State<WalkInScreen> {
 
       // Available = sab − taken − guzre hue times
       final now = DateTime.now();
-      final available = allTimes.where((t) {
-        if (taken.contains(t)) return false;
-        final parts = t.split(':').map(int.parse).toList();
-        final slotDt =
-            DateTime(now.year, now.month, now.day, parts[0], parts[1]);
-        return slotDt.isAfter(now);
-      }).toList();
+      // Weekend (Sat/Sun) par koi slot nahi — patient booking jaisa rule
+      final isWeekend =
+          now.weekday == DateTime.saturday || now.weekday == DateTime.sunday;
+      final available = isWeekend
+          ? <String>[]
+          : allTimes.where((t) {
+              if (taken.contains(t)) return false;
+              final parts = t.split(':').map(int.parse).toList();
+              final slotDt =
+                  DateTime(now.year, now.month, now.day, parts[0], parts[1]);
+              return slotDt.isAfter(now);
+            }).toList();
 
       setState(() {
         _availableTimes = available;
@@ -348,37 +351,60 @@ class _WalkInScreenState extends State<WalkInScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Confirm walk-in booking'),
-        content: Text('Patient: $_patientName\n'
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: const Text('Confirm walk-in booking',
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.text)),
+        content: Text(
+            'Patient: $_patientName\n'
             'Doctor: ${doctor['name']}\n'
             'Today at $_selectedTime\n\n'
-            'Cash received: Rs. $fee?'),
-        actionsAlignment: MainAxisAlignment.spaceBetween,
+            'Cash received: Rs. $fee?',
+            style: const TextStyle(
+                fontSize: 14, height: 1.5, color: AppColors.muted)),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context, false),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: _primary,
-              side: const BorderSide(color: _primary),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30)),
-            ),
-            child: const Text('Back'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _primary,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30)),
-            ),
-            child: const Text('Cash received — Book',
-                style: TextStyle(color: Colors.white)),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.text,
+                    side: const BorderSide(color: AppColors.border),
+                    minimumSize: const Size.fromHeight(46),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Back',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.header,
+                    elevation: 0,
+                    minimumSize: const Size.fromHeight(46),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const FittedBox(
+                    child: Text('Cash received — Book',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -496,7 +522,7 @@ class _WalkInScreenState extends State<WalkInScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: _primary,
+      backgroundColor: AppColors.teal,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -506,211 +532,239 @@ class _WalkInScreenState extends State<WalkInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                child: _stage == 0
-                    ? _buildSearchStage()
-                    : _stage == 1
-                        ? _buildRegisterStage()
-                        : _buildBookStage(),
-              ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+              child: _stage == 0
+                  ? _buildSearchStage()
+                  : _stage == 1
+                      ? _buildRegisterStage()
+                      : _buildBookStage(),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-      // ── Dashboard jaisi bottom nav bar — "Walk-in" tab yahan
-      // hamesha selected/highlighted rehta hai. Koi search/register/
-      // book logic isse touch nahi hota.
+      // ── Dashboard jaisi bottom nav bar — "Walk-in" tab selected.
       bottomNavigationBar: _buildBottomNav(),
     );
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              if (_stage == 0) {
-                Navigator.pop(context);
-              } else {
-                setState(() => _stage = _stage == 2 &&
-                        _patientId != null &&
-                        _nameController.text.isEmpty
-                    ? 0
-                    : _stage - 1);
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+    const labels = ['Find', 'Register', 'Book'];
+    return AppHeader(
+      title: _stage == 0
+          ? 'Walk-in: Find Patient'
+          : _stage == 1
+              ? 'Walk-in: Register'
+              : 'Walk-in: Book (Today)',
+      subtitle: 'Walk-in patient',
+      onBack: () {
+        if (_stage == 0) {
+          Navigator.pop(context);
+        } else {
+          setState(() => _stage =
+              _stage == 2 && _patientId != null && _nameController.text.isEmpty
+                  ? 0
+                  : _stage - 1);
+        }
+      },
+      bottom: Row(
+        children: List.generate(3, (i) {
+          final done = i <= _stage;
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: i < 2 ? 6 : 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: done
+                          ? AppColors.mint
+                          : Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    labels[i],
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: done ? Colors.white : AppColors.headerLabel,
+                    ),
+                  ),
+                ],
               ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
             ),
-          ),
-          const SizedBox(width: 14),
-          Text(
-            _stage == 0
-                ? 'Walk-in: Find Patient'
-                : _stage == 1
-                    ? 'Walk-in: Register'
-                    : 'Walk-in: Book (Today)',
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _stageTitle(String title, String sub) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title,
             style: const TextStyle(
-                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: AppColors.text)),
+        const SizedBox(height: 3),
+        Text(sub, style: const TextStyle(fontSize: 13, color: AppColors.muted)),
+      ],
+    );
+  }
+
+  Widget _primaryButton(
+      {required String label,
+      required bool busy,
+      required VoidCallback? onPressed}) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.header,
+          disabledBackgroundColor: AppColors.header.withOpacity(0.6),
+          elevation: 0,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        child: busy
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2.5))
+            : Text(label,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800)),
+      ),
+    );
+  }
+
+  InputDecoration _fieldDecoration(String hint, IconData icon) {
+    OutlineInputBorder b(Color c) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: c),
+        );
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: AppColors.faint, fontSize: 14),
+      prefixIcon: Icon(icon, color: AppColors.teal, size: 20),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+      border: b(AppColors.border),
+      enabledBorder: b(AppColors.border),
+      focusedBorder: b(AppColors.teal),
+      errorBorder: b(const Color(0xFFE2A090)),
+      focusedErrorBorder: b(AppColors.danger),
+    );
+  }
+
+  // ── Stage 0 UI ──
+  Widget _buildSearchStage() {
+    return AppCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _stageTitle('Search by CNIC',
+              'Search first to avoid duplicate patient records.'),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _searchController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [_CnicInputFormatter()],
+            decoration: _fieldDecoration(
+                'CNIC (e.g. 12345-1234567-1)', Icons.search_rounded),
+          ),
+          const SizedBox(height: 14),
+          _primaryButton(
+            label: 'Search Patient',
+            busy: _isSearching,
+            onPressed: _isSearching ? null : _searchPatient,
           ),
         ],
       ),
     );
   }
 
-  // ── Stage 0 UI ──
-  Widget _buildSearchStage() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Search by CNIC',
-            style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A2F3A))),
-        const SizedBox(height: 4),
-        const Text('Search first to avoid duplicate patient records.',
-            style: TextStyle(fontSize: 12, color: Colors.grey)),
-        const SizedBox(height: 14),
-        TextField(
-          controller: _searchController,
-          keyboardType: TextInputType.number,
-          inputFormatters: [_CnicInputFormatter()],
-          decoration: InputDecoration(
-            hintText: 'CNIC (e.g. 12345-1234567-1)',
-            prefixIcon: const Icon(Icons.search, color: _primary),
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _isSearching ? null : _searchPatient,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _primary,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-            child: _isSearching
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2.5))
-                : const Text('Search Patient',
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w600)),
-          ),
-        ),
-      ],
-    );
-  }
-
   // ── Stage 1 UI ──
   Widget _buildRegisterStage() {
-    return Form(
-      key: _regFormKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('New walk-in patient',
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A2F3A))),
-          const SizedBox(height: 4),
-          const Text('No Email Required',
-              style: TextStyle(fontSize: 12, color: Colors.grey)),
-          const SizedBox(height: 14),
-          _regField(_nameController, 'Full name', Icons.person_outline,
-              validator: (v) => v!.trim().isEmpty ? 'Name required' : null),
-          const SizedBox(height: 12),
-          _regField(_phoneController, 'Phone', Icons.phone_outlined,
-              keyboardType: TextInputType.phone, validator: (v) {
-            if (v == null || v.trim().isEmpty) return 'Phone required';
-            if (!RegExp(r'^03\d{9}$').hasMatch(v.trim())) {
-              return 'Enter valid Pakistani number (03XXXXXXXXX)';
-            }
-            return null;
-          }),
-          const SizedBox(height: 12),
-          _regField(_cnicController, 'CNIC (e.g. 12345-1234567-1)',
-              Icons.badge_outlined,
-              keyboardType: TextInputType.number,
-              inputFormatters: [_CnicInputFormatter()], validator: (v) {
-            if (v == null || v.trim().isEmpty) return 'CNIC required';
-            if (!_isValidCnic(v.trim())) {
-              return 'Enter a valid 13-digit CNIC';
-            }
-            return null;
-          }),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _gender,
-                isExpanded: true,
-                items: const [
-                  DropdownMenuItem(value: 'Male', child: Text('Male')),
-                  DropdownMenuItem(value: 'Female', child: Text('Female')),
-                  DropdownMenuItem(value: 'Other', child: Text('Other')),
-                ],
-                onChanged: (v) => setState(() => _gender = v!),
+    return AppCard(
+      padding: const EdgeInsets.all(18),
+      child: Form(
+        key: _regFormKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _stageTitle('New walk-in patient', 'No Email Required'),
+            const SizedBox(height: 14),
+            _regField(_nameController, 'Full name', Icons.person_outline,
+                validator: (v) => v!.trim().isEmpty ? 'Name required' : null),
+            const SizedBox(height: 12),
+            _regField(_phoneController, 'Phone', Icons.phone_outlined,
+                keyboardType: TextInputType.phone, validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Phone required';
+              if (!RegExp(r'^03\d{9}$').hasMatch(v.trim())) {
+                return 'Enter valid Pakistani number (03XXXXXXXXX)';
+              }
+              return null;
+            }),
+            const SizedBox(height: 12),
+            _regField(_cnicController, 'CNIC (e.g. 12345-1234567-1)',
+                Icons.badge_outlined,
+                keyboardType: TextInputType.number,
+                inputFormatters: [_CnicInputFormatter()], validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'CNIC required';
+              if (!_isValidCnic(v.trim())) {
+                return 'Enter a valid 13-digit CNIC';
+              }
+              return null;
+            }),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _gender,
+                  isExpanded: true,
+                  borderRadius: BorderRadius.circular(14),
+                  items: const [
+                    DropdownMenuItem(value: 'Male', child: Text('Male')),
+                    DropdownMenuItem(value: 'Female', child: Text('Female')),
+                    DropdownMenuItem(value: 'Other', child: Text('Other')),
+                  ],
+                  onChanged: (v) => setState(() => _gender = v!),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
+            const SizedBox(height: 18),
+            _primaryButton(
+              label: 'Register & Continue',
+              busy: _isRegistering,
               onPressed: _isRegistering ? null : _registerPatient,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _primary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: _isRegistering
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2.5))
-                  : const Text('Register & Continue',
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w600)),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -724,15 +778,18 @@ class _WalkInScreenState extends State<WalkInScreen> {
       keyboardType: keyboardType,
       validator: validator,
       inputFormatters: inputFormatters,
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: Icon(icon, color: _primary, size: 20),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
+      decoration: _fieldDecoration(hint, icon),
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.8,
+        color: AppColors.muted,
       ),
     );
   }
@@ -743,42 +800,52 @@ class _WalkInScreenState extends State<WalkInScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Patient chip
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-          ),
+        AppCard(
           child: Row(
             children: [
-              const Icon(Icons.person, color: _primary),
-              const SizedBox(width: 10),
+              CircleAvatar(
+                radius: 21,
+                backgroundColor: AppColors.tealSoft,
+                child: Text(
+                  _patientName.isNotEmpty ? _patientName[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                      color: AppColors.teal, fontWeight: FontWeight.w800),
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
-                child: Text('Patient: $_patientName',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: Color(0xFF1A2F3A))),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Patient',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.muted)),
+                    Text('$_patientName',
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.text)),
+                  ],
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 18),
-        const Text('Select doctor',
-            style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A2F3A))),
+        _sectionLabel('Select doctor'),
         const SizedBox(height: 10),
         _isLoadingDoctors
             ? const Center(
                 child: Padding(
                   padding: EdgeInsets.all(16),
-                  child: CircularProgressIndicator(color: _primary),
+                  child: CircularProgressIndicator(color: AppColors.teal),
                 ),
               )
             : _doctors.isEmpty
                 ? const Text('No doctors available',
-                    style: TextStyle(color: Colors.grey))
+                    style: TextStyle(color: AppColors.faint))
                 : Column(
                     children: _doctors.map((d) {
                       final isSel =
@@ -790,11 +857,12 @@ class _WalkInScreenState extends State<WalkInScreen> {
                         },
                         child: Container(
                           width: double.infinity,
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
-                            color: isSel ? _primary : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
+                            color: isSel ? AppColors.header : Colors.white,
+                            borderRadius: BorderRadius.circular(18),
                           ),
                           child: Row(
                             children: [
@@ -804,23 +872,28 @@ class _WalkInScreenState extends State<WalkInScreen> {
                                   children: [
                                     Text(d['name'],
                                         style: TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w800,
                                             color: isSel
                                                 ? Colors.white
-                                                : const Color(0xFF1A2F3A))),
+                                                : AppColors.text)),
+                                    const SizedBox(height: 2),
                                     Text(d['specialization'],
                                         style: TextStyle(
                                             fontSize: 12,
                                             color: isSel
-                                                ? Colors.white70
-                                                : Colors.black54)),
+                                                ? AppColors.headerMuted
+                                                : AppColors.muted)),
                                   ],
                                 ),
                               ),
                               Text('Rs. ${d['fee']}',
                                   style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: isSel ? Colors.white : _primary)),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: isSel
+                                          ? AppColors.mint
+                                          : AppColors.teal)),
                             ],
                           ),
                         ),
@@ -828,23 +901,23 @@ class _WalkInScreenState extends State<WalkInScreen> {
                     }).toList(),
                   ),
         if (_selectedDoctor != null) ...[
-          const SizedBox(height: 16),
-          const Text("Today's available slots",
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A2F3A))),
+          const SizedBox(height: 8),
+          _sectionLabel("Today's available slots"),
           const SizedBox(height: 10),
           _isLoadingSlots
               ? const Center(
                   child: Padding(
                     padding: EdgeInsets.all(16),
-                    child: CircularProgressIndicator(color: _primary),
+                    child: CircularProgressIndicator(color: AppColors.teal),
                   ),
                 )
               : _availableTimes.isEmpty
-                  ? const Text('No slots left today',
-                      style: TextStyle(color: Colors.grey))
+                  ? Text(
+                      (DateTime.now().weekday == DateTime.saturday ||
+                              DateTime.now().weekday == DateTime.sunday)
+                          ? 'No slots on weekends (Saturday / Sunday)'
+                          : 'No slots left today',
+                      style: const TextStyle(color: AppColors.faint))
                   : Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -853,46 +926,34 @@ class _WalkInScreenState extends State<WalkInScreen> {
                         return GestureDetector(
                           onTap: () => setState(() => _selectedTime = t),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
+                            width: 76,
+                            padding: const EdgeInsets.symmetric(vertical: 11),
+                            alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: isSel ? _primary : Colors.white,
-                              borderRadius: BorderRadius.circular(10),
+                              color: isSel ? AppColors.mint : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: isSel
+                                      ? AppColors.mint
+                                      : AppColors.border),
                             ),
                             child: Text(t,
                                 style: TextStyle(
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w800,
                                     color: isSel
-                                        ? Colors.white
-                                        : const Color(0xFF1A2F3A))),
+                                        ? AppColors.header
+                                        : AppColors.text)),
                           ),
                         );
                       }).toList(),
                     ),
           const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isBooking ? null : _bookWalkIn,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _primary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: _isBooking
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2.5))
-                  : Text(
-                      _selectedDoctor == null
-                          ? 'Book'
-                          : 'Collect Rs. ${_selectedDoctor!['fee']} & Book',
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
+          _primaryButton(
+            label: _selectedDoctor == null
+                ? 'Book'
+                : 'Collect Rs. ${_selectedDoctor!['fee']} & Book',
+            busy: _isBooking,
+            onPressed: _isBooking ? null : _bookWalkIn,
           ),
         ],
       ],
@@ -904,44 +965,66 @@ class _WalkInScreenState extends State<WalkInScreen> {
   // (pop), Appointments/Profile = navigate, Walk-in tap = no-op
   // (already yahan hain).
   Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: 2,
-      selectedItemColor: _primary,
-      unselectedItemColor: Colors.grey,
-      type: BottomNavigationBarType.fixed,
-      onTap: (index) async {
-        if (index == 2) return; // already on Walk-in
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.divider)),
+      ),
+      child: BottomNavigationBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        selectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        currentIndex: 2,
+        selectedItemColor: AppColors.header,
+        unselectedItemColor: AppColors.faint,
+        type: BottomNavigationBarType.fixed,
+        onTap: (index) async {
+          if (index == 2) return; // already on Walk-in
 
-        if (index == 0) {
-          // Dashboard seedha neeche stack mein hai (yahan se push hua
-          // tha), is liye pop hi Home par wapis le jata hai.
-          Navigator.pop(context);
-          return;
-        }
-        if (index == 1) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const AppointmentsTodayScreen(),
-            ),
-          );
-        } else if (index == 3) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const ReceptionistProfileScreen(),
-            ),
-          );
-        }
-      },
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.event_note_outlined), label: 'Appointments'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.person_add_alt_1_outlined), label: 'Walk-in'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-      ],
+          if (index == 0) {
+            // Dashboard seedha neeche stack mein hai (yahan se push hua
+            // tha), is liye pop hi Home par wapis le jata hai.
+            Navigator.pop(context);
+            return;
+          }
+          if (index == 1) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AppointmentsTodayScreen(),
+              ),
+            );
+          } else if (index == 3) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ReceptionistProfileScreen(),
+              ),
+            );
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home_rounded),
+              label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.event_note_outlined),
+              activeIcon: Icon(Icons.event_note_rounded),
+              label: 'Appointments'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_add_alt_1_outlined),
+              activeIcon: Icon(Icons.person_add_alt_1_rounded),
+              label: 'Walk-in'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person_rounded),
+              label: 'Profile'),
+        ],
+      ),
     );
   }
 }

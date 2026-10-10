@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'book_appointment_screen.dart';
+import '../widgets/app_ui.dart';
 
 class DoctorListScreen extends StatefulWidget {
   final String departmentId;
@@ -20,9 +21,6 @@ class DoctorListScreen extends StatefulWidget {
 }
 
 class _DoctorListScreenState extends State<DoctorListScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   bool _isLoading = true;
   List<Map<String, dynamic>> _doctors = [];
 
@@ -116,7 +114,7 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -129,108 +127,56 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : _doctors.isEmpty
-                      ? _buildEmptyState()
-                      : RefreshIndicator(
-                          onRefresh: _loadDoctors,
-                          color: _primary,
-                          child: ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(18, 18, 18, 80),
-                            children: [
-                              Text(
-                                'Available for ${_typeLabel.toLowerCase()}',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A2F3A),
-                                ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : _doctors.isEmpty
+                    ? _buildEmptyState()
+                    : RefreshIndicator(
+                        onRefresh: _loadDoctors,
+                        color: AppColors.teal,
+                        child: ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+                          children: [
+                            Text(
+                              '${_doctors.length} doctor${_doctors.length == 1 ? '' : 's'} found',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.teal,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${_doctors.length} doctor${_doctors.length == 1 ? '' : 's'} found',
-                                style: const TextStyle(
-                                    fontSize: 12, color: Colors.grey),
-                              ),
-                              const SizedBox(height: 14),
-                              ..._doctors.map(_doctorCard),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 12),
+                            ..._doctors.map(_doctorCard),
+                          ],
                         ),
-            ),
-          ],
-        ),
+                      ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              widget.departmentName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 19,
-                fontWeight: FontWeight.bold,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
+    return AppHeader(
+      title: widget.departmentName,
+      subtitle: 'Available for ${_typeLabel.toLowerCase()}',
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.medical_services_outlined,
-              size: 64, color: _primary.withOpacity(0.3)),
-          const SizedBox(height: 16),
-          const Text(
-            'No doctors available',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF6B7280),
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Please check back later',
-            style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
-          ),
-        ],
+    return const SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(20, 18, 20, 24),
+      child: AppEmptyState(
+        icon: Icons.medical_services_outlined,
+        title: 'No doctors available',
+        subtitle: 'Please check back later',
       ),
     );
   }
@@ -239,21 +185,15 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
     final avgRating = (doctor['avgRating'] as double);
     final reviewCount = doctor['reviewCount'] as int;
     final num fee = doctor['consultationFee'] as num;
+    final String name = '${doctor['name']}';
 
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,9 +201,16 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
           Row(
             children: [
               CircleAvatar(
-                radius: 22,
-                backgroundColor: _primary.withOpacity(0.1),
-                child: const Icon(Icons.person, color: _primary, size: 24),
+                radius: 25,
+                backgroundColor: AppColors.tealSoft,
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    color: AppColors.teal,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -271,47 +218,68 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      doctor['name'],
+                      name,
                       style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A2F3A),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.text,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       doctor['specialization'],
                       style:
-                          const TextStyle(fontSize: 12, color: Colors.black54),
+                          const TextStyle(fontSize: 12, color: AppColors.muted),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded,
+                            color: Color(0xFFF2B233), size: 15),
+                        const SizedBox(width: 3),
+                        Text(
+                          reviewCount == 0
+                              ? 'No reviews yet'
+                              : '${avgRating.toStringAsFixed(1)} ($reviewCount review${reviewCount == 1 ? '' : 's'})',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF8A6D00),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: AppColors.divider),
+          const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(Icons.star, color: Colors.amber, size: 14),
-              const SizedBox(width: 3),
-              Text(
-                reviewCount == 0
-                    ? 'No reviews yet'
-                    : '${avgRating.toStringAsFixed(1)} ($reviewCount review${reviewCount == 1 ? '' : 's'})',
-                style: const TextStyle(fontSize: 12, color: Colors.black87),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Rs. $fee',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A2F3A),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Consultation fee',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.faint,
+                      ),
+                    ),
+                    Text(
+                      'Rs. $fee',
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0B5E57),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               GestureDetector(
@@ -330,19 +298,29 @@ class _DoctorListScreenState extends State<DoctorListScreen> {
                     ),
                   );
                 },
-                child: Row(
-                  children: const [
-                    Text(
-                      'Book now',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: _primary,
+                child: Container(
+                  height: 40,
+                  padding: const EdgeInsets.only(left: 16, right: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.header,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Book now',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 2),
-                    Icon(Icons.chevron_right, size: 16, color: _primary),
-                  ],
+                      SizedBox(width: 2),
+                      Icon(Icons.chevron_right_rounded,
+                          size: 18, color: Colors.white),
+                    ],
+                  ),
                 ),
               ),
             ],

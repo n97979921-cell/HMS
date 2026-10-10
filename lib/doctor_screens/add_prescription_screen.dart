@@ -1,19 +1,12 @@
 // lib/doctor_screens/add_prescription_screen.dart
 import 'package:flutter/material.dart';
+import '../widgets/app_ui.dart';
 import 'doctor_repository.dart';
 import 'prescription.dart';
 
 class _RxColors {
-  static const primary = Color(0xFF1F8A70);
-  // FIXED: pehle 0xFF166049 tha — ye baaqi poori app se ek alag green
-  // shade tha. Ab 0xFF0D6B5A kar diya, taake ye screen bhi baaqi
-  // screens (Appointment Detail, Request Lab Test, My Appointments,
-  // waghera) jaisi hi dikhe.
-  static const primaryDark = Color(0xFF0D6B5A);
-  static const background = Color(0xFFF5F7F8);
-  static const cardBackground = Colors.white;
-  static const textMuted = Color(0xFF8A8A8A);
-  static const error = Color(0xFFD64545);
+  static const primary = Color(0xFF0E6E68);
+  static const error = Color(0xFFB23A1E);
 }
 
 class _MedicineFormEntry {
@@ -125,124 +118,97 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _RxColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Text(
-                      'Patient: ${widget.patientName}',
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 16),
-                    for (int i = 0; i < _medicines.length; i++) ...[
-                      _buildMedicineCard(i),
-                      const SizedBox(height: 12),
-                    ],
-                    OutlinedButton.icon(
-                      onPressed: _addMedicineRow,
-                      icon: const Icon(Icons.add, color: _RxColors.primary),
-                      label: const Text('Add another medicine',
-                          style: TextStyle(color: _RxColors.primary)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: _RxColors.primary),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isSaving ? null : _savePrescription,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _RxColors.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: _isSaving
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : const Text(
-                                'Save Prescription',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600),
-                              ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // FIXED: pehle full-width, sirf neeche-corners-round header card tha
-  // (aur alag primaryDark shade use kar raha tha). Ab appointment_detail_
-  // screen.dart jaisa hi floating, sab-corners-round gradient card, taake
-  // Add Prescription screen baaqi doctor screens se consistent dikhe.
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_RxColors.primary, _RxColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
+      backgroundColor: AppColors.bg,
+      body: Column(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+          _buildHeader(),
+          Expanded(
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                children: [
+                  Text(
+                    'Patient: ${widget.patientName}',
+                    style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.text),
+                  ),
+                  const SizedBox(height: 12),
+                  for (int i = 0; i < _medicines.length; i++) ...[
+                    _buildMedicineCard(i),
+                    const SizedBox(height: 12),
+                  ],
+                  OutlinedButton.icon(
+                    onPressed: _addMedicineRow,
+                    icon: const Icon(Icons.add_rounded, color: AppColors.teal),
+                    label: const Text('Add another medicine',
+                        style: TextStyle(
+                            color: AppColors.teal,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800)),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0xFF9FB5B3)),
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.arrow_back,
-                  color: Colors.white, size: 18),
             ),
           ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Add Prescription',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+          Container(
+            padding: EdgeInsets.fromLTRB(
+                20, 12, 20, 16 + MediaQuery.of(context).padding.bottom),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: AppColors.divider)),
+            ),
+            child: SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _isSaving ? null : _savePrescription,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.header,
+                  disabledBackgroundColor: AppColors.header.withOpacity(0.5),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2.5,
+                        ),
+                      )
+                    : const Text(
+                        'Save Prescription',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800),
+                      ),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return AppHeader(
+      title: 'Add Prescription',
+      subtitle: widget.patientName,
     );
   }
 
@@ -251,34 +217,37 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _RxColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2)),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Medicine ${index + 1}',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 13)),
+              const AppIconTile(
+                icon: Icons.medication_outlined,
+                color: AppColors.blue,
+                background: AppColors.blueSoft,
+                size: 28,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('Medicine ${index + 1}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        color: AppColors.text)),
+              ),
               if (_medicines.length > 1)
-                IconButton(
-                  onPressed: () => _removeMedicineRow(index),
-                  icon: const Icon(Icons.close, size: 18, color: _RxColors.error),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                AppDeleteButton(
+                  onTap: () => _removeMedicineRow(index),
+                  size: 32,
+                  tooltip: 'Remove',
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _field(
             controller: entry.nameController,
             label: 'Medicine name',
@@ -286,6 +255,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
           ),
           const SizedBox(height: 10),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: _field(
@@ -294,7 +264,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                   validator: (v) => v!.trim().isEmpty ? 'Required' : null,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: _field(
                   controller: entry.frequencyController,
@@ -306,6 +276,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
           ),
           const SizedBox(height: 10),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: _field(
@@ -314,7 +285,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
                   validator: (v) => v!.trim().isEmpty ? 'Required' : null,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: _field(
                   controller: entry.instructionsController,
@@ -336,24 +307,26 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
     return TextFormField(
       controller: controller,
       validator: validator,
-      style: const TextStyle(fontSize: 13),
+      style: const TextStyle(fontSize: 13, color: AppColors.text),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(fontSize: 12, color: _RxColors.textMuted),
+        labelStyle: const TextStyle(fontSize: 12, color: AppColors.faint),
         isDense: true,
+        filled: true,
+        fillColor: AppColors.bg,
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _RxColors.primary, width: 1.5),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.teal, width: 1.5),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'beds_list_screen.dart';
+import '../widgets/app_ui.dart';
 
 class RoomsListScreen extends StatefulWidget {
   final String roomType;
@@ -70,69 +71,80 @@ class _RoomsListScreenState extends State<RoomsListScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text(
-          'Add ${widget.roomType} Room',
+          'Add ${widget.roomType} room',
           style: const TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A2E),
+            fontWeight: FontWeight.w800,
+            color: AppColors.text,
           ),
         ),
         content: Form(
           key: _formKey,
-          child: TextFormField(
-            controller: _roomNumberController,
-            keyboardType: TextInputType.text,
-            style: const TextStyle(fontSize: 14),
-            decoration: InputDecoration(
-              labelText: 'Room Number',
-              hintText: 'e.g. 101, A-201',
-              prefixIcon: Icon(Icons.meeting_room_outlined,
-                  color: widget.roomTypeColor, size: 20),
-              filled: true,
-              fillColor: const Color(0xFFF4F7F6),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const AppFieldLabel('Room number'),
+              TextFormField(
+                controller: _roomNumberController,
+                keyboardType: TextInputType.text,
+                style: const TextStyle(fontSize: 14),
+                decoration: appInputDecoration(hint: 'e.g. 101, A-201'),
+                validator: (v) => v!.isEmpty ? 'Room number is required' : null,
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: widget.roomTypeColor, width: 1.5),
-              ),
-            ),
-            validator: (v) => v!.isEmpty ? 'Room number is required' : null,
+            ],
           ),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(
-            onPressed: () {
-              _roomNumberController.clear();
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel',
-                style: TextStyle(color: Color(0xFF6B7280))),
-          ),
-          ElevatedButton(
-            onPressed: _isAdding ? null : _addRoom,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: widget.roomTypeColor,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            ),
-            child: _isAdding
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2),
-                  )
-                : const Text('Add Room', style: TextStyle(color: Colors.white)),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    _roomNumberController.clear();
+                    Navigator.pop(context);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(46),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Cancel',
+                      style: TextStyle(
+                          color: AppColors.text, fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _isAdding ? null : _addRoom,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(46),
+                    backgroundColor: AppColors.header,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _isAdding
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Add room',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800)),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -160,111 +172,89 @@ class _RoomsListScreenState extends State<RoomsListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
-      appBar: AppBar(
-        backgroundColor: _primary,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          '${widget.roomType} Rooms',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
+      backgroundColor: AppColors.bg,
+      floatingActionButton:
+          AppFab(label: 'Add room', onPressed: _showAddRoomDialog),
+      body: Column(
+        children: [
+          AppHeader(
+            title: '${widget.roomType} rooms',
+            subtitle: 'Tap a room to see its beds',
           ),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddRoomDialog,
-        backgroundColor: widget.roomTypeColor,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('rooms')
-            .where('roomType', isEqualTo: widget.roomType)
-            .orderBy('createdAt')
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-                child: CircularProgressIndicator(color: widget.roomTypeColor));
-          }
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('rooms')
+                  .where('roomType', isEqualTo: widget.roomType)
+                  .orderBy('createdAt')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                      child: CircularProgressIndicator(color: AppColors.teal));
+                }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text(
-                  'Error: ${snapshot.error}',
-                  style: const TextStyle(color: Colors.red),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
-
-          final rooms = snapshot.data?.docs ?? [];
-
-          if (rooms.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.meeting_room_outlined,
-                      size: 64, color: widget.roomTypeColor.withOpacity(0.4)),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No ${widget.roomType} rooms yet',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF6B7280),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Tap + to add a room',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.all(20),
-            itemCount: rooms.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final room = rooms[index];
-              final data = room.data() as Map<String, dynamic>;
-
-              return _RoomCard(
-                roomId: room.id,
-                roomNumber: data['roomNumber'] ?? '',
-                roomType: widget.roomType,
-                roomTypeColor: widget.roomTypeColor,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BedsListScreen(
-                        roomId: room.id,
-                        roomNumber: data['roomNumber'] ?? '',
-                        roomType: widget.roomType,
-                        roomTypeColor: widget.roomTypeColor,
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        'Error: ${snapshot.error}',
+                        style: const TextStyle(color: AppColors.danger),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   );
-                },
-              );
-            },
-          );
-        },
+                }
+
+                final rooms = snapshot.data?.docs ?? [];
+
+                if (rooms.isEmpty) {
+                  return ListView(
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      AppEmptyState(
+                        icon: Icons.meeting_room_outlined,
+                        title: 'No ${widget.roomType} rooms yet',
+                        subtitle: 'Tap Add room to add a room',
+                      ),
+                    ],
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 100),
+                  itemCount: rooms.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final room = rooms[index];
+                    final data = room.data() as Map<String, dynamic>;
+
+                    return _RoomCard(
+                      roomId: room.id,
+                      roomNumber: data['roomNumber'] ?? '',
+                      roomType: widget.roomType,
+                      roomTypeColor: widget.roomTypeColor,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => BedsListScreen(
+                              roomId: room.id,
+                              roomNumber: data['roomNumber'] ?? '',
+                              roomType: widget.roomType,
+                              roomTypeColor: widget.roomTypeColor,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -287,97 +277,65 @@ class _RoomCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppCard(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: roomTypeColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.meeting_room_outlined,
-                  color: roomTypeColor, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Room $roomNumber',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
-                    ),
+      child: Row(
+        children: [
+          AppIconTile(icon: Icons.meeting_room_outlined, color: roomTypeColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Room $roomNumber',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    roomType,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF6B7280),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Real-time bed count
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('beds')
-                  .where('roomId', isEqualTo: roomId)
-                  .snapshots(),
-              builder: (context, snap) {
-                final total = snap.data?.docs.length ?? 0;
-                final available = snap.data?.docs
-                        .where((d) =>
-                            (d.data() as Map)['availability'] == 'Available')
-                        .length ??
-                    0;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '$total Beds',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: roomTypeColor,
+                ),
+                const SizedBox(height: 3),
+                // Real-time bed count
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('beds')
+                      .where('roomId', isEqualTo: roomId)
+                      .snapshots(),
+                  builder: (context, snap) {
+                    final total = snap.data?.docs.length ?? 0;
+                    final available = snap.data?.docs
+                            .where((d) =>
+                                (d.data() as Map)['availability'] ==
+                                'Available')
+                            .length ??
+                        0;
+                    return Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(text: '$roomType · $total Beds · '),
+                          TextSpan(
+                            text: '$available Available',
+                            style: const TextStyle(
+                              color: Color(0xFF0B5E57),
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    Text(
-                      '$available Available',
                       style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF0F9D58),
+                        fontSize: 12,
+                        color: AppColors.muted,
                       ),
-                    ),
-                  ],
-                );
-              },
+                    );
+                  },
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Icon(Icons.arrow_forward_ios_rounded,
-                size: 16, color: roomTypeColor),
-          ],
-        ),
+          ),
+          const Icon(Icons.chevron_right_rounded,
+              color: AppColors.muted, size: 24),
+        ],
       ),
     );
   }

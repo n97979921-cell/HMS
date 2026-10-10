@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/notification_service.dart';
+import '../widgets/app_ui.dart';
 
 /// LAB TEST DETAIL (Lab Staff)
 ///
@@ -25,9 +26,6 @@ class LabTestDetailScreen extends StatefulWidget {
 }
 
 class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   final _picker = ImagePicker();
   final _reasonController = TextEditingController();
 
@@ -195,19 +193,23 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Cancel this test?'),
         content: const Text(
             'The patient already paid for this test. Cancelling will '
             'add a FULL refund to the receptionist\'s pending refunds list.'),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.muted),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Back'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB23A1E), elevation: 0),
             child: const Text('Cancel & Refund',
                 style: TextStyle(color: Colors.white)),
           ),
@@ -295,7 +297,7 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -305,7 +307,7 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: _primary,
+      backgroundColor: AppColors.teal,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -324,30 +326,53 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
           child: Container(
             decoration: const BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
             ),
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
                 const Text('Cancel Test',
-                    style:
-                        TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.text)),
                 const SizedBox(height: 4),
                 const Text('Please explain why this test cannot be completed.',
-                    style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    style: TextStyle(fontSize: 12.5, color: AppColors.muted)),
                 const SizedBox(height: 14),
                 TextField(
                   controller: _reasonController,
                   maxLines: 3,
                   decoration: InputDecoration(
                     hintText: 'e.g. Sample damaged, equipment malfunction...',
+                    hintStyle: const TextStyle(color: AppColors.faint),
                     filled: true,
-                    fillColor: const Color(0xFFF4F7F6),
+                    fillColor: AppColors.bg,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide:
+                          const BorderSide(color: AppColors.teal, width: 1.5),
                     ),
                   ),
                 ),
@@ -360,13 +385,16 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
                       _cancelTest();
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
+                      backgroundColor: AppColors.danger,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                     ),
                     child: const Text('Cancel Test',
                         style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w600)),
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800)),
                   ),
                 ),
               ],
@@ -380,79 +408,53 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: _primary))
-            : _test == null
-                ? const Center(child: Text('Test not found'))
-                : Column(
-                    children: [
-                      _buildHeader(),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(18),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildInfoCard(),
-                              const SizedBox(height: 20),
-                              _buildActionSection(),
-                            ],
-                          ),
+      backgroundColor: AppColors.bg,
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.teal))
+          : _test == null
+              ? const Center(child: Text('Test not found'))
+              : Column(
+                  children: [
+                    _buildHeader(),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildInfoCard(),
+                            const SizedBox(height: 20),
+                            _buildActionSection(),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-      ),
+                    ),
+                  ],
+                ),
     );
   }
 
-  // FIXED: pehle full-width, sirf neeche-corners-round header card tha
-  // (plain IconButton back arrow). Ab appointment_detail_screen.dart
-  // jaisa hi floating, sab-corners-round gradient card, taake Lab Test
-  // Detail screen baaqi doctor/lab-staff screens se consistent dikhe.
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_primary, _primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.arrow_back,
-                  color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Test Detail',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return AppHeader(
+      title: 'Test Detail',
+      subtitle: '${_test!['testType'] ?? ''}',
     );
+  }
+
+  AppChipColors _statusColors() {
+    switch (_status) {
+      case 'Completed':
+        return const AppChipColors(Color(0xFF0B5E57), Color(0xFFDDF3EE));
+      case 'In Progress':
+        return const AppChipColors(AppColors.blue, AppColors.blueSoft);
+      case 'Cancelled':
+        return const AppChipColors(Color(0xFF9A2E16), Color(0xFFFBE6E0));
+      case 'Confirmed':
+        return const AppChipColors(Color(0xFF5B3FA8), Color(0xFFEEE8FB));
+      default:
+        return const AppChipColors(Color(0xFF8A6D00), Color(0xFFF6F2E2));
+    }
   }
 
   Widget _buildInfoCard() {
@@ -461,33 +463,65 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2))
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(_patientName,
-              style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A2F3A))),
-          const SizedBox(height: 4),
-          Text('Referred by Dr. $_doctorName',
-              style: const TextStyle(fontSize: 12, color: Colors.black54)),
-          const Divider(height: 24),
-          _infoRow('Test Type', _test!['testType'] ?? ''),
-          const SizedBox(height: 10),
-          _infoRow('Status', _status),
-          if (_status == 'Cancelled' && _test!['cancelReason'] != null) ...[
-            const SizedBox(height: 10),
-            _infoRow('Cancel Reason', _test!['cancelReason']),
-          ],
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: AppColors.tealSoft,
+                child: Text(
+                  _patientName.isNotEmpty ? _patientName[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                      color: AppColors.teal,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_patientName,
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.text)),
+                    const SizedBox(height: 2),
+                    Text('Referred by Dr. $_doctorName',
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.muted)),
+                  ],
+                ),
+              ),
+              AppStatusChip(label: _status, colors: _statusColors()),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.bg,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              children: [
+                _infoRow('Test Type', _test!['testType'] ?? ''),
+                const SizedBox(height: 8),
+                _infoRow('Status', _status),
+                if (_status == 'Cancelled' &&
+                    _test!['cancelReason'] != null) ...[
+                  const SizedBox(height: 8),
+                  _infoRow('Cancel Reason', _test!['cancelReason']),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -495,63 +529,76 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
 
   Widget _infoRow(String label, String value) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
           width: 100,
           child: Text(label,
-              style: const TextStyle(fontSize: 13, color: Colors.grey)),
+              style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.faint)),
         ),
         Expanded(
           child: Text(value,
               style: const TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A2F3A))),
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.text)),
         ),
       ],
     );
   }
 
+  ButtonStyle _darkBtn() => ElevatedButton.styleFrom(
+        backgroundColor: AppColors.header,
+        disabledBackgroundColor: AppColors.header.withOpacity(0.5),
+        elevation: 0,
+        minimumSize: const Size.fromHeight(50),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      );
+
+  ButtonStyle _cancelBtn() => OutlinedButton.styleFrom(
+        backgroundColor: Colors.white,
+        side: const BorderSide(color: Color(0xFFF0C9BE)),
+        minimumSize: const Size.fromHeight(48),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      );
+
+  Widget _banner(IconData icon, String text, Color fg, Color bg) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: fg, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text,
+                style: TextStyle(
+                    color: fg, fontSize: 14, fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildActionSection() {
     if (_status == 'Completed') {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: _primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.check_circle, color: _primary, size: 18),
-            SizedBox(width: 8),
-            Text('Test completed — report submitted',
-                style: TextStyle(color: _primary, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      );
+      return _banner(
+          Icons.check_circle_rounded,
+          'Test completed — report submitted',
+          const Color(0xFF0B5E57),
+          const Color(0xFFDDF3EE));
     }
 
     if (_status == 'Cancelled') {
-      return Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFFD9534F).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.cancel_outlined, color: Color(0xFFD9534F), size: 18),
-            SizedBox(width: 8),
-            Text('Test cancelled',
-                style: TextStyle(
-                    color: Color(0xFFD9534F), fontWeight: FontWeight.w600)),
-          ],
-        ),
-      );
+      return _banner(Icons.cancel_outlined, 'Test cancelled',
+          const Color(0xFF9A2E16), const Color(0xFFFBE6E0));
     }
 
     if (_status == 'Confirmed') {
@@ -566,29 +613,25 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
                     height: 16,
                     child: CircularProgressIndicator(
                         color: Colors.white, strokeWidth: 2))
-                : const Icon(Icons.play_arrow, color: Colors.white),
-            label:
-                const Text('Start Test', style: TextStyle(color: Colors.white)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _primary,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30)),
-            ),
+                : const Icon(Icons.play_arrow_rounded, color: AppColors.mint),
+            label: const Text('Start Test',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800)),
+            style: _darkBtn(),
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
             onPressed: _isProcessing ? null : _showCancelSheet,
             icon: const Icon(Icons.cancel_outlined,
-                color: Color(0xFFD9534F), size: 18),
+                color: Color(0xFF9A2E16), size: 18),
             label: const Text('Cancel Test',
-                style: TextStyle(color: Color(0xFFD9534F))),
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Color(0xFFD9534F)),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30)),
-            ),
+                style: TextStyle(
+                    color: Color(0xFF9A2E16),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800)),
+            style: _cancelBtn(),
           ),
         ],
       );
@@ -598,12 +641,13 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Upload Report',
+        const Text('UPLOAD REPORT',
             style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A2F3A))),
-        const SizedBox(height: 8),
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8,
+                color: AppColors.muted)),
+        const SizedBox(height: 10),
         _buildReportPicker(),
         const SizedBox(height: 16),
         ElevatedButton.icon(
@@ -614,29 +658,25 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
                   height: 16,
                   child: CircularProgressIndicator(
                       color: Colors.white, strokeWidth: 2))
-              : const Icon(Icons.check_circle_outline, color: Colors.white),
+              : const Icon(Icons.check_circle_outline, color: AppColors.mint),
           label: const Text('Complete Test',
-              style: TextStyle(color: Colors.white)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _primary,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          ),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800)),
+          style: _darkBtn(),
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
           onPressed: _isProcessing ? null : _showCancelSheet,
           icon: const Icon(Icons.cancel_outlined,
-              color: Color(0xFFD9534F), size: 18),
+              color: Color(0xFF9A2E16), size: 18),
           label: const Text('Cancel Test',
-              style: TextStyle(color: Color(0xFFD9534F))),
-          style: OutlinedButton.styleFrom(
-            side: const BorderSide(color: Color(0xFFD9534F)),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          ),
+              style: TextStyle(
+                  color: Color(0xFF9A2E16),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800)),
+          style: _cancelBtn(),
         ),
       ],
     );
@@ -644,21 +684,45 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
 
   Widget _buildReportPicker() {
     if (_reportBase64 != null) {
-      return Column(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.memory(base64Decode(_reportBase64!),
-                height: 180, width: double.infinity, fit: BoxFit.cover),
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: _pickReport,
-            icon: const Icon(Icons.refresh, size: 16, color: _primary),
-            label:
-                const Text('Change report', style: TextStyle(color: _primary)),
-          ),
-        ],
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.memory(base64Decode(_reportBase64!),
+                  height: 180, width: double.infinity, fit: BoxFit.cover),
+            ),
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: _pickReport,
+              child: Container(
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.tealSoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.refresh_rounded,
+                        size: 16, color: AppColors.teal),
+                    SizedBox(width: 6),
+                    Text('Change report',
+                        style: TextStyle(
+                            color: AppColors.teal,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -666,21 +730,26 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
       onTap: _pickReport,
       child: Container(
         width: double.infinity,
-        height: 120,
+        height: 130,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border:
-              Border.all(color: _primary.withValues(alpha: 0.4), width: 1.5),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFB9CFCC), width: 1.5),
         ),
-        child: Column(
+        child: const Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.upload_file,
-                size: 30, color: _primary.withValues(alpha: 0.6)),
-            const SizedBox(height: 8),
-            const Text('Tap to upload report',
-                style: TextStyle(fontSize: 12, color: Colors.black54)),
+            AppIconTile(
+              icon: Icons.upload_file,
+              color: AppColors.teal,
+              background: AppColors.tealSoft,
+            ),
+            SizedBox(height: 8),
+            Text('Tap to upload report',
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text)),
           ],
         ),
       ),

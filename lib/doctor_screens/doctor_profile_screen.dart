@@ -1,5 +1,6 @@
 // lib/doctor_screens/doctor_profile_screen.dart
 import 'package:flutter/material.dart';
+import '../widgets/app_ui.dart';
 import 'doctor_repository.dart';
 import 'doctor_profile.dart';
 import '../login_screen.dart';
@@ -7,11 +8,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class _ProfileColors {
-  static const primary = Color(0xFF1F8A70);
-  static const primaryDark = Color(0xFF0D6B5A);
-  static const background = Color(0xFFF4F7F6);
-  static const textMuted = Color(0xFF8A8A8A);
-  static const error = Color(0xFFD64545);
+  static const primary = Color(0xFF0E6E68);
+  static const error = Color(0xFFB23A1E);
 }
 
 /// DOCTOR PROFILE
@@ -124,7 +122,8 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: isError ? const Color(0xFFDB4437) : _ProfileColors.primary,
+      backgroundColor:
+          isError ? const Color(0xFFDB4437) : _ProfileColors.primary,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -134,10 +133,18 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Logout'),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: const Text('Logout',
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.text)),
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
+              style: TextButton.styleFrom(foregroundColor: AppColors.muted),
               onPressed: () => Navigator.pop(context, false),
               child: const Text('Cancel')),
           TextButton(
@@ -173,15 +180,25 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _ProfileColors.background,
-      body: SafeArea(child: _buildBody()),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          AppHeader(
+            title: 'My Profile',
+            bottom: (!_isLoading && _profile != null)
+                ? _buildHeaderCard(_profile!)
+                : null,
+          ),
+          Expanded(child: _buildBody()),
+        ],
+      ),
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-          child: CircularProgressIndicator(color: _ProfileColors.primary));
+          child: CircularProgressIndicator(color: AppColors.teal));
     }
     if (_errorMessage != null || _profile == null) {
       return Center(
@@ -191,16 +208,16 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.error_outline,
-                  color: _ProfileColors.error, size: 40),
+                  color: AppColors.danger, size: 40),
               const SizedBox(height: 12),
               Text(_errorMessage ?? 'Profile not found',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: _ProfileColors.textMuted)),
+                  style: const TextStyle(color: AppColors.muted)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadProfile,
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: _ProfileColors.primary),
+                    backgroundColor: AppColors.header, elevation: 0),
                 child:
                     const Text('Retry', style: TextStyle(color: Colors.white)),
               ),
@@ -214,26 +231,24 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
 
     return RefreshIndicator(
       onRefresh: _loadProfile,
-      color: _ProfileColors.primary,
+      color: AppColors.teal,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildHeaderCard(profile),
-              const SizedBox(height: 16),
               _buildLogoutButton(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
 
               // ── Personal (editable) ──
               const _SectionLabel('Personal Information'),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               _cardWrap([
                 const _FieldLabel('Full Name'),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 TextFormField(
                   controller: _nameController,
                   decoration: _inputDecoration(Icons.person_outline_rounded),
@@ -245,9 +260,9 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                   },
                   onChanged: (_) => setState(() {}),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 const _FieldLabel('Phone Number'),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
@@ -263,55 +278,54 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                   },
                 ),
               ]),
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
 
               // ── Account (read-only) ──
               const _SectionLabel('Account Information'),
-              const SizedBox(height: 12),
-              _readOnlyRow(Icons.email_outlined, 'Email Address', profile.email),
+              const SizedBox(height: 10),
+              _groupCard([
+                _readOnlyRow(
+                    Icons.email_outlined, 'Email Address', profile.email),
+              ]),
               const SizedBox(height: 8),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  'Email cannot be changed.',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
-                ),
+              const Text(
+                'Email cannot be changed.',
+                style: TextStyle(fontSize: 12, color: AppColors.faint),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 22),
 
               // ── Professional (read-only) ──
               const _SectionLabel('Professional Details'),
-              const SizedBox(height: 12),
-              _readOnlyRow(Icons.medical_services_outlined, 'Specialization',
-                  profile.specialization),
-              const SizedBox(height: 12),
-              _readOnlyRow(Icons.workspace_premium_outlined, 'License No.',
-                  profile.license),
-              const SizedBox(height: 12),
-              _readOnlyRow(Icons.apartment_outlined, 'Department',
-                  profile.departmentName),
-              const SizedBox(height: 24),
+              const SizedBox(height: 10),
+              _groupCard([
+                _readOnlyRow(Icons.medical_services_outlined, 'Specialization',
+                    profile.specialization),
+                _readOnlyRow(Icons.workspace_premium_outlined, 'License No.',
+                    profile.license),
+                _readOnlyRow(Icons.apartment_outlined, 'Department',
+                    profile.departmentName),
+              ]),
+              const SizedBox(height: 22),
 
               // ── Timing (read-only) ──
               const _SectionLabel('Consultation Timing'),
-              const SizedBox(height: 12),
-              _readOnlyRow(
-                Icons.schedule_outlined,
-                'Available Hours',
-                (profile.appointmentStartTime != null &&
-                        profile.appointmentEndTime != null)
-                    ? '${profile.appointmentStartTime} - ${profile.appointmentEndTime}'
-                    : 'Not set by admin yet',
-              ),
-              const SizedBox(height: 8),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text(
-                  'Professional details and timing are managed by admin.',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+              const SizedBox(height: 10),
+              _groupCard([
+                _readOnlyRow(
+                  Icons.schedule_outlined,
+                  'Available Hours',
+                  (profile.appointmentStartTime != null &&
+                          profile.appointmentEndTime != null)
+                      ? '${profile.appointmentStartTime} - ${profile.appointmentEndTime}'
+                      : 'Not set by admin yet',
                 ),
+              ]),
+              const SizedBox(height: 8),
+              const Text(
+                'Professional details and timing are managed by admin.',
+                style: TextStyle(fontSize: 12, color: AppColors.faint),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
 
               // Save
               SizedBox(
@@ -319,9 +333,8 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                 child: ElevatedButton(
                   onPressed: _isSaving ? null : _saveProfile,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _ProfileColors.primary,
-                    disabledBackgroundColor:
-                        _ProfileColors.primary.withOpacity(0.5),
+                    backgroundColor: AppColors.header,
+                    disabledBackgroundColor: AppColors.header.withOpacity(0.5),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
@@ -337,25 +350,26 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 15,
-                              fontWeight: FontWeight.w600)),
+                              fontWeight: FontWeight.w800)),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
               // Change password
               SizedBox(
                 height: 52,
                 child: OutlinedButton.icon(
                   onPressed: _showChangePasswordSheet,
-                  icon: const Icon(Icons.lock_reset_rounded,
-                      color: _ProfileColors.primary, size: 20),
+                  icon: const Icon(Icons.lock_outline_rounded,
+                      color: AppColors.text, size: 19),
                   label: const Text('Change Password',
                       style: TextStyle(
-                          color: _ProfileColors.primary,
+                          color: AppColors.text,
                           fontSize: 15,
-                          fontWeight: FontWeight.w600)),
+                          fontWeight: FontWeight.w800)),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: _ProfileColors.primary),
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: AppColors.border),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
                   ),
@@ -368,110 +382,90 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     );
   }
 
-  // Header: back button + avatar + name + specialization + rating
+  // Header hero: avatar + name + specialization + rating (same data)
   Widget _buildHeaderCard(DoctorProfile profile) {
     final liveName = _nameController.text.trim();
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(0, 16, 0, 0),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_ProfileColors.primary, _ProfileColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return Row(
+      children: [
+        Container(
+          width: 64,
+          height: 64,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: AppColors.mint,
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            liveName.isNotEmpty ? liveName[0].toUpperCase() : '?',
+            style: const TextStyle(
+                color: AppColors.header,
+                fontWeight: FontWeight.w800,
+                fontSize: 26),
+          ),
         ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        children: [
-          Row(
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    shape: BoxShape.circle,
+              Text(liveName.isEmpty ? 'Doctor' : liveName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      profile.specialization,
+                      style: const TextStyle(
+                          color: AppColors.mint,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800),
+                    ),
                   ),
-                  child: const Icon(Icons.arrow_back,
-                      color: Colors.white, size: 18),
-                ),
-              ),
-              const Expanded(
-                child: Text(
-                  'My Profile',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.star.withOpacity(0.14),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded,
+                            color: AppColors.star, size: 13),
+                        const SizedBox(width: 4),
+                        Text(
+                          _reviewCount == 0
+                              ? 'No reviews yet'
+                              : '${_avgRating.toStringAsFixed(1)} ($_reviewCount review${_reviewCount == 1 ? '' : 's'})',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.star),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
-              const SizedBox(width: 30),
             ],
           ),
-          const SizedBox(height: 10),
-          CircleAvatar(
-            radius: 40,
-            backgroundColor: Colors.white.withOpacity(0.2),
-            child: Text(
-              liveName.isNotEmpty ? liveName[0].toUpperCase() : '?',
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 28),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(liveName.isEmpty ? 'Doctor' : liveName,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold)),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              profile.specialization,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.star, color: Colors.amber, size: 16),
-                const SizedBox(width: 6),
-                Text(
-                  _reviewCount == 0
-                      ? 'No reviews yet'
-                      : '${_avgRating.toStringAsFixed(1)} ($_reviewCount review${_reviewCount == 1 ? '' : 's'})',
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -481,38 +475,32 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       child: InkWell(
         onTap: _confirmLogout,
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Ink(
+          height: 52,
           decoration: BoxDecoration(
-            color: _ProfileColors.error,
+            color: AppColors.dangerSoft,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: _ProfileColors.error.withOpacity(0.35),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                width: 30,
+                height: 30,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.logout, color: Colors.white, size: 18),
+                child: const Icon(Icons.logout_rounded,
+                    color: AppColors.danger, size: 16),
               ),
               const SizedBox(width: 10),
               const Text(
                 'Logout',
                 style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  color: AppColors.danger,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
@@ -527,8 +515,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,23 +524,38 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     );
   }
 
-  Widget _readOnlyRow(IconData icon, String label, String value) {
+  // Read-only rows ek white card mein, dividers ke saath
+  Widget _groupCard(List<Widget> rows) {
+    final children = <Widget>[];
+    for (int i = 0; i < rows.length; i++) {
+      if (i > 0) {
+        children.add(const Divider(height: 1, color: AppColors.divider));
+      }
+      children.add(rows[i]);
+    }
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(20),
       ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _readOnlyRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFFF0F0F0),
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.bg,
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: const Color(0xFF9CA3AF), size: 20),
+            child: Icon(icon, color: AppColors.faint, size: 19),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -562,19 +564,21 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
               children: [
                 Text(label,
                     style: const TextStyle(
-                        fontSize: 11, color: Color(0xFF9CA3AF))),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.faint)),
                 const SizedBox(height: 2),
                 Text(value,
                     style: const TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF6B7280)),
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.muted),
                     overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
           const Icon(Icons.lock_outline_rounded,
-              size: 16, color: Color(0xFFD1D5DB)),
+              size: 16, color: Color(0xFFC9D3D3)),
         ],
       ),
     );
@@ -583,30 +587,30 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
   InputDecoration _inputDecoration(IconData icon, {String? hint}) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xFFB0B7C3), fontSize: 13),
-      prefixIcon: Icon(icon, color: _ProfileColors.primary, size: 20),
+      hintStyle: const TextStyle(color: AppColors.faint, fontSize: 13),
+      prefixIcon: Icon(icon, color: AppColors.teal, size: 20),
       filled: true,
-      fillColor: _ProfileColors.background,
+      fillColor: AppColors.bg,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _ProfileColors.primary, width: 1.5),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.teal, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFDB4437), width: 1.5),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFDB4437), width: 1.5),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.danger, width: 1.5),
       ),
     );
   }
@@ -622,9 +626,9 @@ class _SectionLabel extends StatelessWidget {
       text.toUpperCase(),
       style: const TextStyle(
         fontSize: 12,
-        fontWeight: FontWeight.w700,
-        color: Color(0xFF6B7280),
-        letterSpacing: 0.5,
+        fontWeight: FontWeight.w800,
+        color: AppColors.muted,
+        letterSpacing: 0.8,
       ),
     );
   }
@@ -640,8 +644,8 @@ class _FieldLabel extends StatelessWidget {
       text,
       style: const TextStyle(
         fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF374151),
+        fontWeight: FontWeight.w700,
+        color: AppColors.text,
       ),
     );
   }
@@ -658,7 +662,7 @@ class _DoctorChangePasswordSheet extends StatefulWidget {
 
 class _DoctorChangePasswordSheetState
     extends State<_DoctorChangePasswordSheet> {
-  static const Color _primary = Color(0xFF1F8A70);
+  static const Color _primary = Color(0xFF0B2E33);
 
   final _formKey = GlobalKey<FormState>();
   final _currentPasswordController = TextEditingController();
@@ -738,7 +742,7 @@ class _DoctorChangePasswordSheetState
       child: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         child: Form(

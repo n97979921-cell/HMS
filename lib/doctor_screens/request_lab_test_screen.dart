@@ -1,20 +1,13 @@
 // lib/doctor_screens/request_lab_test_screen.dart
 import 'package:flutter/material.dart';
+import '../widgets/app_ui.dart';
 import 'doctor_repository.dart';
 import 'test_type_price.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class _RLColors {
-  static const primary = Color(0xFF1F8A70);
-  // FIXED: pehle 0xFF166049 tha — ye baaqi poori app se ek alag green
-  // shade tha. Ab 0xFF0D6B5A kar diya, taake ye screen bhi baaqi
-  // screens (Appointment Detail, My Appointments, Refunds, waghera)
-  // jaisi hi dikhe.
-  static const primaryDark = Color(0xFF0D6B5A);
-  static const background = Color(0xFFF5F7F8);
-  static const cardBackground = Colors.white;
-  static const textMuted = Color(0xFF8A8A8A);
-  static const error = Color(0xFFD64545);
+  static const primary = Color(0xFF0E6E68);
+  static const error = Color(0xFFB23A1E);
 }
 
 /// Doctor ek saath MULTIPLE lab tests request kar sakta hai — har test
@@ -170,69 +163,27 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _RLColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(child: _buildBody()),
-          ],
-        ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(child: _buildBody()),
+        ],
       ),
     );
   }
 
-  // FIXED: pehle full-width, sirf neeche-corners-round header card tha
-  // (aur alag primaryDark shade use kar raha tha). Ab appointment_detail_
-  // screen.dart jaisa hi floating, sab-corners-round gradient card, taake
-  // Request Lab Test screen baaqi doctor screens se consistent dikhe.
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_RLColors.primary, _RLColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.arrow_back,
-                  color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Request Lab Test',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return AppHeader(
+      title: 'Request Lab Test',
+      subtitle: widget.patientName,
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-          child: CircularProgressIndicator(color: _RLColors.primary));
+          child: CircularProgressIndicator(color: AppColors.teal));
     }
     if (_errorMessage != null) {
       return Center(
@@ -241,16 +192,17 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: _RLColors.error, size: 40),
+              const Icon(Icons.error_outline,
+                  color: AppColors.danger, size: 40),
               const SizedBox(height: 12),
               Text(_errorMessage!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: _RLColors.textMuted)),
+                  style: const TextStyle(color: AppColors.muted)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadTestTypes,
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: _RLColors.primary),
+                    backgroundColor: AppColors.header, elevation: 0),
                 child:
                     const Text('Retry', style: TextStyle(color: Colors.white)),
               ),
@@ -260,14 +212,12 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
       );
     }
     if (_testTypes.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'No test types have been configured yet. Ask the admin to add test type prices first.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _RLColors.textMuted),
-          ),
+      return const SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 18, 20, 24),
+        child: AppEmptyState(
+          icon: Icons.science_outlined,
+          title:
+              'No test types have been configured yet. Ask the admin to add test type prices first.',
         ),
       );
     }
@@ -276,29 +226,26 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
       children: [
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
             children: [
               Text(
                 'Patient: ${widget.patientName}',
-                style:
-                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               const Text(
                 'Select one or more tests to request.',
-                style: TextStyle(fontSize: 12, color: _RLColors.textMuted),
+                style: TextStyle(fontSize: 12.5, color: AppColors.muted),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Container(
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 decoration: BoxDecoration(
-                  color: _RLColors.cardBackground,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2)),
-                  ],
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
                   children: _testTypes.map((t) {
@@ -310,21 +257,25 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
                       onChanged: isAlreadyRequested
                           ? null
                           : (checked) => _toggleSelection(t, checked),
-                      activeColor: _RLColors.primary,
+                      activeColor: AppColors.teal,
+                      checkboxShape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6)),
                       controlAffinity: ListTileControlAffinity.leading,
                       title: Text(t.testType,
                           style: TextStyle(
                               fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w800,
                               color: isAlreadyRequested
-                                  ? _RLColors.textMuted
-                                  : null)),
+                                  ? AppColors.faint
+                                  : AppColors.text)),
                       subtitle: Text(
                           isAlreadyRequested
                               ? 'Already requested'
                               : 'Rs. ${t.charge}',
                           style: const TextStyle(
-                              fontSize: 12, color: _RLColors.textMuted)),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.muted)),
                     );
                   }).toList(),
                 ),
@@ -332,51 +283,64 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
             ],
           ),
         ),
-        if (_selected.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                    '${_selected.length} test${_selected.length == 1 ? '' : 's'} selected',
-                    style: const TextStyle(
-                        fontSize: 12, color: _RLColors.textMuted)),
-                Text('Total: Rs. $_totalCharge',
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: _RLColors.primary)),
-              ],
-            ),
+        Container(
+          padding: EdgeInsets.fromLTRB(
+              20, 12, 20, 16 + MediaQuery.of(context).padding.bottom),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: AppColors.divider)),
           ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isSubmitting ? null : _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _RLColors.primary,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_selected.isNotEmpty) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                        '${_selected.length} test${_selected.length == 1 ? '' : 's'} selected',
+                        style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.muted)),
+                    Text('Total: Rs. $_totalCharge',
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0B5E57))),
+                  ],
+                ),
+                const SizedBox(height: 10),
+              ],
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.header,
+                    disabledBackgroundColor: AppColors.header.withOpacity(0.5),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2.5))
+                      : Text(
+                          _selected.length > 1
+                              ? 'Request ${_selected.length} Tests'
+                              : 'Request Test',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800)),
+                ),
               ),
-              child: _isSubmitting
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2.5))
-                  : Text(
-                      _selected.length > 1
-                          ? 'Request ${_selected.length} Tests'
-                          : 'Request Test',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600)),
-            ),
+            ],
           ),
         ),
       ],

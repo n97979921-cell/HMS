@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'assign_bed_screen.dart';
 import '../services/notification_service.dart';
+import '../widgets/app_ui.dart';
 
 /// ADMISSIONS (Receptionist) — Pending | Occupied tabs
 ///
@@ -23,8 +24,7 @@ class AdmissionsScreen extends StatefulWidget {
 }
 
 class _AdmissionsScreenState extends State<AdmissionsScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
+  static const Color _primary = Color(0xFF0B2E33);
 
   String _selectedTab = 'Pending'; // Pending | Occupied
   bool _isLoading = true;
@@ -191,7 +191,9 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Release bed'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -214,6 +216,7 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.muted),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
@@ -317,19 +320,22 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Cancel recommendation'),
         content: Text(
             'Remove "${p['patientName']}" from pending admissions? No bed has been assigned yet.'),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.muted),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('No'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDB4437)),
+                backgroundColor: const Color(0xFF9A2E16)),
             child: const Text('Yes, cancel',
                 style: TextStyle(color: Colors.white)),
           ),
@@ -359,7 +365,7 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -369,7 +375,7 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: _primary,
+      backgroundColor: AppColors.teal,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -380,79 +386,50 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
     final list = _selectedTab == 'Pending' ? _pending : _occupied;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildTabToggle(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : list.isEmpty
-                      ? _buildEmpty()
-                      : RefreshIndicator(
-                          onRefresh: _load,
-                          color: _primary,
-                          child: ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
-                            itemCount: list.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (ctx, i) => _selectedTab == 'Pending'
-                                ? _pendingCard(list[i])
-                                : _occupiedCard(list[i]),
-                          ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : list.isEmpty
+                    ? _buildEmpty()
+                    : RefreshIndicator(
+                        onRefresh: _load,
+                        color: AppColors.teal,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                          itemCount: list.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (ctx, i) => _selectedTab == 'Pending'
+                              ? _pendingCard(list[i])
+                              : _occupiedCard(list[i]),
                         ),
-            ),
-          ],
-        ),
+                      ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 14),
-          const Text('Admissions',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold)),
-        ],
-      ),
+    return AppHeader(
+      title: 'Admissions',
+      subtitle: 'Assign and release beds',
+      bottom: _buildTabToggle(),
     );
   }
 
   Widget _buildTabToggle() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(18, 14, 18, 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)
-        ],
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
@@ -468,18 +445,19 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => _selectedTab = label),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          height: 40,
           decoration: BoxDecoration(
-            color: isSelected ? _primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(26),
+            color: isSelected ? AppColors.mint : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
           child: Text(
             count > 0 ? '$label ($count)' : label,
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.grey,
-              fontWeight: FontWeight.w600,
+              color: isSelected ? AppColors.header : Colors.white,
+              fontWeight: FontWeight.w800,
               fontSize: 13,
             ),
           ),
@@ -490,103 +468,110 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
 
   Widget _buildEmpty() {
     final isPending = _selectedTab == 'Pending';
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(isPending ? Icons.bed_outlined : Icons.hotel_outlined,
-              size: 64, color: _primary.withValues(alpha: 0.3)),
-          const SizedBox(height: 16),
-          Text(isPending ? 'No admissions pending' : 'No occupied beds',
-              style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF6B7280))),
-        ],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      child: AppEmptyState(
+        icon: isPending ? Icons.bed_outlined : Icons.hotel_outlined,
+        title: isPending ? 'No admissions pending' : 'No occupied beds',
       ),
     );
   }
 
   Widget _pendingCard(Map<String, dynamic> p) {
     final isProcessing = _processingId == p['appointmentId'];
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
-      ),
-      child: Row(
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFDE6E0),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.local_hospital_outlined,
-                color: Color(0xFFD9534F), size: 20),
+          Row(
+            children: [
+              const AppIconTile(
+                icon: Icons.bed_outlined,
+                color: Color(0xFF9A2E16),
+                background: Color(0xFFFBE6E0),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(p['patientName'],
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.text)),
+                    const SizedBox(height: 3),
+                    Text('Recommended by Dr. ${p['doctorName']}',
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.muted)),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(p['patientName'],
-                    style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A2F3A))),
-                const SizedBox(height: 2),
-                Text('Recommended by Dr. ${p['doctorName']}',
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.black54)),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: isProcessing ? null : () => _cancelRecommendation(p),
-            style:
-                TextButton.styleFrom(foregroundColor: const Color(0xFFDB4437)),
-            child: const Text('Cancel', style: TextStyle(fontSize: 12)),
-          ),
-          const SizedBox(width: 4),
-          ElevatedButton(
-            onPressed: isProcessing
-                ? null
-                : () async {
-                    final assigned = await Navigator.push<bool>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => AssignBedScreen(
-                          appointmentId: p['appointmentId'],
-                          patientId: p['patientId'],
-                          patientName: p['patientName'],
-                        ),
-                      ),
-                    );
-                    if (assigned == true) _load();
-                  },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _primary,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-            child: isProcessing
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                        color: Colors.white, strokeWidth: 2))
-                : const Text('Assign Bed',
-                    style: TextStyle(color: Colors.white, fontSize: 12)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed:
+                      isProcessing ? null : () => _cancelRecommendation(p),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(42),
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: Color(0xFFF0C9BE)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Cancel',
+                      style: TextStyle(
+                          color: Color(0xFF9A2E16),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: ElevatedButton(
+                  onPressed: isProcessing
+                      ? null
+                      : () async {
+                          final assigned = await Navigator.push<bool>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AssignBedScreen(
+                                appointmentId: p['appointmentId'],
+                                patientId: p['patientId'],
+                                patientName: p['patientName'],
+                              ),
+                            ),
+                          );
+                          if (assigned == true) _load();
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.header,
+                    disabledBackgroundColor: AppColors.header.withOpacity(0.5),
+                    elevation: 0,
+                    minimumSize: const Size.fromHeight(42),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: isProcessing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Text('Assign Bed',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800)),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -597,24 +582,19 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
     final isProcessing = _processingId == bed['bedId'];
     final assignedAt = bed['assignedAt'] as DateTime?;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
+              const AppIconTile(
+                icon: Icons.bed_outlined,
+                color: Color(0xFF5B3FA8),
+                background: Color(0xFFEEE8FB),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,22 +602,38 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
                     Text(bed['patientName'],
                         style: const TextStyle(
                             fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A2F3A))),
-                    const SizedBox(height: 2),
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.text)),
+                    const SizedBox(height: 3),
                     Text(
                         'Room ${bed['roomNumber']} · Bed ${bed['bedNumber']} · ${bed['roomType']}',
                         style: const TextStyle(
-                            fontSize: 12, color: Colors.black54)),
+                            fontSize: 12, color: AppColors.muted)),
                   ],
                 ),
               ),
               if (assignedAt != null)
-                Text(_durationLabel(assignedAt),
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: _primary)),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDDF3EE),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.schedule_rounded,
+                          size: 13, color: Color(0xFF0B5E57)),
+                      const SizedBox(width: 4),
+                      Text(_durationLabel(assignedAt),
+                          style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0B5E57))),
+                    ],
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -646,8 +642,10 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
             child: ElevatedButton(
               onPressed: isProcessing ? null : () => _releaseBed(bed),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _primary,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                backgroundColor: AppColors.header,
+                disabledBackgroundColor: AppColors.header.withOpacity(0.5),
+                elevation: 0,
+                minimumSize: const Size.fromHeight(44),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
@@ -659,7 +657,9 @@ class _AdmissionsScreenState extends State<AdmissionsScreen> {
                           color: Colors.white, strokeWidth: 2.5))
                   : const Text('Release Bed',
                       style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w600)),
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800)),
             ),
           ),
         ],

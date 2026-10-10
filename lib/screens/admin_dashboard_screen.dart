@@ -11,29 +11,17 @@ import 'view_payment_records_screen.dart';
 import 'view_feedback_screen.dart';
 import 'reports_screen.dart';
 import 'admin_profile_screen.dart';
+import '../widgets/app_ui.dart';
+import 'package:intl/intl.dart';
 
-/// ADMIN DASHBOARD — UI/UX redesign only, ALL logic unchanged.
+/// ADMIN DASHBOARD — UI redesign only (Option B), ALL logic unchanged.
 ///
-/// Changes from before:
-///  - No separate top AppBar (hospital name/logo removed) — single
-///    gradient header card instead, matching Receptionist/Doctor style.
-///  - Hamburger (opens Drawer) moved INSIDE the header card, left side.
-///  - 3-dot menu removed entirely (was non-functional).
-///  - Bottom nav restyled to match the app-wide rounded/active-tab look
-///    used elsewhere (Patient/Receptionist), same 3 items + same
-///    navigation logic as before.
-///  - Stat cards: same 4 values (_totalDoctors, _totalPatients,
-///    _todayAppointments, _totalRevenue), same _loadStats() logic.
-///    Style updated to match the Patient dashboard's full-colour
-///    card look (whole card tinted, icon in a small white chip)
-///    instead of a white card with just a coloured icon chip.
-///  - Drawer: same items, same navigation, only re-themed to match
-///    the app's green palette instead of the old teal.
-///  - Header: compact bar, no gradient — bigger circular logo mark
-///    (assets/Logo.png) next to the hamburger, and a role tag
-///    ("Admin") shown under the name.
-///  - ✅ REMOVED: notification bell icon — admin doesn't receive
-///    notifications, so it's taken out of the header entirely.
+///  - Dark rounded header: menu button, logo, admin name, and the same
+///    Total revenue value (_totalRevenue) shown large.
+///  - Stats card: same _totalDoctors, _totalPatients, _todayAppointments.
+///  - "Manage hospital" shortcuts open the SAME screens the drawer opens.
+///  - Bottom nav: same 3 items, same onTap navigation.
+///  - Drawer: same items + same navigation, grouped into sections.
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -50,6 +38,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _todayAppointments = 0;
   double _totalRevenue = 0;
   bool _isLoading = true;
+
+  // ── NAYA (sirf dikhane ke liye): Revenue chart — Daily / Monthly ──
+  // Purana _loadStats() bilkul wahi hai; yeh alag read-only query hai.
+  bool _revDaily = false;
+  bool _revLoading = true;
+  List<double> _revBars = [];
+  List<String> _revLabels = [];
+  double _revPeriodTotal = 0;
   int _selectedIndex = 0;
 
   // Logged-in admin name
@@ -65,6 +61,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     super.initState();
     _loadStats();
     _loadAdminName();
+    _loadRevenueChart();
   }
 
   // ── LOAD LOGGED-IN ADMIN NAME ──
@@ -74,10 +71,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
       if (uid == null) return;
 
-      final userDoc = await _firestore
-          .collection('users')
-          .doc(uid)
-          .get();
+      final userDoc = await _firestore.collection('users').doc(uid).get();
 
       if (!mounted) return;
 
@@ -156,190 +150,472 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  // ── NAYA: Revenue chart data (Paid payments) ──
+  // Daily  = pichle 7 din (aaj tak), har din ka total.
+  // Monthly = pichle 6 mahine (is mahine tak), har mahine ka total.
+  Future<void> _loadRevenueChart() async {
+    if (mounted) setState(() => _revLoading = true);
+    try {
+      final now = DateTime.now();
+      final List<DateTime> starts = [];
+      if (_revDaily) {
+        final today = DateTime(now.year, now.month, now.day);
+        for (int i = 6; i >= 0; i--) {
+          starts.add(today.subtract(Duration(days: i)));
+        }
+      } else {
+        for (int i = 5; i >= 0; i--) {
+          starts.add(DateTime(now.year, now.month - i, 1));
+        }
+      }
+      final rangeStart = starts.first;
+      final rangeEnd = _revDaily
+          ? starts.last.add(const Duration(days: 1))
+          : DateTime(now.year, now.month + 1, 1);
+
+      final snap = await _firestore
+          .collection('payments')
+          .where('status', isEqualTo: 'Paid')
+          .where('createdAt', isGreaterThanOrEqualTo: rangeStart)
+          .where('createdAt', isLessThan: rangeEnd)
+          .get();
+
+      final bars = List<double>.filled(starts.length, 0);
+      for (final doc in snap.docs) {
+        final data = doc.data();
+        final ts = data['createdAt'];
+        if (ts is! Timestamp) continue;
+        final d = ts.toDate();
+        int idx;
+        if (_revDaily) {
+          final day = DateTime(d.year, d.month, d.day);
+          idx = starts.indexWhere((s) => s == day);
+        } else {
+          idx =
+              starts.indexWhere((s) => s.year == d.year && s.month == d.month);
+        }
+        if (idx >= 0) bars[idx] += (data['amount'] ?? 0).toDouble();
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _revBars = bars;
+        _revLabels = starts
+            .map((s) => _revDaily
+                ? DateFormat('E').format(s)
+                : DateFormat('MMM').format(s))
+            .toList();
+        _revPeriodTotal = bars.isEmpty ? 0 : bars.last;
+        _revLoading = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _revLoading = false);
+    }
+  }
+
+  void _setRevMode(bool daily) {
+    if (_revDaily == daily) return;
+    setState(() => _revDaily = daily);
+    _loadRevenueChart();
+  }
+
+  String _formatRs(double v) {
+    return 'Rs ${NumberFormat.decimalPattern('en_IN').format(v.round())}';
+  }
+
+  // ── UI ONLY: shortcut list ka ek row ──
+  void _open(Widget screen) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => screen),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: bgColor,
+      backgroundColor: AppColors.bg,
       drawer: _buildDrawer(),
-
-      // No AppBar — header card inside the body carries the menu now
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadStats,
-          color: primaryColor,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-
-                const SizedBox(height: 20),
-
-                const Text(
-                  'Overview',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF6B7280),
-                  ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _loadStats();
+          await _loadRevenueChart();
+        },
+        color: AppColors.teal,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeader(),
+              // Stats card — header ke upar thora overlap karta hai
+              Transform.translate(
+                offset: const Offset(0, -34),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _isLoading
+                      ? Container(
+                          height: 92,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              color: AppColors.teal,
+                            ),
+                          ),
+                        )
+                      : _buildStatsCard(),
                 ),
-
-                const SizedBox(height: 10),
-
-                _isLoading
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 40),
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            color: primaryColor,
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Manage hospital',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.text,
+                            ),
                           ),
                         ),
-                      )
-                    : GridView.count(
-                        crossAxisCount: 2,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                        childAspectRatio: 1.15,
+                        GestureDetector(
+                          onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                          child: const Text(
+                            'See all',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.teal,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
                         children: [
-                          _statCard(
-                            title: 'Total doctors',
-                            value: '$_totalDoctors',
-                            icon: Icons.medical_services_outlined,
-                            cardColor: const Color(0xFFD9ECF8),
-                            iconColor: const Color(0xFF1565C0),
+                          _shortcutTile(
+                            icon: Icons.people_outline_rounded,
+                            color: AppColors.teal,
+                            title: 'Users & invites',
+                            subtitle: 'Doctors, staff, admins',
+                            onTap: () => _open(const ManageUsersScreen()),
                           ),
-
-                          _statCard(
-                            title: 'Total patients',
-                            value: '$_totalPatients',
-                            icon: Icons.people_outline,
-                            cardColor: const Color(0xFFE3DFF5),
-                            iconColor: const Color(0xFF7E57C2),
+                          _shortcutTile(
+                            icon: Icons.calendar_month_rounded,
+                            color: AppColors.blue,
+                            title: 'Appointments',
+                            subtitle: 'All bookings and status',
+                            onTap: () => _open(const ViewAppointmentsScreen()),
                           ),
-
-                          _statCard(
-                            title: "Today's appointments",
-                            value: '$_todayAppointments',
-                            icon: Icons.calendar_today_outlined,
-                            cardColor: const Color(0xFFFDE6E0),
-                            iconColor: const Color(0xFFD9534F),
+                          _shortcutTile(
+                            icon: Icons.bed_rounded,
+                            color: const Color(0xFF7E57C2),
+                            title: 'Rooms & beds',
+                            subtitle: 'Room types, rooms and beds',
+                            onTap: () => _open(const ManageRoomsScreen()),
                           ),
-
-                          _statCard(
-                            title: 'Total revenue',
-                            value:
-                                'Rs ${_totalRevenue.toStringAsFixed(0)}',
-                            icon: Icons.payments_outlined,
-                            cardColor: const Color(0xFFFCEFD8),
-                            iconColor: const Color(0xFFB8860B),
+                          _shortcutTile(
+                            icon: Icons.bar_chart_rounded,
+                            color: const Color(0xFF8A5A00),
+                            title: 'Reports',
+                            subtitle: 'Revenue, doctors, lab, beds',
+                            onTap: () => _open(const ReportsScreen()),
+                            isLast: true,
                           ),
                         ],
                       ),
-              ],
-            ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
-
       bottomNavigationBar: _buildBottomNav(),
     );
   }
 
-  // Header — compact bar, no gradient (solid primaryDark), bigger
-  // circular logo mark (assets/Logo.png) next to the hamburger, name
-  // + role tag ("Admin") stacked. Same hamburger → openDrawer() as
-  // before — only the visual style changed, and the bell icon has
-  // been removed (admin doesn't receive notifications).
+  // Header — dark rounded block. Same hamburger → openDrawer().
   Widget _buildHeader() {
+    final now = DateTime.now();
+    final periodLabel = _revDaily
+        ? 'Revenue · Today'
+        : 'Revenue · ${DateFormat('MMMM yyyy').format(now)}';
+    final maxBar =
+        _revBars.isEmpty ? 0.0 : _revBars.reduce((a, b) => a > b ? a : b);
+
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: const BoxDecoration(
+        color: AppColors.header,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 58),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  AppHeaderIconButton(
+                    icon: Icons.menu_rounded,
+                    tooltip: 'Menu',
+                    onTap: () => _scaffoldKey.currentState?.openDrawer(),
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        const Text(
+                          'FAMILY WELL CARE',
+                          style: TextStyle(
+                            color: AppColors.headerMuted,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _adminName,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Logo mark (same asset + crop as before)
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: ClipOval(
+                      child: Transform.scale(
+                        scale: 1.6,
+                        child: Image.asset(
+                          'assets/Logo.png',
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          periodLabel,
+                          style: const TextStyle(
+                            color: AppColors.headerMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _revLoading ? '—' : _formatRs(_revPeriodTotal),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _isLoading
+                              ? ''
+                              : 'All time: ${_formatRs(_totalRevenue)}',
+                          style: const TextStyle(
+                            color: AppColors.mint,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      children: [
+                        _revToggle('Daily', _revDaily, () => _setRevMode(true)),
+                        _revToggle(
+                            'Monthly', !_revDaily, () => _setRevMode(false)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                height: 96,
+                child: _revLoading
+                    ? const Center(
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                              color: AppColors.mint, strokeWidth: 2),
+                        ),
+                      )
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: List.generate(_revBars.length, (i) {
+                          final isLast = i == _revBars.length - 1;
+                          final frac = maxBar <= 0 ? 0.0 : _revBars[i] / maxBar;
+                          return Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 4),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Container(
+                                    height: 10 + 62 * frac,
+                                    decoration: BoxDecoration(
+                                      color: isLast
+                                          ? AppColors.mint
+                                          : Colors.white.withOpacity(0.14),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _revLabels[i],
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: isLast
+                                          ? Colors.white
+                                          : AppColors.headerMuted,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _revToggle(String label, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: active ? AppColors.mint : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: active ? AppColors.header : Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Stats — same 3 numeric values.
+  Widget _buildStatsCard() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
-        color: primaryDark,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.header.withOpacity(0.10),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          // Hamburger — no permanent circle background.
-          // Circle only appears as a ripple while pressed.
-          Material(
-            color: Colors.transparent,
-            shape: const CircleBorder(),
-            child: InkWell(
-              onTap: () => _scaffoldKey.currentState?.openDrawer(),
-              customBorder: const CircleBorder(),
-              child: const Padding(
-                padding: EdgeInsets.all(6),
-                child: Icon(
-                  Icons.menu_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
+          _statCard(title: 'Doctors', value: '$_totalDoctors'),
+          _statDivider(),
+          _statCard(title: 'Patients', value: '$_totalPatients'),
+          _statDivider(),
+          _statCard(title: "Today's visits", value: '$_todayAppointments'),
+        ],
+      ),
+    );
+  }
+
+  Widget _statDivider() {
+    return Container(width: 1, height: 44, color: AppColors.divider);
+  }
+
+  Widget _statCard({
+    required String title,
+    required String value,
+  }) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: AppColors.text,
             ),
           ),
-
-          const SizedBox(width: 10),
-
-          // Logo mark — enlarged. The source asset has its own
-          // built-in white margin around the FWC mark, which was
-          // showing as a double ring alongside the container's white
-          // backing. Scaling the image up inside the clip crops that
-          // baked-in whitespace away so only the FWC circle shows.
-          Container(
-            width: 52,
-            height: 52,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: ClipOval(
-              child: Transform.scale(
-                scale: 1.6,
-                child: Image.asset(
-                  'assets/Logo.png',
-                  width: 52,
-                  height: 52,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(width: 12),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _adminName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-
-                const SizedBox(height: 2),
-
-                // Role tag — always "Admin" on this dashboard.
-                const Text(
-                  'Admin',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 2),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppColors.muted,
             ),
           ),
         ],
@@ -347,127 +623,134 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // Stat card — same 4 numeric values as before, re-styled to match
-  // the Patient dashboard's full-colour card look: the whole card is
-  // tinted with `cardColor`, and the icon sits in a small white chip
-  // on top instead of a white card with just a coloured icon chip.
-  Widget _statCard({
-    required String title,
-    required String value,
+  Widget _shortcutTile({
     required IconData icon,
-    required Color cardColor,
-    required Color iconColor,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    bool isLast = false,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(9),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          border: isLast
+              ? null
+              : const Border(bottom: BorderSide(color: AppColors.divider)),
+        ),
+        child: Row(
+          children: [
+            AppIconTile(icon: icon, color: color, size: 40),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.muted,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            alignment: Alignment.center,
-            child: Icon(
-              icon,
-              color: iconColor,
-              size: 16,
-            ),
-          ),
-
-          const Spacer(),
-
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A2F3A),
-            ),
-          ),
-
-          const SizedBox(height: 2),
-
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF5B6B76),
-            ),
-          ),
-        ],
+            const Icon(Icons.chevron_right_rounded,
+                color: AppColors.muted, size: 22),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: _selectedIndex,
-      onTap: (index) {
-        if (index == 1) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const ManageUsersScreen(),
-            ),
-          );
-        } else if (index == 2) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const AdminProfileScreen(),
-            ),
-          );
-        } else {
-          setState(() => _selectedIndex = index);
-        }
-      },
-      backgroundColor: Colors.white,
-      selectedItemColor: primaryColor,
-      unselectedItemColor: Colors.grey,
-      type: BottomNavigationBarType.fixed,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.people_outline),
-          label: 'Users',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          label: 'Profile',
-        ),
-      ],
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.divider)),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ManageUsersScreen(),
+              ),
+            );
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AdminProfileScreen(),
+              ),
+            );
+          } else {
+            setState(() => _selectedIndex = index);
+          }
+        },
+        elevation: 0,
+        backgroundColor: Colors.white,
+        selectedItemColor: AppColors.header,
+        unselectedItemColor: AppColors.faint,
+        selectedLabelStyle:
+            const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home_rounded),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_outline),
+            activeIcon: Icon(Icons.people_rounded),
+            label: 'Users',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
   }
 
-  // ── DRAWER — same items, same navigation, re-themed colors only ──
+  // ── DRAWER — same items, same navigation, grouped + re-styled ──
   Widget _buildDrawer() {
     return Drawer(
-      backgroundColor: primaryDark,
+      backgroundColor: AppColors.header,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.horizontal(right: Radius.circular(28)),
+      ),
       child: SafeArea(
         child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
               child: Row(
                 children: [
-                  // Hospital logo — enlarged, with a solid white
-                  // backing. The asset's own baked-in white margin is
-                  // cropped out with a scale-up inside the clip (same
-                  // fix as the header logo) so no double ring shows.
+                  // Hospital logo — same asset + crop as before
                   Container(
-                    width: 64,
-                    height: 64,
+                    width: 52,
+                    height: 52,
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
@@ -482,155 +765,219 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Family Well Care',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Family Well Care',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                      Text(
-                        'Hospital',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
+                        SizedBox(height: 2),
+                        Text(
+                          'Hospital · Admin panel',
+                          style: TextStyle(
+                            color: AppColors.headerMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-
-            const Divider(color: Colors.white24),
-
-            _drawerItem(
-              icon: Icons.dashboard_rounded,
-              title: 'Dashboard',
-              onTap: () => Navigator.pop(context),
-            ),
-
-            _drawerItem(
-              icon: Icons.business_rounded,
-              title: 'Manage Departments',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ManageDepartmentsScreen(),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  _drawerItem(
+                    icon: Icons.dashboard_rounded,
+                    title: 'Dashboard',
+                    selected: true,
+                    onTap: () => Navigator.pop(context),
                   ),
-                );
-              },
-            ),
-
-            _drawerItem(
-              icon: Icons.attach_money_rounded,
-              title: 'Manage Prices',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ManagePricesScreen(),
+                  _drawerSection('MANAGE'),
+                  _drawerItem(
+                    icon: Icons.business_rounded,
+                    title: 'Departments',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ManageDepartmentsScreen(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-
-            _drawerItem(
-              icon: Icons.bed_rounded,
-              title: 'Manage Rooms/Beds',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ManageRoomsScreen(),
+                  _drawerItem(
+                    icon: Icons.sell_outlined,
+                    title: 'Prices',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ManagePricesScreen(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-
-            _drawerItem(
-              icon: Icons.calendar_month_rounded,
-              title: 'View Appointments',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ViewAppointmentsScreen(),
+                  _drawerItem(
+                    icon: Icons.bed_rounded,
+                    title: 'Rooms & beds',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ManageRoomsScreen(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-
-            _drawerItem(
-              icon: Icons.biotech_rounded,
-              title: 'View Lab Test Summary',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ViewLabTestSummaryScreen(),
+                  _drawerSection('RECORDS'),
+                  _drawerItem(
+                    icon: Icons.calendar_month_rounded,
+                    title: 'Appointments',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ViewAppointmentsScreen(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-
-            _drawerItem(
-              icon: Icons.receipt_long_rounded,
-              title: 'View Billing Records',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ViewPaymentRecordsScreen(),
+                  _drawerItem(
+                    icon: Icons.biotech_rounded,
+                    title: 'Lab tests',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ViewLabTestSummaryScreen(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-
-            _drawerItem(
-              icon: Icons.bar_chart_rounded,
-              title: 'View Reports',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ReportsScreen(),
+                  _drawerItem(
+                    icon: Icons.receipt_long_rounded,
+                    title: 'Billing records',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ViewPaymentRecordsScreen(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-
-            _drawerItem(
-              icon: Icons.star_rounded,
-              title: 'View Feedback',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ViewFeedbackScreen(),
+                  _drawerSection('INSIGHTS'),
+                  _drawerItem(
+                    icon: Icons.bar_chart_rounded,
+                    title: 'Reports',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ReportsScreen(),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
+                  _drawerItem(
+                    icon: Icons.star_rounded,
+                    title: 'Feedback',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ViewFeedbackScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
             ),
-
-            const SizedBox(height: 10),
+            // Admin card (sirf naam dikhata hai)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: AppColors.mint,
+                    child: Text(
+                      _adminName.isNotEmpty ? _adminName[0].toUpperCase() : 'A',
+                      style: const TextStyle(
+                        color: AppColors.header,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _adminName,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const Text(
+                          'Admin',
+                          style: TextStyle(
+                            color: AppColors.headerMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _drawerSection(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 6),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: AppColors.headerLabel,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1,
         ),
       ),
     );
@@ -641,23 +988,43 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required String title,
     required VoidCallback onTap,
     bool isLogout = false,
+    bool selected = false,
   }) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: isLogout ? Colors.red[300] : Colors.white,
-        size: 22,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isLogout ? Colors.red[300] : Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
+    final Color fg = isLogout
+        ? const Color(0xFFFFB4A3)
+        : selected
+            ? AppColors.header
+            : Colors.white;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Material(
+        color: selected ? AppColors.mint : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: SizedBox(
+            height: 46,
+            child: Row(
+              children: [
+                const SizedBox(width: 12),
+                Icon(icon, color: fg, size: 21),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      color: fg,
+                      fontSize: 14,
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      onTap: onTap,
-      horizontalTitleGap: 8,
     );
   }
 }

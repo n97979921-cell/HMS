@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/app_ui.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -21,9 +22,6 @@ class FeedbackScreen extends StatefulWidget {
 }
 
 class _FeedbackScreenState extends State<FeedbackScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   int _rating = 0;
   final _commentController = TextEditingController();
   bool _isSubmitting = false;
@@ -65,7 +63,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Thank you for your feedback'),
-          backgroundColor: _primary,
+          backgroundColor: AppColors.teal,
           behavior: SnackBarBehavior.floating,
         ));
         Navigator.pop(context, true); // true = feedback submitted
@@ -79,7 +77,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -105,59 +103,34 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    _buildDoctorCard(),
-                    const SizedBox(height: 28),
-                    _buildRatingCard(),
-                    const SizedBox(height: 20),
-                    _buildCommentCard(),
-                  ],
-                ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+              child: Column(
+                children: [
+                  _buildDoctorCard(),
+                  const SizedBox(height: 20),
+                  _buildRatingCard(),
+                  const SizedBox(height: 12),
+                  _buildCommentCard(),
+                ],
               ),
             ),
-            _buildSubmitBar(),
-          ],
-        ),
+          ),
+          _buildSubmitBar(),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 14),
-          const Text('Give Feedback',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold)),
-        ],
-      ),
+    return AppHeader(
+      title: 'Give Feedback',
+      subtitle: widget.doctorName,
     );
   }
 
@@ -166,24 +139,26 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       children: [
         CircleAvatar(
           radius: 34,
-          backgroundColor: _primary.withOpacity(0.15),
+          backgroundColor: AppColors.tealSoft,
           child: Text(
             widget.doctorName.isNotEmpty
                 ? widget.doctorName[0].toUpperCase()
                 : '?',
             style: const TextStyle(
-                color: _primary, fontWeight: FontWeight.bold, fontSize: 26),
+                color: AppColors.teal,
+                fontWeight: FontWeight.w800,
+                fontSize: 26),
           ),
         ),
         const SizedBox(height: 12),
         Text(widget.doctorName,
             style: const TextStyle(
                 fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1A2F3A))),
+                fontWeight: FontWeight.w800,
+                color: AppColors.text)),
         const SizedBox(height: 2),
         Text(widget.specialization,
-            style: const TextStyle(fontSize: 13, color: Colors.black54)),
+            style: const TextStyle(fontSize: 13, color: AppColors.muted)),
       ],
     );
   }
@@ -194,22 +169,16 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         children: [
           const Text('How was your consultation?',
               style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A2F3A))),
-          const SizedBox(height: 16),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.text)),
+          const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(5, (i) {
@@ -219,11 +188,13 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: Icon(
-                    starIndex <= _rating ? Icons.star : Icons.star_border,
+                    starIndex <= _rating
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
                     color: starIndex <= _rating
-                        ? Colors.amber
-                        : Colors.grey.shade400,
-                    size: 38,
+                        ? const Color(0xFFF2B233)
+                        : const Color(0xFFC9D3D3),
+                    size: 42,
                   ),
                 ),
               );
@@ -233,8 +204,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           Text(_ratingLabel,
               style: TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: _rating == 0 ? Colors.grey : _primary)),
+                  fontWeight: FontWeight.w800,
+                  color: _rating == 0 ? AppColors.faint : AppColors.teal)),
         ],
       ),
     );
@@ -246,13 +217,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,19 +225,28 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           const Text('Additional comments (optional)',
               style: TextStyle(
                   fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A2F3A))),
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.text)),
           const SizedBox(height: 10),
           TextField(
             controller: _commentController,
             maxLines: 4,
             decoration: InputDecoration(
               hintText: 'Share your experience...',
+              hintStyle: const TextStyle(color: AppColors.faint),
               filled: true,
-              fillColor: const Color(0xFFF4F7F6),
+              fillColor: AppColors.bg,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: AppColors.teal, width: 1.5),
               ),
               contentPadding: const EdgeInsets.all(14),
             ),
@@ -284,23 +258,23 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   Widget _buildSubmitBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 18),
+      padding: EdgeInsets.fromLTRB(
+          20, 12, 20, 16 + MediaQuery.of(context).padding.bottom),
       decoration: const BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))
-        ],
+        border: Border(top: BorderSide(color: AppColors.divider)),
       ),
       child: SizedBox(
         width: double.infinity,
+        height: 50,
         child: ElevatedButton(
           onPressed: _isSubmitting ? null : _submitFeedback,
           style: ElevatedButton.styleFrom(
-            backgroundColor: _primary,
-            padding: const EdgeInsets.symmetric(vertical: 15),
+            backgroundColor: AppColors.header,
+            disabledBackgroundColor: AppColors.header.withOpacity(0.5),
+            elevation: 0,
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
           child: _isSubmitting
               ? const SizedBox(
@@ -313,7 +287,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: 15,
-                      fontWeight: FontWeight.w600)),
+                      fontWeight: FontWeight.w800)),
         ),
       ),
     );

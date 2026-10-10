@@ -33,7 +33,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   // Theme colors
   static const Color _navy = Color(0xFF1A2F5A);
-  static const Color _teal = Color(0xFF1F8A70);
+  static const Color _teal = Color(0xFF0E6E68);
   static const Color _bg = Color(0xFFF4F7F6);
 
   @override
@@ -81,7 +81,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Account created! Check your email to verify.'),
-            backgroundColor: Colors.green,
+            backgroundColor: Color(0xFF0E6E68),
             duration: Duration(seconds: 2),
           ),
         );
@@ -99,7 +99,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
         // FAILED — ab asal wajah dikhati hai, generic message nahi
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['error'] ?? 'Registration failed. Please try again.'),
+            content: Text(
+                result['error'] ?? 'Registration failed. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );

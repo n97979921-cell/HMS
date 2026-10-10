@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/notification_service.dart';
+import '../widgets/app_ui.dart';
 
 /// VERIFY PAYMENTS SCREEN (Receptionist) — Pending | Expired tabs
 ///
@@ -42,8 +43,7 @@ class VerifyPaymentsScreen extends StatefulWidget {
 }
 
 class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
+  static const Color _primary = Color(0xFF0B2E33);
 
   String _selectedTab = 'Pending'; // Pending | Expired
   bool _isLoading = true;
@@ -166,7 +166,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
               '$_autoExpired appointment(s) auto-cancelled (slot expired) — review payment in Expired tab'),
-          backgroundColor: const Color(0xFFB8860B),
+          backgroundColor: const Color(0xFF8A6D00),
           behavior: SnackBarBehavior.floating,
         ));
       }
@@ -469,7 +469,9 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Reject payment?'),
         content: const Text(
             'Use this if the screenshot is invalid or fake. The appointment '
@@ -483,7 +485,8 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
               Navigator.pop(context);
               _reject(payment);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB23A1E), elevation: 0),
             child: const Text('Reject', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -495,7 +498,9 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Verify but cancel?'),
         content: Text(
             'Use this if the payment is genuine but the doctor is not '
@@ -511,7 +516,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
               _verifyButCancel(payment);
             },
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFB8860B)),
+                backgroundColor: const Color(0xFF8A6D00)),
             child: const Text('Cancel & Refund',
                 style: TextStyle(color: Colors.white)),
           ),
@@ -524,7 +529,9 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Refund this payment?'),
         content: Text(
             'The slot already expired and the appointment was auto-cancelled. '
@@ -551,7 +558,9 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Reject this payment?'),
         content: const Text(
             'Use this if the screenshot is invalid or fake. No refund will '
@@ -565,7 +574,8 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
               Navigator.pop(context);
               _expiredReject(payment);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB23A1E), elevation: 0),
             child: const Text('Reject', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -577,7 +587,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -587,7 +597,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: _primary,
+      backgroundColor: AppColors.teal,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -633,79 +643,50 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
     final list = _selectedTab == 'Pending' ? _pending : _expired;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildTabToggle(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : list.isEmpty
-                      ? _buildEmpty()
-                      : RefreshIndicator(
-                          onRefresh: _loadAndProcess,
-                          color: _primary,
-                          child: ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
-                            itemCount: list.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 14),
-                            itemBuilder: (ctx, i) => _selectedTab == 'Pending'
-                                ? _pendingCard(list[i])
-                                : _expiredCard(list[i]),
-                          ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : list.isEmpty
+                    ? _buildEmpty()
+                    : RefreshIndicator(
+                        onRefresh: _loadAndProcess,
+                        color: AppColors.teal,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                          itemCount: list.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (ctx, i) => _selectedTab == 'Pending'
+                              ? _pendingCard(list[i])
+                              : _expiredCard(list[i]),
                         ),
-            ),
-          ],
-        ),
+                      ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 14),
-          const Text('Verify Payments',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold)),
-        ],
-      ),
+    return AppHeader(
+      title: 'Verify payments',
+      subtitle: 'Online payment screenshots',
+      bottom: _buildTabToggle(),
     );
   }
 
   Widget _buildTabToggle() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(18, 14, 18, 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)
-        ],
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
@@ -722,17 +703,17 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
       child: GestureDetector(
         onTap: () => setState(() => _selectedTab = label),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          height: 40,
           decoration: BoxDecoration(
-            color: isSelected ? _primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(26),
+            color: isSelected ? AppColors.mint : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
           child: Text(
             count > 0 ? '$label ($count)' : label,
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.grey,
-              fontWeight: FontWeight.w600,
+              color: isSelected ? AppColors.header : Colors.white,
+              fontWeight: FontWeight.w800,
               fontSize: 13,
             ),
           ),
@@ -743,20 +724,14 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
 
   Widget _buildEmpty() {
     final isPending = _selectedTab == 'Pending';
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(isPending ? Icons.check_circle_outline : Icons.history_outlined,
-              size: 64, color: _primary.withValues(alpha: 0.3)),
-          const SizedBox(height: 16),
-          Text(isPending ? 'No pending payments' : 'No expired payments',
-              style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF6B7280))),
-        ],
-      ),
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        AppEmptyState(
+          icon: isPending ? Icons.check_circle_outline : Icons.history_outlined,
+          title: isPending ? 'No pending payments' : 'No expired payments',
+        ),
+      ],
     );
   }
 
@@ -764,18 +739,28 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
     if (base64Img == null) return const SizedBox.shrink();
     return Align(
       alignment: Alignment.centerLeft,
-      child: ElevatedButton.icon(
-        onPressed: () => _viewScreenshot(base64Img),
-        icon: const Icon(Icons.remove_red_eye_outlined,
-            size: 16, color: Colors.white),
-        label: const Text('View Screenshot',
-            style: TextStyle(color: Colors.white, fontSize: 12)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _primary,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          elevation: 0,
+      child: Material(
+        color: AppColors.tealSoft,
+        borderRadius: BorderRadius.circular(999),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: () => _viewScreenshot(base64Img),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.remove_red_eye_outlined,
+                    size: 16, color: AppColors.teal),
+                SizedBox(width: 6),
+                Text('View Screenshot',
+                    style: TextStyle(
+                        color: AppColors.teal,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800)),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -786,16 +771,10 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -824,9 +803,9 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
               ),
               Text('Rs. ${p['amount']}',
                   style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: _primary)),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0B5E57))),
             ],
           ),
           if (p['transactionId'] != null) ...[
@@ -868,13 +847,13 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
                     onPressed: () => _confirmReject(p),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 11),
-                      side: const BorderSide(color: Color(0xFFD9534F)),
+                      side: const BorderSide(color: Color(0xFFF0C9BE)),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text('Reject',
                         style: TextStyle(
-                            color: Color(0xFFD9534F),
+                            color: Color(0xFF9A2E16),
                             fontWeight: FontWeight.w600)),
                   ),
                 ),
@@ -884,13 +863,13 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
                     onPressed: () => _confirmVerifyButCancel(p),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 11),
-                      side: const BorderSide(color: Color(0xFFB8860B)),
+                      side: const BorderSide(color: Color(0xFFE8D99C)),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text('Verify + Cancel',
                         style: TextStyle(
-                            color: Color(0xFFB8860B),
+                            color: Color(0xFF8A6D00),
                             fontWeight: FontWeight.w600,
                             fontSize: 13)),
                   ),
@@ -908,17 +887,11 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFCEFD8)),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF1E3B5), width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -926,14 +899,14 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFFFCEFD8),
-              borderRadius: BorderRadius.circular(6),
+              color: const Color(0xFFF6F2E2),
+              borderRadius: BorderRadius.circular(999),
             ),
             child: const Text('SLOT EXPIRED — appointment auto-cancelled',
                 style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFB8860B))),
+                    color: Color(0xFF8A6D00))),
           ),
           const SizedBox(height: 10),
           Row(
@@ -956,9 +929,9 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
               ),
               Text('Rs. ${p['amount']}',
                   style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: _primary)),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0B5E57))),
             ],
           ),
           const SizedBox(height: 12),
@@ -979,13 +952,13 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
                     onPressed: () => _confirmExpiredReject(p),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: Color(0xFFD9534F)),
+                      side: const BorderSide(color: Color(0xFFF0C9BE)),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text('Reject (no refund)',
                         style: TextStyle(
-                            color: Color(0xFFD9534F),
+                            color: Color(0xFF9A2E16),
                             fontWeight: FontWeight.w600,
                             fontSize: 12)),
                   ),

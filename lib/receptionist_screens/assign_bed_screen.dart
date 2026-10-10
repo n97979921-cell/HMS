@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/app_ui.dart';
 
 /// ASSIGN BED (Receptionist)
 ///
@@ -23,20 +24,19 @@ class AssignBedScreen extends StatefulWidget {
 }
 
 class _AssignBedScreenState extends State<AssignBedScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
+  static const Color _primary = Color(0xFF0B2E33);
 
   static const List<Map<String, dynamic>> _roomTypes = [
     {
       'type': 'ICU',
       'icon': Icons.monitor_heart_outlined,
-      'color': Color(0xFFD9534F)
+      'color': Color(0xFF9A2E16)
     },
-    {'type': 'General', 'icon': Icons.bed_outlined, 'color': Color(0xFF1F8A70)},
+    {'type': 'General', 'icon': Icons.bed_outlined, 'color': Color(0xFF0E6E68)},
     {
       'type': 'Private',
       'icon': Icons.king_bed_outlined,
-      'color': Color(0xFF1565C0)
+      'color': Color(0xFF1D4F91)
     },
   ];
 
@@ -96,13 +96,16 @@ class _AssignBedScreenState extends State<AssignBedScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Assign this bed?'),
         content: Text(
             'Room ${bed['roomNumber']} — Bed ${bed['bedNumber']} — Rs. ${bed['pricePerHour']}/hour\n\n'
             'Patient: ${widget.patientName}'),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.muted),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
@@ -154,7 +157,7 @@ class _AssignBedScreenState extends State<AssignBedScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -164,7 +167,7 @@ class _AssignBedScreenState extends State<AssignBedScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: _primary,
+      backgroundColor: AppColors.teal,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -173,188 +176,217 @@ class _AssignBedScreenState extends State<AssignBedScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Patient: ${widget.patientName}',
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A2F3A))),
-                    const SizedBox(height: 18),
-                    const Text('Select room type',
-                        style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A2F3A))),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: _roomTypes.map((rt) {
-                        final isSel = _selectedType == rt['type'];
-                        return Expanded(
-                          child: GestureDetector(
-                            onTap: () => _loadBeds(rt['type']),
-                            child: Container(
-                              margin: const EdgeInsets.only(right: 8),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              decoration: BoxDecoration(
-                                color: isSel ? rt['color'] : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                      color:
-                                          Colors.black.withValues(alpha: 0.04),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 2))
-                                ],
-                              ),
-                              child: Column(
-                                children: [
-                                  Icon(rt['icon'],
-                                      color: isSel ? Colors.white : rt['color'],
-                                      size: 22),
-                                  const SizedBox(height: 6),
-                                  Text(rt['type'],
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: isSel
-                                              ? Colors.white
-                                              : const Color(0xFF1A2F3A))),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 20),
-                    if (_selectedType != null) ...[
-                      Text('Available beds — $_selectedType',
-                          style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A2F3A))),
-                      const SizedBox(height: 10),
-                      _isLoadingBeds
-                          ? const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(20),
-                                child:
-                                    CircularProgressIndicator(color: _primary),
-                              ),
-                            )
-                          : _availableBeds.isEmpty
-                              ? const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 20),
-                                  child: Text(
-                                      'No available beds of this type right now.',
-                                      style: TextStyle(color: Colors.grey)),
-                                )
-                              : Column(
-                                  children: _availableBeds.map((bed) {
-                                    return Container(
-                                      margin: const EdgeInsets.only(bottom: 10),
-                                      padding: const EdgeInsets.all(14),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(14),
-                                        boxShadow: [
-                                          BoxShadow(
-                                              color: Colors.black
-                                                  .withValues(alpha: 0.04),
-                                              blurRadius: 6,
-                                              offset: const Offset(0, 2))
-                                        ],
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                    'Room ${bed['roomNumber']} — Bed ${bed['bedNumber']}',
-                                                    style: const TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                        color:
-                                                            Color(0xFF1A2F3A))),
-                                                Text(
-                                                    'Rs. ${bed['pricePerHour']}/hour',
-                                                    style: const TextStyle(
-                                                        fontSize: 12,
-                                                        color: Colors.grey)),
-                                              ],
-                                            ),
-                                          ),
-                                          ElevatedButton(
-                                            onPressed: _isAssigning
-                                                ? null
-                                                : () => _assignBed(bed),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: _primary,
-                                              shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          10)),
-                                            ),
-                                            child: const Text('Assign',
-                                                style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 12)),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _sectionLabel('SELECT ROOM TYPE'),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      for (int i = 0; i < _roomTypes.length; i++) ...[
+                        if (i > 0) const SizedBox(width: 10),
+                        Expanded(child: _roomTypeTile(_roomTypes[i])),
+                      ],
                     ],
+                  ),
+                  const SizedBox(height: 20),
+                  if (_selectedType != null) ...[
+                    _sectionLabel(
+                        'AVAILABLE BEDS — ${_selectedType!.toUpperCase()}'),
+                    const SizedBox(height: 10),
+                    _isLoadingBeds
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20),
+                              child: CircularProgressIndicator(
+                                  color: AppColors.teal),
+                            ),
+                          )
+                        : _availableBeds.isEmpty
+                            ? Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 22, horizontal: 16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: const Text(
+                                  'No available beds of this type right now.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      fontSize: 13, color: AppColors.faint),
+                                ),
+                              )
+                            : Column(
+                                children: _availableBeds
+                                    .map((bed) => _bedCard(bed))
+                                    .toList(),
+                              ),
                   ],
-                ),
+                ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Text(text,
+        style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.8,
+            color: AppColors.muted));
+  }
+
+  Widget _roomTypeTile(Map<String, dynamic> rt) {
+    final isSel = _selectedType == rt['type'];
+    final Color c = rt['color'];
+    return GestureDetector(
+      onTap: () => _loadBeds(rt['type']),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        height: 84,
+        decoration: BoxDecoration(
+          color: isSel ? c : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: isSel
+                    ? Colors.white.withOpacity(0.18)
+                    : c.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child:
+                  Icon(rt['icon'], color: isSel ? Colors.white : c, size: 20),
+            ),
+            const SizedBox(height: 6),
+            Text(rt['type'],
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: isSel ? Colors.white : AppColors.text)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _bedCard(Map<String, dynamic> bed) {
     return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Room ${bed['roomNumber']} — Bed ${bed['bedNumber']}',
+                    style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.text)),
+                const SizedBox(height: 2),
+                Text('Rs. ${bed['pricePerHour']}/hour',
+                    style:
+                        const TextStyle(fontSize: 12, color: AppColors.muted)),
+              ],
             ),
           ),
-          const SizedBox(width: 14),
-          const Text('Assign Bed',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold)),
+          ElevatedButton(
+            onPressed: _isAssigning ? null : () => _assignBed(bed),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.header,
+              disabledBackgroundColor: AppColors.header.withOpacity(0.5),
+              elevation: 0,
+              minimumSize: const Size(0, 38),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Assign',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800)),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    final name = widget.patientName;
+    return AppHeader(
+      title: 'Assign Bed',
+      subtitle: 'Pick a room type and bed',
+      bottom: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.07),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: AppColors.mint,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : 'P',
+                style: const TextStyle(
+                    color: AppColors.header,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Patient',
+                      style: TextStyle(
+                          color: AppColors.headerMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700)),
+                  Text(name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

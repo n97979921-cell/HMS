@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../widgets/app_ui.dart';
+import 'reports_screen.dart';
 
 // Content-only widget for the Lab Summary tab — no Scaffold/AppBar
 // of its own, since it lives inside ReportsScreen's TabBarView.
@@ -13,8 +15,8 @@ class LabSummaryTab extends StatefulWidget {
 
 class _LabSummaryTabState extends State<LabSummaryTab> {
   // Theme colors — matched to Admin Dashboard's green palette
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _bg = Color(0xFFF4F7F6);
+  static const Color _primary = Color(0xFF0E6E68);
+  static const Color _bg = Color(0xFFF2F5F5);
 
   DateTime _selectedMonth = DateTime.now();
   bool _isLoading = true;
@@ -97,7 +99,7 @@ class _LabSummaryTabState extends State<LabSummaryTab> {
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -150,31 +152,23 @@ class _LabSummaryTabState extends State<LabSummaryTab> {
       color: _bg,
       child: Column(
         children: [
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          // Month navigation (dark strip)
+          ReportsHeaderStrip(
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                IconButton(
-                  onPressed: _canGoPrevious() ? () => _navigate(-1) : null,
-                  icon: Icon(Icons.chevron_left_rounded,
-                      color: _canGoPrevious()
-                          ? _primary
-                          : const Color(0xFFD1D5DB)),
-                ),
-                Text(
-                  DateFormat('MMMM yyyy').format(_selectedMonth),
-                  style: const TextStyle(
-                    fontSize: 14,
+                const Text(
+                  'Month by month',
+                  style: TextStyle(
+                    color: AppColors.headerMuted,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
                   ),
                 ),
-                IconButton(
-                  onPressed: _canGoNext() ? () => _navigate(1) : null,
-                  icon: Icon(Icons.chevron_right_rounded,
-                      color: _canGoNext() ? _primary : const Color(0xFFD1D5DB)),
+                const Spacer(),
+                ReportsDateNav(
+                  label: DateFormat('MMMM yyyy').format(_selectedMonth),
+                  onPrev: _canGoPrevious() ? () => _navigate(-1) : null,
+                  onNext: _canGoNext() ? () => _navigate(1) : null,
                 ),
               ],
             ),
@@ -182,68 +176,48 @@ class _LabSummaryTabState extends State<LabSummaryTab> {
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(color: _primary))
+                    child: CircularProgressIndicator(color: AppColors.teal))
                 : RefreshIndicator(
                     onRefresh: _loadSummary,
-                    color: _primary,
+                    color: AppColors.teal,
                     child: ListView(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                       children: [
+                        // Total tests | Lab revenue
                         Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: _primary,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Column(
-                            children: [
-                              const Text(
-                                'TOTAL TESTS',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white70,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '$total',
-                                style: const TextStyle(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Revenue: Rs. $revenue',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'BY STATUS',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF6B7280),
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFE5E7EB)),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: IntrinsicHeight(
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _metric('Total tests', '$total'),
+                                ),
+                                Container(
+                                  width: 1,
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 12),
+                                  color: AppColors.divider,
+                                ),
+                                Expanded(
+                                  child: _metric('Lab revenue', 'Rs $revenue'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        _sectionLabel('BY STATUS'),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Column(
                             children: [
@@ -251,120 +225,104 @@ class _LabSummaryTabState extends State<LabSummaryTab> {
                                 label: 'Completed',
                                 count: completed,
                                 percentage: _pct(completed, total),
-                                color: const Color(0xFF0F9D58),
-                                icon: Icons.check_circle_outline_rounded,
+                                color: const Color(0xFF0B5E57),
                               ),
                               const Divider(
-                                  height: 20, color: Color(0xFFF0F0F0)),
+                                  height: 1, color: AppColors.divider),
                               _StatusRow(
                                 label: 'Pending',
                                 count: pending,
                                 percentage: _pct(pending, total),
-                                color: const Color(0xFFF4B400),
-                                icon: Icons.hourglass_empty_rounded,
+                                color: const Color(0xFFC9A400),
                               ),
                               const Divider(
-                                  height: 20, color: Color(0xFFF0F0F0)),
+                                  height: 1, color: AppColors.divider),
                               _StatusRow(
-                                label: 'In Progress',
+                                label: 'In progress',
                                 count: inProgress,
                                 percentage: _pct(inProgress, total),
-                                color: const Color(0xFF1A73E8),
-                                icon: Icons.science_outlined,
+                                color: const Color(0xFF1D4F91),
                               ),
                               const Divider(
-                                  height: 20, color: Color(0xFFF0F0F0)),
+                                  height: 1, color: AppColors.divider),
                               _StatusRow(
                                 label: 'Cancelled',
                                 count: cancelled,
                                 percentage: _pct(cancelled, total),
-                                color: const Color(0xFFDB4437),
-                                icon: Icons.cancel_outlined,
+                                color: const Color(0xFF9A2E16),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'BY TEST TYPE',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF6B7280),
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 18),
+                        _sectionLabel('BY TEST TYPE'),
+                        const SizedBox(height: 10),
                         if (byTestType.isEmpty)
                           Container(
-                            padding: const EdgeInsets.all(20),
+                            padding: const EdgeInsets.all(22),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border:
-                                  Border.all(color: const Color(0xFFE5E7EB)),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Center(
                               child: Text(
                                 'No lab tests this month',
                                 style: TextStyle(
-                                    fontSize: 13, color: Color(0xFF9CA3AF)),
+                                    fontSize: 13, color: AppColors.faint),
                               ),
                             ),
                           )
                         else
                           Container(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border:
-                                  Border.all(color: const Color(0xFFE5E7EB)),
+                              borderRadius: BorderRadius.circular(20),
                             ),
                             child: Column(
                               children: byTestType.map((entry) {
                                 final isLast = entry == byTestType.last;
-                                return Column(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16, vertical: 12),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            entry.key,
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF1A1A2E),
-                                            ),
+                                return Container(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 13),
+                                  decoration: BoxDecoration(
+                                    border: isLast
+                                        ? null
+                                        : const Border(
+                                            bottom: BorderSide(
+                                                color: AppColors.divider)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          entry.key,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.text,
                                           ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: _primary.withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            ),
-                                            child: Text(
-                                              '${entry.value}',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w700,
-                                                color: _primary,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
+                                        ),
                                       ),
-                                    ),
-                                    if (!isLast)
-                                      const Divider(
-                                          height: 1, color: Color(0xFFF0F0F0)),
-                                  ],
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.tealSoft,
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                        ),
+                                        child: Text(
+                                          '${entry.value}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppColors.teal,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 );
                               }).toList(),
                             ),
@@ -377,6 +335,45 @@ class _LabSummaryTabState extends State<LabSummaryTab> {
       ),
     );
   }
+
+  Widget _metric(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppColors.muted,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: AppColors.text,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectionLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.8,
+        color: AppColors.muted,
+      ),
+    );
+  }
 }
 
 class _StatusRow extends StatelessWidget {
@@ -384,50 +381,59 @@ class _StatusRow extends StatelessWidget {
   final int count;
   final String percentage;
   final Color color;
-  final IconData icon;
 
   const _StatusRow({
     required this.label,
     required this.count,
     required this.percentage,
     required this.color,
-    required this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: color),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1A1A2E),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 13),
+      child: Row(
+        children: [
+          Container(
+            width: 9,
+            height: 9,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.text,
+              ),
             ),
           ),
-        ),
-        Text(
-          '$count',
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A2E),
+          Text(
+            '$count',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: AppColors.text,
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          percentage,
-          style: TextStyle(
-            fontSize: 12,
-            color: color,
-            fontWeight: FontWeight.w600,
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 36,
+            child: Text(
+              percentage,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

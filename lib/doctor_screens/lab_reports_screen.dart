@@ -1,5 +1,6 @@
 // lib/doctor_screens/lab_reports_screen.dart
 import 'package:flutter/material.dart';
+import '../widgets/app_ui.dart';
 import 'doctor_repository.dart';
 import 'lab_test_status.dart';
 import 'lab_test_list_item.dart';
@@ -7,15 +8,11 @@ import 'report_detail_screen.dart';
 import 'doctor_profile_screen.dart';
 
 class _LabColors {
-  static const primary = Color(0xFF1F8A70);
-  static const primaryDark = Color(0xFF0D6B5A);
-  static const background = Color(0xFFF5F7F8);
-  static const cardBackground = Colors.white;
-  static const textMuted = Color(0xFF8A8A8A);
-  static const pending = Color(0xFFB98900);
-  static const inProgress = Color(0xFF2D6BE0);
-  static const completed = Color(0xFF1F8A70);
-  static const error = Color(0xFFD64545);
+  static const pending = Color(0xFF8A6D00);
+  static const confirmed = Color(0xFF5B3FA8);
+  static const inProgress = Color(0xFF1D4F91);
+  static const completed = Color(0xFF0B5E57);
+  static const error = Color(0xFF9A2E16);
 }
 
 class LabReportsScreen extends StatefulWidget {
@@ -82,7 +79,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
       case LabTestStatus.pending:
         return _LabColors.pending;
       case LabTestStatus.confirmed:
-        return const Color(0xFF7E57C2);
+        return _LabColors.confirmed;
       case LabTestStatus.inProgress:
         return _LabColors.inProgress;
       case LabTestStatus.completed:
@@ -95,59 +92,22 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _LabColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildFilterTabs(),
-            Expanded(child: _buildBody()),
-          ],
-        ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(child: _buildBody()),
+        ],
       ),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_LabColors.primary, _LabColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Lab Reports',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
+    return AppHeader(
+      title: 'Lab Reports',
+      subtitle: 'Tests you requested',
+      bottom: _buildFilterTabs(),
     );
   }
 
@@ -160,46 +120,41 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
       'Cancelled': 'cancelled',
     };
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6)
-        ],
-      ),
-      // Horizontal scroll — tabs ab chipakte nahi, agar width kam pare to swipe ho jate hain
-      child: SingleChildScrollView(
+    return SizedBox(
+      height: 36,
+      child: ListView(
         scrollDirection: Axis.horizontal,
-        child: Row(
-          children: filters.entries.map((entry) {
-            final isSelected = _selectedFilter == entry.value;
-            return GestureDetector(
+        children: filters.entries.map((entry) {
+          final isSelected = _selectedFilter == entry.value;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
               onTap: () => _changeFilter(entry.value),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                padding:
-                    const EdgeInsets.symmetric(vertical: 10, horizontal: 18),
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
                 decoration: BoxDecoration(
-                  color: isSelected ? _LabColors.primary : Colors.transparent,
-                  borderRadius: BorderRadius.circular(26),
+                  color: isSelected
+                      ? AppColors.mint
+                      : Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(999),
+                  border: isSelected
+                      ? null
+                      : Border.all(color: Colors.white.withOpacity(0.16)),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   entry.key,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : _LabColors.textMuted,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12,
+                    color: isSelected ? AppColors.header : Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
                   ),
                 ),
               ),
-            );
-          }).toList(),
-        ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -207,7 +162,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-          child: CircularProgressIndicator(color: _LabColors.primary));
+          child: CircularProgressIndicator(color: AppColors.teal));
     }
     if (_errorMessage != null) {
       return Center(
@@ -217,16 +172,16 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.error_outline,
-                  color: _LabColors.error, size: 40),
+                  color: AppColors.danger, size: 40),
               const SizedBox(height: 12),
               Text(_errorMessage!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: _LabColors.textMuted)),
+                  style: const TextStyle(color: AppColors.muted)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadReports,
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: _LabColors.primary),
+                    backgroundColor: AppColors.header, elevation: 0),
                 child:
                     const Text('Retry', style: TextStyle(color: Colors.white)),
               ),
@@ -236,16 +191,19 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
       );
     }
     if (_reports.isEmpty) {
-      return const Center(
-        child: Text('No lab reports found',
-            style: TextStyle(color: _LabColors.textMuted)),
+      return const SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: AppEmptyState(
+          icon: Icons.science_outlined,
+          title: 'No lab reports found',
+        ),
       );
     }
     return RefreshIndicator(
       onRefresh: _loadReports,
-      color: _LabColors.primary,
+      color: AppColors.teal,
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         itemCount: _reports.length,
         itemBuilder: (context, index) => _reportCard(_reports[index]),
       ),
@@ -260,40 +218,47 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _LabColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2))
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
         children: [
+          const AppIconTile(
+            icon: Icons.science_outlined,
+            color: AppColors.blue,
+            background: AppColors.blueSoft,
+            size: 44,
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(item.patientName,
                     style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 15)),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: AppColors.text)),
                 const SizedBox(height: 2),
                 Text(item.testType,
                     style: const TextStyle(
-                        color: _LabColors.textMuted, fontSize: 13)),
+                        color: AppColors.muted, fontSize: 12.5)),
                 if (item.status == LabTestStatus.cancelled &&
                     item.cancelReason != null) ...[
                   const SizedBox(height: 2),
                   Text('Reason: ${item.cancelReason}',
-                      style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                      style: const TextStyle(
+                          color: Color(0xFF9A2E16),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600)),
                 ],
               ],
             ),
           ),
+          const SizedBox(width: 8),
           if (isCompleted)
-            ElevatedButton.icon(
-              onPressed: () => Navigator.push(
+            GestureDetector(
+              onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => ReportDetailScreen(
@@ -302,29 +267,32 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                   ),
                 ),
               ),
-              icon: const Icon(Icons.remove_red_eye_outlined,
-                  size: 16, color: Colors.white),
-              label: const Text('View',
-                  style: TextStyle(color: Colors.white, fontSize: 12)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: color,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20)),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Container(
+                height: 34,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.teal,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.remove_red_eye_outlined,
+                        size: 15, color: Colors.white),
+                    SizedBox(width: 5),
+                    Text('View',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800)),
+                  ],
+                ),
               ),
             )
           else
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20)),
-              child: Text(
-                item.status.label,
-                style: TextStyle(
-                    color: color, fontSize: 12, fontWeight: FontWeight.w600),
-              ),
+            AppStatusChip(
+              label: item.status.label,
+              colors: AppChipColors(color, color.withOpacity(0.1)),
             ),
         ],
       ),
@@ -332,34 +300,49 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
   }
 
   Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: _bottomNavIndex,
-      selectedItemColor: _LabColors.primary,
-      unselectedItemColor: _LabColors.textMuted,
-      type: BottomNavigationBarType.fixed,
-      onTap: (index) {
-        if (index == 0) {
-          Navigator.pop(context);
-        } else if (index == 2) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => DoctorProfileScreen(
-                repository: widget.repository,
-                doctorId: widget.doctorId,
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.divider)),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _bottomNavIndex,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        selectedItemColor: AppColors.header,
+        unselectedItemColor: AppColors.faint,
+        selectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        type: BottomNavigationBarType.fixed,
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.pop(context);
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DoctorProfileScreen(
+                  repository: widget.repository,
+                  doctorId: widget.doctorId,
+                ),
               ),
-            ),
-          );
-        }
-        // index == 1 → already yahin hain, kuch mat karo
-      },
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.science_outlined), label: 'Lab Reports'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline), label: 'Profile'),
-      ],
+            );
+          }
+          // index == 1 → already yahin hain, kuch mat karo
+        },
+        items: const [
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined), label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.science_outlined),
+              activeIcon: Icon(Icons.science),
+              label: 'Lab Reports'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline), label: 'Profile'),
+        ],
+      ),
     );
   }
 }

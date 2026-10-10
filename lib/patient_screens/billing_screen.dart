@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'bill_detail_screen.dart';
+import '../widgets/app_ui.dart';
 
 ///  REAL-TIME (Rule 2): Data `payments` + `appointments` + `users` +
 /// `departments` + `slots` se milkar banta hai, is liye poori screen
@@ -31,9 +32,6 @@ class BillingScreen extends StatefulWidget {
 }
 
 class _BillingScreenState extends State<BillingScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   bool _isLoading = true;
   List<Map<String, dynamic>> _groups = [];
 
@@ -184,7 +182,7 @@ class _BillingScreenState extends State<BillingScreen> {
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -194,7 +192,7 @@ class _BillingScreenState extends State<BillingScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: _primary,
+      backgroundColor: AppColors.teal,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -250,109 +248,138 @@ class _BillingScreenState extends State<BillingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            if (!_isLoading && _hasAnyPaidBill) _buildDeleteAllBar(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : _groups.isEmpty
-                      ? _buildEmptyState()
-                      : RefreshIndicator(
-                          onRefresh: _loadBills,
-                          color: _primary,
-                          child: ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                            itemCount: _groups.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (ctx, i) => _apptCard(_groups[i]),
-                          ),
-                        ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
+      backgroundColor: AppColors.bg,
+      body: Column(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
+          _buildHeader(),
+          if (!_isLoading && _hasAnyPaidBill) _buildDeleteAllBar(),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : _groups.isEmpty
+                    ? _buildEmptyState()
+                    : RefreshIndicator(
+                        onRefresh: _loadBills,
+                        color: AppColors.teal,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                              20, _hasAnyPaidBill ? 4 : 16, 20, 24),
+                          itemCount: _groups.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (ctx, i) => _apptCard(_groups[i]),
+                        ),
+                      ),
           ),
-          const SizedBox(width: 14),
-          const Text('Billing',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  // "Delete All" bar — sirf jab kam-se-kam ek Paid bill ho. Koi
-  // confirmation dialog nahi — seedha tap par saare currently-Paid
-  // bills ke payment records permanent delete ho jaate hain.
+  // UI only: header summary list se hi calculate hota hai
+  num get _totalPaid => _groups.fold<num>(0, (sum, g) {
+        final v = g['total'];
+        return sum + (v is num ? v : 0);
+      });
+
+  int get _pendingCount => _groups.where((g) => g['hasPending'] == true).length;
+
+  Widget _buildHeader() {
+    return AppHeader(
+      title: 'Billing',
+      subtitle: 'Payments & dues',
+      bottom: _isLoading
+          ? null
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Total paid',
+                          style: TextStyle(
+                              color: AppColors.headerMuted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 2),
+                      Text('Rs. $_totalPaid',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800)),
+                    ],
+                  ),
+                ),
+                if (_pendingCount > 0)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.star.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text('$_pendingCount pending',
+                        style: const TextStyle(
+                            color: AppColors.star,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800)),
+                  ),
+              ],
+            ),
+    );
+  }
+
+  // "Delete All Paid" — same action, bina confirmation (pehle jaisa)
   Widget _buildDeleteAllBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
       child: Align(
         alignment: Alignment.centerRight,
-        child: TextButton.icon(
-          onPressed: _deleteAllPaidBills,
-          icon: const Icon(Icons.delete_sweep_outlined,
-              size: 18, color: Color(0xFFD9534F)),
-          label: const Text('Delete All Paid',
-              style: TextStyle(
-                  color: Color(0xFFD9534F),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600)),
+        child: GestureDetector(
+          onTap: _deleteAllPaidBills,
+          child: Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: AppColors.dangerSoft,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.delete_sweep_outlined,
+                    size: 16, color: AppColors.danger),
+                SizedBox(width: 6),
+                Text('Delete All Paid',
+                    style: TextStyle(
+                        color: AppColors.danger,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800)),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.receipt_long_outlined,
-              size: 64, color: _primary.withOpacity(0.3)),
-          const SizedBox(height: 16),
-          const Text('No bills yet',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF6B7280))),
-        ],
+    return const SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
+      child: AppEmptyState(
+        icon: Icons.receipt_long_outlined,
+        title: 'No bills yet',
       ),
     );
   }
 
   Widget _apptCard(Map<String, dynamic> group) {
     final hasPending = group['hasPending'] as bool;
+    final count = (group['payments'] as List).length;
+    final String date = group['dateLabel'].isEmpty ? '' : group['dateLabel'];
 
     return GestureDetector(
       onTap: () {
@@ -366,22 +393,16 @@ class _BillingScreenState extends State<BillingScreen> {
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
-          ],
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Column(
@@ -390,70 +411,64 @@ class _BillingScreenState extends State<BillingScreen> {
                       Text(group['doctorName'],
                           style: const TextStyle(
                               fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A2F3A))),
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.text)),
                       const SizedBox(height: 2),
-                      Text(group['department'],
+                      Text(
+                          date.isEmpty
+                              ? '${group['department']}'
+                              : '${group['department']} · $date',
                           style: const TextStyle(
-                              fontSize: 12, color: Colors.black54)),
+                              fontSize: 12, color: AppColors.muted)),
                     ],
                   ),
                 ),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: hasPending
-                            ? const Color(0xFFFCEFD8)
-                            : const Color(0xFFDCEFE9),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        hasPending ? 'Pending' : 'Paid',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: hasPending
-                                ? const Color(0xFFB8860B)
-                                : const Color(0xFF1F8A70)),
-                      ),
-                    ),
-                    // Individual delete — sirf Paid bills par (Pending
-                    // par nahi, wo abhi collect/verify hona baaki hai).
-                    if (!hasPending)
-                      IconButton(
-                        onPressed: () => _deleteBill(group),
-                        icon: const Icon(Icons.delete_outline,
-                            color: Color(0xFFD9534F), size: 20),
-                        tooltip: 'Delete',
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                  ],
+                const SizedBox(width: 8),
+                AppStatusChip(
+                  label: hasPending ? 'Pending' : 'Paid',
+                  colors: hasPending
+                      ? const AppChipColors(
+                          Color(0xFF8A6D00), Color(0xFFF6F2E2))
+                      : const AppChipColors(
+                          Color(0xFF0B5E57), Color(0xFFDDF3EE)),
                 ),
+                // Individual delete — sirf Paid bills par
+                if (!hasPending) ...[
+                  const SizedBox(width: 6),
+                  AppDeleteButton(
+                    onTap: () => _deleteBill(group),
+                    size: 30,
+                  ),
+                ],
               ],
             ),
-            const SizedBox(height: 6),
-            Text(group['dateLabel'].isEmpty ? '' : group['dateLabel'],
-                style: const TextStyle(fontSize: 12, color: Colors.grey)),
-            const SizedBox(height: 10),
-            const Divider(height: 1),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                    '${(group['payments'] as List).length} bill${(group['payments'] as List).length == 1 ? '' : 's'}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                Text('Rs. ${group['total']}',
-                    style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A2F3A))),
-              ],
+            const SizedBox(height: 12),
+            Container(
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppColors.bg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text('$count bill${count == 1 ? '' : 's'}',
+                        style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.muted)),
+                  ),
+                  Text('Rs. ${group['total']}',
+                      style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0B5E57))),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_right_rounded,
+                      size: 18, color: AppColors.faint),
+                ],
+              ),
             ),
           ],
         ),

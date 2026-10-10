@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/app_ui.dart';
 
 /// SCHEMA COMPLIANCE:
 /// - prescription_medicines where prescriptionId == given ID
@@ -25,9 +26,6 @@ class PrescriptionDetailScreen extends StatefulWidget {
 }
 
 class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   bool _isLoading = true;
   List<Map<String, dynamic>> _medicines = [];
 
@@ -57,68 +55,66 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDoctorCard(),
-                          const SizedBox(height: 20),
-                          const Text('Medicines',
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A2F3A))),
-                          const SizedBox(height: 10),
-                          if (_medicines.isEmpty)
-                            const Text('No medicines in this prescription.',
-                                style: TextStyle(color: Colors.grey))
-                          else
-                            ..._medicines.map(_medicineCard),
-                        ],
-                      ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDoctorCard(),
+                        const SizedBox(height: 20),
+                        const Text('MEDICINES',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                                color: AppColors.muted)),
+                        const SizedBox(height: 10),
+                        if (_medicines.isEmpty)
+                          const AppEmptyState(
+                            icon: Icons.medication_outlined,
+                            title: 'No medicines in this prescription.',
+                          )
+                        else
+                          ..._medicines.map(_medicineCard),
+                      ],
                     ),
-            ),
-          ],
-        ),
+                  ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
+    return AppHeader(
+      title: 'Prescription detail',
+      subtitle: widget.dateLabel,
+    );
+  }
+
+  Widget _pill(IconData icon, String text, Color fg, Color bg) {
     return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 14),
-          const Text('Prescription detail',
+          Icon(icon, size: 13, color: fg),
+          const SizedBox(width: 5),
+          Text(text,
               style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold)),
+                  fontSize: 12, fontWeight: FontWeight.w800, color: fg)),
         ],
       ),
     );
@@ -130,39 +126,28 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(widget.doctorName,
               style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A2F3A))),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.text)),
           const SizedBox(height: 2),
           Text(widget.specialization,
-              style: const TextStyle(fontSize: 12, color: Colors.black54)),
+              style: const TextStyle(fontSize: 12, color: AppColors.muted)),
           const SizedBox(height: 10),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
             children: [
-              const Icon(Icons.calendar_today_outlined,
-                  size: 13, color: Colors.grey),
-              const SizedBox(width: 6),
-              Text(widget.dateLabel,
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              const SizedBox(width: 14),
-              const Icon(Icons.medication_outlined,
-                  size: 13, color: Colors.grey),
-              const SizedBox(width: 6),
-              Text('${_medicines.length} medicines',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+              _pill(Icons.calendar_today_outlined, widget.dateLabel,
+                  AppColors.muted, AppColors.bg),
+              _pill(Icons.medication_outlined, '${_medicines.length} medicines',
+                  AppColors.blue, AppColors.blueSoft),
             ],
           ),
         ],
@@ -174,61 +159,80 @@ class _PrescriptionDetailScreenState extends State<PrescriptionDetailScreen> {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(med['medicineName'] ?? '',
               style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A2F3A))),
-          const SizedBox(height: 8),
-          _detailRow(
-              Icons.medication_liquid_outlined, 'Dosage', med['dosage'] ?? '—'),
-          const SizedBox(height: 4),
-          _detailRow(
-              Icons.schedule_outlined, 'Frequency', med['frequency'] ?? '—'),
-          if (med['instructions'] != null &&
-              med['instructions'].toString().isNotEmpty) ...[
-            const SizedBox(height: 4),
-            _detailRow(Icons.info_outline, 'Instructions',
-                med['instructions'].toString()),
-          ],
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.text)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(child: _box('Dosage', '${med['dosage'] ?? '—'}')),
+              const SizedBox(width: 8),
+              Expanded(child: _box('Frequency', '${med['frequency'] ?? '—'}')),
+            ],
+          ),
           if (med['duration'] != null &&
               med['duration'].toString().isNotEmpty) ...[
-            const SizedBox(height: 4),
-            _detailRow(Icons.calendar_month_outlined, 'Duration',
-                med['duration'].toString()),
+            const SizedBox(height: 8),
+            _detailRow('Duration', med['duration'].toString()),
+          ],
+          if (med['instructions'] != null &&
+              med['instructions'].toString().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _detailRow('Instructions', med['instructions'].toString()),
           ],
         ],
       ),
     );
   }
 
-  Widget _detailRow(IconData icon, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 14, color: Colors.grey),
-        const SizedBox(width: 6),
-        Text('$label: ',
-            style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        Expanded(
-          child: Text(value,
-              style: const TextStyle(fontSize: 12, color: Colors.black87)),
-        ),
-      ],
+  Widget _box(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.faint)),
+          const SizedBox(height: 1),
+          Text(value,
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.text)),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return RichText(
+      text: TextSpan(
+        style: const TextStyle(fontSize: 12.5, color: AppColors.muted),
+        children: [
+          TextSpan(
+              text: '$label: ',
+              style: const TextStyle(
+                  fontWeight: FontWeight.w800, color: AppColors.text)),
+          TextSpan(text: value),
+        ],
+      ),
     );
   }
 }

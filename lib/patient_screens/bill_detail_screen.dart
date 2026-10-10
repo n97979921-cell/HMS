@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../widgets/app_ui.dart';
 
 /// BILL DETAIL — Simple version
 /// - Grand total = sirf PAID payments ka sum (Pending/Cancelled/
@@ -18,9 +19,6 @@ class BillDetailScreen extends StatefulWidget {
 }
 
 class _BillDetailScreenState extends State<BillDetailScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   bool _isLoading = true;
   String _doctorName = '';
   String _department = '';
@@ -135,15 +133,15 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'Paid':
-        return _primary;
+        return const Color(0xFF0B5E57);
       case 'Pending':
-        return const Color(0xFFB8860B);
+        return const Color(0xFF8A6D00);
       case 'Cancelled':
       case 'Rejected':
         return Colors.grey;
       case 'Refunded':
       case 'HalfRefunded':
-        return const Color(0xFFD9534F);
+        return const Color(0xFF9A2E16);
       default:
         return Colors.grey;
     }
@@ -152,66 +150,42 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildSummaryCard(),
-                          const SizedBox(height: 20),
-                          const Text('Charge breakdown',
-                              style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1A2F3A))),
-                          const SizedBox(height: 10),
-                          _buildBreakdownCard(),
-                        ],
-                      ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSummaryCard(),
+                        const SizedBox(height: 20),
+                        const Text('CHARGE BREAKDOWN',
+                            style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                                color: AppColors.muted)),
+                        const SizedBox(height: 10),
+                        _buildBreakdownCard(),
+                      ],
                     ),
-            ),
-          ],
-        ),
+                  ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 14),
-          const Text('Bill detail',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold)),
-        ],
-      ),
+    return AppHeader(
+      title: 'Bill detail',
+      subtitle: _isLoading ? null : _doctorName,
     );
   }
 
@@ -221,13 +195,7 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,96 +203,133 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
           Text(_doctorName,
               style: const TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A2F3A))),
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.text)),
           const SizedBox(height: 2),
-          Text(_department,
-              style: const TextStyle(fontSize: 12, color: Colors.black54)),
-          const SizedBox(height: 2),
-          Text(_dateLabel,
-              style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          const SizedBox(height: 16),
-          const Divider(height: 1),
-          const SizedBox(height: 16),
-          Text('Rs. $_total',
-              style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A2F3A))),
-          const Text('Total for this appointment (paid so far)',
-              style: TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(_dateLabel.isEmpty ? _department : '$_department · $_dateLabel',
+              style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.header,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Rs. $_total',
+                    style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white)),
+                const SizedBox(height: 2),
+                const Text('Total for this appointment (paid so far)',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.headerMuted)),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
+  AppChipColors _typeColors(String type) {
+    switch (type) {
+      case 'Lab':
+        return const AppChipColors(AppColors.blue, AppColors.blueSoft);
+      case 'Room':
+        return const AppChipColors(Color(0xFF5B3FA8), Color(0xFFEEE8FB));
+      default:
+        return const AppChipColors(AppColors.teal, AppColors.tealSoft);
+    }
+  }
+
+  IconData _typeIcon(String type) {
+    switch (type) {
+      case 'Lab':
+        return Icons.science_outlined;
+      case 'Room':
+        return Icons.bed_outlined;
+      default:
+        return Icons.medical_services_outlined;
+    }
+  }
+
   Widget _buildBreakdownCard() {
     return Container(
       width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         children: List.generate(_payments.length, (i) {
           final p = _payments[i];
           final status = p['status'] ?? '';
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(p['displayName'] ?? p['type'] ?? '',
-                              style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF1A2F3A))),
-                          const SizedBox(height: 2),
-                          Text(
-                            p['paymentMethod'] ?? '',
-                            style: const TextStyle(
-                                fontSize: 11, color: Colors.grey),
-                          ),
-                        ],
+          final String type = '${p['type'] ?? ''}';
+          final c = _typeColors(type);
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              border: i != _payments.length - 1
+                  ? const Border(bottom: BorderSide(color: AppColors.divider))
+                  : null,
+            ),
+            child: Row(
+              children: [
+                AppIconTile(
+                  icon: _typeIcon(type),
+                  color: c.fg,
+                  background: c.bg,
+                  size: 38,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(p['displayName'] ?? p['type'] ?? '',
+                          style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.text)),
+                      const SizedBox(height: 2),
+                      Text(
+                        p['paymentMethod'] ?? '',
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.faint),
                       ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text('Rs. ${p['amount']}',
-                            style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1A2F3A))),
-                        const SizedBox(height: 2),
-                        Text(
-                          status,
-                          style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: _statusColor(status)),
-                        ),
-                      ],
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('Rs. ${p['amount']}',
+                        style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.text)),
+                    const SizedBox(height: 2),
+                    Text(
+                      status,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: _statusColor(status)),
                     ),
                   ],
                 ),
-              ),
-              if (i != _payments.length - 1)
-                const Divider(height: 1, indent: 14, endIndent: 14),
-            ],
+              ],
+            ),
           );
         }),
       ),

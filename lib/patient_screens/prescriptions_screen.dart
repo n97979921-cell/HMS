@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'prescription_detail_screen.dart';
+import '../widgets/app_ui.dart';
 
 /// SCHEMA COMPLIANCE:
 /// - prescriptions where patientId == uid
@@ -17,10 +18,6 @@ class PrescriptionsScreen extends StatefulWidget {
 }
 
 class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-  static const Color _error = Color(0xFFD9534F);
-
   bool _isLoading = true;
   List<Map<String, dynamic>> _prescriptions = [];
 
@@ -171,7 +168,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -180,72 +177,45 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : _prescriptions.isEmpty
-                      ? _buildEmptyState()
-                      : RefreshIndicator(
-                          onRefresh: _loadPrescriptions,
-                          color: _primary,
-                          child: ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                            itemCount: _prescriptions.length + 1,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (ctx, i) {
-                              if (i == 0) return _buildDeleteAllBar();
-                              return _prescriptionCard(
-                                  _prescriptions[i - 1]);
-                            },
-                          ),
-                        ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
+      backgroundColor: AppColors.bg,
+      body: Column(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
+          _buildHeader(),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : _prescriptions.isEmpty
+                    ? _buildEmptyState()
+                    : RefreshIndicator(
+                        onRefresh: _loadPrescriptions,
+                        color: AppColors.teal,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                          itemCount: _prescriptions.length + 1,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (ctx, i) {
+                            if (i == 0) return _buildDeleteAllBar();
+                            return _prescriptionCard(_prescriptions[i - 1]);
+                          },
+                        ),
+                      ),
           ),
-          const SizedBox(width: 14),
-          const Text('Prescriptions',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  // "X prescriptions" count + Delete All — same bar style as
-  // Refunds / Billing Paid bills screens.
+  Widget _buildHeader() {
+    return const AppHeader(
+      title: 'Prescriptions',
+      subtitle: 'From completed visits',
+    );
+  }
+
+  // "X prescriptions" count + Delete All (same action as before)
   Widget _buildDeleteAllBar() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -253,23 +223,32 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
         Text(
           '${_prescriptions.length} prescription${_prescriptions.length == 1 ? '' : 's'}',
           style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF6B7280)),
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: AppColors.muted),
         ),
         GestureDetector(
           onTap: _deleteAllPrescriptions,
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.delete_sweep_outlined, size: 16, color: _error),
-              SizedBox(width: 4),
-              Text('Delete All',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: _error)),
-            ],
+          child: Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: AppColors.dangerSoft,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.delete_sweep_outlined,
+                    size: 16, color: AppColors.danger),
+                SizedBox(width: 6),
+                Text('Delete All',
+                    style: TextStyle(
+                        color: AppColors.danger,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800)),
+              ],
+            ),
           ),
         ),
       ],
@@ -277,22 +256,12 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.medication_outlined,
-              size: 64, color: _primary.withOpacity(0.3)),
-          const SizedBox(height: 16),
-          const Text('No prescriptions yet',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF6B7280))),
-          const SizedBox(height: 8),
-          const Text('Prescriptions appear after a completed visit',
-              style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF))),
-        ],
+    return const SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
+      child: AppEmptyState(
+        icon: Icons.medication_outlined,
+        title: 'No prescriptions yet',
+        subtitle: 'Prescriptions appear after a completed visit',
       ),
     );
   }
@@ -317,13 +286,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
-          ],
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,67 +294,72 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const AppIconTile(
+                  icon: Icons.medication_outlined,
+                  color: AppColors.blue,
+                  background: AppColors.blueSoft,
+                  size: 44,
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(presc['doctorName'],
                           style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A2F3A))),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.text)),
                       const SizedBox(height: 2),
                       Text(presc['specialization'],
                           style: const TextStyle(
-                              fontSize: 12, color: Colors.black54)),
+                              fontSize: 12, color: AppColors.muted)),
                       const SizedBox(height: 2),
                       Text(presc['dateLabel'],
                           style: const TextStyle(
-                              fontSize: 11, color: Colors.grey)),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.faint)),
                     ],
                   ),
                 ),
-                GestureDetector(
-                  onTap: () =>
-                      _deletePrescription(presc['prescriptionId']),
-                  child: const Padding(
-                    padding: EdgeInsets.only(left: 8),
-                    child: Icon(Icons.delete_outline,
-                        size: 20, color: _error),
-                  ),
+                AppDeleteButton(
+                  onTap: () => _deletePrescription(presc['prescriptionId']),
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            const Divider(height: 1),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.medication_outlined,
-                        size: 14, color: _primary),
-                    const SizedBox(width: 6),
-                    Text(
+            const SizedBox(height: 12),
+            Container(
+              height: 42,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppColors.bg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.medication_outlined,
+                      size: 15, color: AppColors.muted),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
                       '${presc['medicineCount']} medicine${presc['medicineCount'] == 1 ? '' : 's'}',
-                      style:
-                          const TextStyle(fontSize: 12, color: Colors.black54),
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.muted),
                     ),
-                  ],
-                ),
-                const Row(
-                  children: [
-                    Text('View detail',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: _primary)),
-                    SizedBox(width: 2),
-                    Icon(Icons.chevron_right, size: 16, color: _primary),
-                  ],
-                ),
-              ],
+                  ),
+                  const Text('View detail',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.teal)),
+                  const SizedBox(width: 2),
+                  const Icon(Icons.chevron_right_rounded,
+                      size: 18, color: AppColors.teal),
+                ],
+              ),
             ),
           ],
         ),

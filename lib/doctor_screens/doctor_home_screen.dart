@@ -10,6 +10,7 @@ import 'doctor_profile_screen.dart';
 import '../services/notification_service.dart';
 import '../widgets/notification_bell_icon.dart';
 import 'lab_reports_screen.dart';
+import '../widgets/app_ui.dart';
 
 /// DOCTOR HOME — aaj ke patients
 ///
@@ -43,9 +44,6 @@ class DoctorHomeScreen extends StatefulWidget {
 }
 
 class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   String _doctorName = '';
   bool _isLoading = true;
   int _autoProcessed = 0;
@@ -211,7 +209,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
               '$_autoProcessed video call(s) auto-processed (no-show/refund)'),
-          backgroundColor: const Color(0xFFB8860B),
+          backgroundColor: const Color(0xFF8A6D00),
           behavior: SnackBarBehavior.floating,
         ));
       }
@@ -327,7 +325,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -336,226 +334,240 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildDateNavigator(),
-            _buildTabToggle(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : _appointments.isEmpty
-                      ? _buildEmpty()
-                      : RefreshIndicator(
-                          onRefresh: _loadData,
-                          color: _primary,
-                          child: ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
-                            itemCount: _appointments.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (ctx, i) =>
-                                _appointmentCard(_appointments[i]),
-                          ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : _appointments.isEmpty
+                    ? _buildEmpty()
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        color: AppColors.teal,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                          itemCount: _appointments.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (ctx, i) =>
+                              _appointmentCard(_appointments[i]),
                         ),
-            ),
-          ],
-        ),
+                      ),
+          ),
+        ],
       ),
 
-      // ─────────────────────────────────────────────
-      // BOTTOM NAVIGATION
-      // Home | Lab Reports | Profile
-      // ─────────────────────────────────────────────
+      // BOTTOM NAVIGATION — Home | Lab Reports | Profile
       bottomNavigationBar: _buildBottomNav(),
     );
   }
 
-  // ✅ CHANGED: sirf logo add kiya gaya hai (left side, round). Baqi
-  // sab — gradient, "Welcome,", name, tagline, bell icon — bilkul
-  // pehle jaisa hi hai, kuch nahi hataya.
+  // Dark header: logo, "Welcome,", name, tagline, bell + date navigator
+  // + Waiting/Completed toggle (same actions as before)
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_primary, _primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
+      decoration: const BoxDecoration(
+        color: AppColors.header,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
       ),
-      child: Row(
-        children: [
-          // Logo mark — round, no white box background.
-          ClipOval(
-            child: Image.asset(
-              'assets/Logo.png',
-              width: 70,
-              height: 70,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                // Asset path galat ho to app crash nahi hogi, ye
-                // fallback icon dikhega taake pata chal jaye.
-                return Container(
-                  width: 44,
-                  height: 44,
-                  color: Colors.white24,
-                  child: const Icon(
-                    Icons.local_hospital,
-                    color: Colors.white,
-                    size: 24,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  ClipOval(
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      color: Colors.white,
+                      child: Image.asset(
+                        'assets/Logo.png',
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.local_hospital,
+                            color: AppColors.header,
+                            size: 24,
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Welcome,',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _isLoading ? 'Loading...' : _doctorName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Welcome,',
+                          style: TextStyle(
+                            color: AppColors.headerMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          _isLoading ? 'Loading...' : _doctorName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const Text(
+                          'Your patients today',
+                          style: TextStyle(
+                            color: AppColors.headerLabel,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  'Your patients today',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-              ],
-            ),
+                  // Notification Bell with unread count
+                  const NotificationBellIcon(
+                    iconColor: Colors.white,
+                    backgroundColor: Color(0x26FFFFFF),
+                    size: 20,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildDateNavigator(),
+              const SizedBox(height: 12),
+              _buildTabToggle(),
+            ],
           ),
+        ),
+      ),
+    );
+  }
 
-          // Notification Bell with unread count
-          const NotificationBellIcon(
-            iconColor: Colors.white,
-            backgroundColor: Color(0x26FFFFFF),
-            size: 20,
+  // BOTTOM NAVIGATION BAR — same onTap as before, sirf look badla
+  Widget _buildBottomNav() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.divider)),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: 0,
+        onTap: (index) {
+          if (index == 0) {
+            // Already on Home
+            return;
+          } else if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => LabReportsScreen(
+                  repository: FirebaseDoctorRepository(),
+                  doctorId: FirebaseAuth.instance.currentUser?.uid ?? '',
+                ),
+              ),
+            );
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DoctorProfileScreen(
+                  repository: FirebaseDoctorRepository(),
+                  doctorId: FirebaseAuth.instance.currentUser?.uid ?? '',
+                ),
+              ),
+            );
+          }
+        },
+        elevation: 0,
+        backgroundColor: Colors.white,
+        selectedItemColor: AppColors.header,
+        unselectedItemColor: AppColors.faint,
+        selectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home_rounded),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.science_outlined),
+            activeIcon: Icon(Icons.science),
+            label: 'Lab Reports',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
           ),
         ],
       ),
     );
   }
 
-  // ─────────────────────────────────────────────
-  // BOTTOM NAVIGATION BAR
-  // ─────────────────────────────────────────────
-  Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: 0,
-      onTap: (index) {
-        if (index == 0) {
-          // Already on Home
-          return;
-        } else if (index == 1) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => LabReportsScreen(
-                repository: FirebaseDoctorRepository(),
-                doctorId: FirebaseAuth.instance.currentUser?.uid ?? '',
-              ),
-            ),
-          );
-        } else if (index == 2) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => DoctorProfileScreen(
-                repository: FirebaseDoctorRepository(),
-                doctorId: FirebaseAuth.instance.currentUser?.uid ?? '',
-              ),
-            ),
-          );
-        }
-      },
-      backgroundColor: Colors.white,
-      selectedItemColor: _primary,
-      unselectedItemColor: Colors.grey,
-      type: BottomNavigationBarType.fixed,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined),
-          activeIcon: Icon(Icons.home),
-          label: 'Home',
+  Widget _navArrow(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.science_outlined),
-          activeIcon: Icon(Icons.science),
-          label: 'Lab Reports',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          activeIcon: Icon(Icons.person),
-          label: 'Profile',
-        ),
-      ],
+        child: Icon(icon, color: Colors.white, size: 22),
+      ),
     );
   }
 
   Widget _buildDateNavigator() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          )
-        ],
+        color: Colors.white.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            onPressed: () => _changeDate(-1),
-            icon: const Icon(Icons.chevron_left, color: _primary),
-          ),
-          Column(
-            children: [
-              Text(
-                _isToday(_selectedDate) ? 'Today' : 'Selected',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: Color(0xFF1A2F3A),
+          _navArrow(Icons.chevron_left_rounded, () => _changeDate(-1)),
+          Expanded(
+            child: Column(
+              children: [
+                Text(
+                  _isToday(_selectedDate) ? 'Today' : 'Selected',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-              Text(
-                _formatDate(_selectedDate),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
+                Text(
+                  _formatDate(_selectedDate),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.headerMuted,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          IconButton(
-            onPressed: () => _changeDate(1),
-            icon: const Icon(Icons.chevron_right, color: _primary),
-          ),
+          _navArrow(Icons.chevron_right_rounded, () => _changeDate(1)),
         ],
       ),
     );
@@ -563,17 +575,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
 
   Widget _buildTabToggle() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(18, 12, 18, 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-          )
-        ],
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
@@ -589,18 +594,19 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () => _changeTab(value),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          height: 40,
           decoration: BoxDecoration(
-            color: isSelected ? _primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(26),
+            color: isSelected ? AppColors.mint : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.grey,
-              fontWeight: FontWeight.w600,
+              color: isSelected ? AppColors.header : Colors.white,
+              fontWeight: FontWeight.w800,
               fontSize: 13,
             ),
           ),
@@ -610,40 +616,18 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
   }
 
   Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            _selectedTab == 'CheckedIn'
-                ? Icons.people_outline
-                : Icons.check_circle_outline,
-            size: 64,
-            color: _primary.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _selectedTab == 'CheckedIn'
-                ? 'No patients waiting'
-                : 'No completed consultations',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF6B7280),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _selectedTab == 'CheckedIn'
-                ? 'Patients appear here after check-in (or when confirmed, for video calls)'
-                : 'Completed consultations will appear here',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF9CA3AF),
-            ),
-          ),
-        ],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      child: AppEmptyState(
+        icon: _selectedTab == 'CheckedIn'
+            ? Icons.people_outline
+            : Icons.check_circle_outline,
+        title: _selectedTab == 'CheckedIn'
+            ? 'No patients waiting'
+            : 'No completed consultations',
+        subtitle: _selectedTab == 'CheckedIn'
+            ? 'Patients appear here after check-in (or when confirmed, for video calls)'
+            : 'Completed consultations will appear here',
       ),
     );
   }
@@ -654,10 +638,10 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
     final isWalkIn = type == 'WALK_IN';
 
     final Color badgeColor = isVideo
-        ? const Color(0xFF1565C0)
+        ? AppColors.blue
         : isWalkIn
-            ? const Color(0xFFB8860B)
-            : _primary;
+            ? const Color(0xFF8A6D00)
+            : AppColors.teal;
 
     final String typeLabel = isVideo
         ? 'Video'
@@ -696,8 +680,7 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                 appointmentType: AppointmentTypeX.fromString(
                   appt['appointmentType'] ?? 'IN_PERSON',
                 ),
-                admissionRecommended:
-                    appt['admissionRecommended'] ?? false,
+                admissionRecommended: appt['admissionRecommended'] ?? false,
                 symptoms: appt['symptoms'],
                 patientReportBase64: appt['patientReportBase64'],
               ),
@@ -710,34 +693,27 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            )
-          ],
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 10,
-              ),
+              width: 60,
+              height: 50,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: const Color(0xFFDCEFE9),
-                borderRadius: BorderRadius.circular(12),
+                color: AppColors.tealSoft,
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
                 appt['startTime'],
                 style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: _primaryDark,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0B5E57),
                 ),
               ),
             ),
@@ -749,24 +725,21 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                   Text(
                     appt['patientName'],
                     style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A2F3A),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.text,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(
-                        typeIcon,
-                        size: 13,
-                        color: badgeColor,
-                      ),
-                      const SizedBox(width: 4),
+                      Icon(typeIcon, size: 14, color: badgeColor),
+                      const SizedBox(width: 5),
                       Text(
                         typeLabel,
                         style: TextStyle(
                           fontSize: 12,
+                          fontWeight: FontWeight.w700,
                           color: badgeColor,
                         ),
                       ),
@@ -778,15 +751,16 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFD9534F),
+                            color: AppColors.danger,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text(
                             'LIVE',
                             style: TextStyle(
                               fontSize: 9,
+                              letterSpacing: 0.5,
                               color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                         ),
@@ -797,8 +771,8 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
               ),
             ),
             const Icon(
-              Icons.chevron_right,
-              color: Color(0xFF9CA3AF),
+              Icons.chevron_right_rounded,
+              color: AppColors.faint,
             ),
           ],
         ),

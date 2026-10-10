@@ -1,22 +1,10 @@
 // lib/doctor_screens/report_detail_screen.dart
 import 'package:flutter/material.dart';
+import '../widgets/app_ui.dart';
 import 'doctor_repository.dart';
 import 'lab_test_status.dart';
 import 'lab_test_detail.dart';
 import 'dart:convert';
-
-class _DetailColors {
-  static const primary = Color(0xFF1F8A70);
-  // FIXED: pehle 0xFF166049 tha — ye baaqi poori app se ek alag green
-  // shade tha. Ab 0xFF0D6B5A kar diya, taake ye screen bhi baaqi
-  // screens (Appointment Detail, Request Lab Test, Add Prescription,
-  // waghera) jaisi hi dikhe.
-  static const primaryDark = Color(0xFF0D6B5A);
-  static const background = Color(0xFFF5F7F8);
-  static const cardBackground = Colors.white;
-  static const textMuted = Color(0xFF8A8A8A);
-  static const error = Color(0xFFD64545);
-}
 
 class ReportDetailScreen extends StatefulWidget {
   final DoctorRepository repository;
@@ -92,8 +80,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     color: Colors.white.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close,
-                      color: Colors.white, size: 22),
+                  child: const Icon(Icons.close, color: Colors.white, size: 22),
                 ),
               ),
             ),
@@ -124,85 +111,43 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _DetailColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(child: _buildBody()),
-          ],
-        ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(child: _buildBody()),
+        ],
       ),
     );
   }
 
-  // FIXED: pehle full-width, sirf neeche-corners-round header card tha
-  // (aur alag primaryDark shade use kar raha tha). Ab appointment_detail_
-  // screen.dart jaisa hi floating, sab-corners-round gradient card, taake
-  // Report Detail screen baaqi doctor screens se consistent dikhe. Status
-  // badge (jab report load ho chuka ho) bilkul pehle jaisa hi right side
-  // par raha hai.
+  // Status badge (jab report load ho chuka ho) pehle jaisa right side par
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_DetailColors.primary, _DetailColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
+    return AppHeader(
+      title: 'Report Detail',
+      subtitle: _detail?.patientName,
+      trailing: _detail != null
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.arrow_back,
-                  color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Report Detail',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          if (_detail != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(20)),
+                  color: AppColors.mint.withOpacity(0.14),
+                  borderRadius: BorderRadius.circular(999)),
               child: Text(
                 _detail!.status.label,
                 style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600),
+                    color: AppColors.mint,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800),
               ),
-            ),
-        ],
-      ),
+            )
+          : null,
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-          child: CircularProgressIndicator(color: _DetailColors.primary));
+          child: CircularProgressIndicator(color: AppColors.teal));
     }
     if (_errorMessage != null || _detail == null) {
       return Center(
@@ -212,16 +157,16 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.error_outline,
-                  color: _DetailColors.error, size: 40),
+                  color: AppColors.danger, size: 40),
               const SizedBox(height: 12),
               Text(_errorMessage ?? 'Report not found',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: _DetailColors.textMuted)),
+                  style: const TextStyle(color: AppColors.muted)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadDetail,
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: _DetailColors.primary),
+                    backgroundColor: AppColors.header, elevation: 0),
                 child:
                     const Text('Retry', style: TextStyle(color: Colors.white)),
               ),
@@ -234,34 +179,28 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     final detail = _detail!;
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
       children: [
         // Patient info card
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: _DetailColors.cardBackground,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2))
-            ],
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
           ),
           child: Row(
             children: [
               CircleAvatar(
-                radius: 22,
-                backgroundColor: _DetailColors.primary.withOpacity(0.15),
+                radius: 23,
+                backgroundColor: AppColors.tealSoft,
                 child: Text(
                   detail.patientName.isNotEmpty
                       ? detail.patientName[0].toUpperCase()
                       : '?',
                   style: const TextStyle(
-                      color: _DetailColors.primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
+                      color: AppColors.teal,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 17),
                 ),
               ),
               const SizedBox(width: 12),
@@ -271,12 +210,14 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   children: [
                     Text(detail.patientName,
                         style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 16)),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                            color: AppColors.text)),
                     const SizedBox(height: 2),
                     Text(
                       '${detail.doctorName}${detail.reportDate != null ? ' · ${_formatDate(detail.reportDate!)}' : ''}',
                       style: const TextStyle(
-                          color: _DetailColors.textMuted, fontSize: 13),
+                          color: AppColors.muted, fontSize: 12.5),
                     ),
                   ],
                 ),
@@ -284,87 +225,91 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
 
         // Test name card
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
           decoration: BoxDecoration(
-            color: _DetailColors.cardBackground,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2))
-            ],
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Test Name',
-                  style:
-                      TextStyle(color: _DetailColors.textMuted, fontSize: 13)),
-              const SizedBox(height: 4),
+                  style: TextStyle(
+                      color: AppColors.faint,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700)),
+              const SizedBox(height: 3),
               Text(detail.testType,
                   style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: AppColors.text)),
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
+        const Text('REPORT',
+            style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8,
+                color: AppColors.muted)),
+        const SizedBox(height: 10),
 
         // Report (image, base64) — tap to view
         if (detail.reportBase64 != null && detail.reportBase64!.isNotEmpty) ...[
           GestureDetector(
             onTap: () => _viewReportFullscreen(detail.reportBase64!),
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.memory(
-                    base64Decode(detail.reportBase64!),
-                    height: 220,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.memory(
+                      base64Decode(detail.reportBase64!),
                       height: 220,
-                      color: const Color(0xFFF0F0F0),
-                      alignment: Alignment.center,
-                      child: const Text('Could not load report',
-                          style: TextStyle(color: Colors.grey)),
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 220,
+                        color: AppColors.bg,
+                        alignment: Alignment.center,
+                        child: const Text('Could not load report',
+                            style: TextStyle(color: AppColors.faint)),
+                      ),
                     ),
                   ),
-                ),
-                Positioned(
-                  bottom: 10,
-                  right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      shape: BoxShape.circle,
+                  Positioned(
+                    bottom: 10,
+                    right: 10,
+                    child: Container(
+                      padding: const EdgeInsets.all(9),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.zoom_in,
+                          color: Colors.white, size: 19),
                     ),
-                    child: const Icon(Icons.zoom_in,
-                        color: Colors.white, size: 18),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ] else ...[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _DetailColors.cardBackground,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: const Text('Report not uploaded yet',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: _DetailColors.textMuted)),
+          const AppEmptyState(
+            icon: Icons.description_outlined,
+            title: 'Report not uploaded yet',
           ),
         ],
       ],

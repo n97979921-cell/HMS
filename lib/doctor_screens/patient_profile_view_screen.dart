@@ -1,16 +1,8 @@
 // lib/doctor_screens/patient_profile_view_screen.dart
 import 'package:flutter/material.dart';
+import '../widgets/app_ui.dart';
 import 'doctor_repository.dart';
 import 'patient_profile.dart';
-
-class _PPColors {
-  static const primary = Color(0xFF1F8A70);
-  static const primaryDark = Color(0xFF166049);
-  static const background = Color(0xFFF5F7F8);
-  static const cardBackground = Colors.white;
-  static const textMuted = Color(0xFF8A8A8A);
-  static const error = Color(0xFFD64545);
-}
 
 class PatientProfileViewScreen extends StatefulWidget {
   final DoctorRepository repository;
@@ -64,53 +56,27 @@ class _PatientProfileViewScreenState extends State<PatientProfileViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _PPColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(child: _buildBody()),
-          ],
-        ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(child: _buildBody()),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 16, 20, 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_PPColors.primary, _PPColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-          ),
-          const Text(
-            'Patient Profile',
-            style: TextStyle(
-                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
+    return AppHeader(
+      title: 'Patient Profile',
+      subtitle: _profile?.name,
     );
   }
 
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-          child: CircularProgressIndicator(color: _PPColors.primary));
+          child: CircularProgressIndicator(color: AppColors.teal));
     }
     if (_errorMessage != null || _profile == null) {
       return Center(
@@ -119,16 +85,17 @@ class _PatientProfileViewScreenState extends State<PatientProfileViewScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: _PPColors.error, size: 40),
+              const Icon(Icons.error_outline,
+                  color: AppColors.danger, size: 40),
               const SizedBox(height: 12),
               Text(_errorMessage ?? 'Profile not found',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: _PPColors.textMuted)),
+                  style: const TextStyle(color: AppColors.muted)),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _loadProfile,
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: _PPColors.primary),
+                    backgroundColor: AppColors.header, elevation: 0),
                 child:
                     const Text('Retry', style: TextStyle(color: Colors.white)),
               ),
@@ -140,38 +107,50 @@ class _PatientProfileViewScreenState extends State<PatientProfileViewScreen> {
 
     final profile = _profile!;
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
       children: [
         Center(
           child: Column(
             children: [
               CircleAvatar(
-                radius: 40,
-                backgroundColor: _PPColors.primary.withOpacity(0.15),
+                radius: 38,
+                backgroundColor: AppColors.tealSoft,
                 child: Text(
                   profile.name.isNotEmpty ? profile.name[0].toUpperCase() : '?',
                   style: const TextStyle(
-                      color: _PPColors.primary,
-                      fontWeight: FontWeight.bold,
+                      color: AppColors.teal,
+                      fontWeight: FontWeight.w800,
                       fontSize: 28),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(profile.name,
                   style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 2),
-              Text(
-                profile.patientType == 'WALK_IN'
-                    ? 'Walk-in Patient'
-                    : 'Registered Patient',
-                style:
-                    const TextStyle(color: _PPColors.textMuted, fontSize: 13),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.text)),
+              const SizedBox(height: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.tealSoft,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  profile.patientType == 'WALK_IN'
+                      ? 'Walk-in Patient'
+                      : 'Registered Patient',
+                  style: const TextStyle(
+                      color: Color(0xFF0B5E57),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800),
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 22),
         _sectionCard('Contact Information', [
           _infoRow(Icons.email_outlined, 'Email',
               profile.email.isNotEmpty ? profile.email : 'Not available'),
@@ -198,51 +177,66 @@ class _PatientProfileViewScreenState extends State<PatientProfileViewScreen> {
   }
 
   Widget _sectionCard(String title, List<Widget> children) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _PPColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-          const SizedBox(height: 12),
-          ...children,
-        ],
-      ),
+    final rows = <Widget>[];
+    for (int i = 0; i < children.length; i++) {
+      if (i > 0) {
+        rows.add(const Divider(height: 1, color: AppColors.divider));
+      }
+      rows.add(children[i]);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title.toUpperCase(),
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8,
+                color: AppColors.muted)),
+        const SizedBox(height: 10),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(children: rows),
+        ),
+      ],
     );
   }
 
   Widget _infoRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 11),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: _PPColors.textMuted),
-          const SizedBox(width: 10),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.bg,
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, size: 17, color: AppColors.faint),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
                     style: const TextStyle(
-                        color: _PPColors.textMuted, fontSize: 12)),
-                const SizedBox(height: 2),
+                        color: AppColors.faint,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(height: 1),
                 Text(value,
                     style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w500)),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.text)),
               ],
             ),
           ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/app_ui.dart';
 
 // ─────────────────────────────────────────
 // MAIN SCREEN — Manage Prices
@@ -13,56 +14,47 @@ class ManagePricesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: primaryColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Manage Prices',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          const AppHeader(title: 'Prices', subtitle: 'Rooms · Lab tests'),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+              children: [
+                // Room Type Prices Card
+                _PriceOptionCard(
+                  icon: Icons.bed_rounded,
+                  iconColor: AppColors.teal,
+                  iconBg: AppColors.tealSoft,
+                  title: 'Room type prices',
+                  subtitle: 'Set prices for ICU, General, Private rooms',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ManageRoomPricesScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Test Type Prices Card
+                _PriceOptionCard(
+                  icon: Icons.biotech_rounded,
+                  iconColor: AppColors.blue,
+                  iconBg: AppColors.blueSoft,
+                  title: 'Test type prices',
+                  subtitle: 'Set prices for lab tests',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ManageTestPricesScreen(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            const SizedBox(height: 10),
-            // Room Type Prices Card
-            _PriceOptionCard(
-              icon: Icons.bed_rounded,
-              title: 'Room Type Prices',
-              subtitle: 'Set prices for ICU, General, Private rooms',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ManageRoomPricesScreen(),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Test Type Prices Card
-            _PriceOptionCard(
-              icon: Icons.biotech_rounded,
-              title: 'Test Type Prices',
-              subtitle: 'Set prices for lab tests',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ManageTestPricesScreen(),
-                ),
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -70,14 +62,16 @@ class ManagePricesScreen extends StatelessWidget {
 
 class _PriceOptionCard extends StatelessWidget {
   final IconData icon;
+  final Color iconColor;
+  final Color iconBg;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
 
-  static const Color primaryColor = Color(0xFF1F8A70);
-
   const _PriceOptionCard({
     required this.icon,
+    required this.iconColor,
+    required this.iconBg,
     required this.title,
     required this.subtitle,
     required this.onTap,
@@ -85,59 +79,40 @@ class _PriceOptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppCard(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: primaryColor.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: primaryColor, size: 26),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
-                    ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      child: Row(
+        children: [
+          AppIconTile(
+              icon: icon, color: iconColor, background: iconBg, size: 52),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF6B7280),
-                    ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.muted,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const Icon(Icons.arrow_forward_ios_rounded,
-                color: Color(0xFF6B7280), size: 16),
-          ],
-        ),
+          ),
+          const Icon(Icons.chevron_right_rounded,
+              color: AppColors.muted, size: 24),
+        ],
       ),
     );
   }
@@ -192,109 +167,64 @@ class _ManageRoomPricesScreenState extends State<ManageRoomPricesScreen> {
     final priceController = TextEditingController(
         text: _prices[roomType]?.toStringAsFixed(0) ?? '0');
 
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Edit Price',
-                style: TextStyle(fontWeight: FontWeight.w700)),
-            IconButton(
-              icon: const Icon(Icons.close_rounded, color: Colors.grey),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(roomType,
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: primaryColor)),
-            const SizedBox(height: 12),
-            const Text('Price Per Hour',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: priceController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: '0',
-                prefixText: 'Rs ',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: primaryColor),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () async {
-                final price = double.tryParse(priceController.text.trim()) ?? 0;
+    showAppSheet(
+      context,
+      (_) => AppSheet(
+        title: 'Edit price',
+        subtitle: roomType,
+        children: [
+          const AppFieldLabel('Price per hour'),
+          TextField(
+            controller: priceController,
+            keyboardType: TextInputType.number,
+            decoration: appInputDecoration(hint: '0', prefixText: 'Rs '),
+          ),
+          const SizedBox(height: 20),
+          AppPrimaryButton(
+            label: 'Save',
+            onPressed: () async {
+              final price = double.tryParse(priceController.text.trim()) ?? 0;
 
-                // 1. Master rate-card update
-                await _firestore
-                    .collection('room_type_prices')
-                    .doc(roomType)
-                    .set({
-                  'roomType': roomType,
-                  'pricePerHour': price,
-                  'updatedAt': DateTime.now(),
-                });
+              // 1. Master rate-card update
+              await _firestore
+                  .collection('room_type_prices')
+                  .doc(roomType)
+                  .set({
+                'roomType': roomType,
+                'pricePerHour': price,
+                'updatedAt': DateTime.now(),
+              });
 
-                // 2. Sirf FREE beds (Available + Under Maintenance) turant
-                //    naye rate pe update karo. Occupied beds ko chhuo mat —
-                //    unki price patient-assignment ke waqt "lock" ho chuki,
-                //    release hote hi refresh hogi (admissions_screen.dart).
-                final roomsSnap = await _firestore
-                    .collection('rooms')
-                    .where('roomType', isEqualTo: roomType)
-                    .get();
+              // 2. Sirf FREE beds (Available + Under Maintenance) turant
+              //    naye rate pe update karo. Occupied beds ko chhuo mat —
+              //    unki price patient-assignment ke waqt "lock" ho chuki,
+              //    release hote hi refresh hogi (admissions_screen.dart).
+              final roomsSnap = await _firestore
+                  .collection('rooms')
+                  .where('roomType', isEqualTo: roomType)
+                  .get();
 
-                for (final roomDoc in roomsSnap.docs) {
-                  final bedsSnap = await _firestore
-                      .collection('beds')
-                      .where('roomId', isEqualTo: roomDoc.id)
-                      .where('availability',
-                          whereIn: ['Available', 'Under Maintenance']).get();
+              for (final roomDoc in roomsSnap.docs) {
+                final bedsSnap = await _firestore
+                    .collection('beds')
+                    .where('roomId', isEqualTo: roomDoc.id)
+                    .where('availability',
+                        whereIn: ['Available', 'Under Maintenance']).get();
 
-                  if (bedsSnap.docs.isEmpty) continue;
-                  final batch = _firestore.batch();
-                  for (final bedDoc in bedsSnap.docs) {
-                    batch.update(bedDoc.reference, {
-                      'pricePerHour': price,
-                      'updatedAt': DateTime.now(),
-                    });
-                  }
-                  await batch.commit();
+                if (bedsSnap.docs.isEmpty) continue;
+                final batch = _firestore.batch();
+                for (final bedDoc in bedsSnap.docs) {
+                  batch.update(bedDoc.reference, {
+                    'pricePerHour': price,
+                    'updatedAt': DateTime.now(),
+                  });
                 }
+                await batch.commit();
+              }
 
-                if (context.mounted) Navigator.pop(context);
-                _loadPrices();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: const Text('Save',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
+              if (context.mounted) Navigator.pop(context);
+              _loadPrices();
+            },
           ),
         ],
       ),
@@ -304,96 +234,85 @@ class _ManageRoomPricesScreenState extends State<ManageRoomPricesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: primaryColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Room Type Prices',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          AppHeader(
+            title: 'Room type prices',
+            subtitle: '${_roomTypes.length} room types',
           ),
-        ),
-        centerTitle: true,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: primaryColor))
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _roomTypes.length,
-              itemBuilder: (context, index) {
-                final roomType = _roomTypes[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.bed_rounded,
-                            color: primaryColor, size: 22),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              roomType,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF1A1A2E),
+                      ..._roomTypes.map((roomType) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: AppCard(
+                              child: Row(
+                                children: [
+                                  const AppIconTile(
+                                    icon: Icons.bed_rounded,
+                                    color: AppColors.teal,
+                                    background: AppColors.tealSoft,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          roomType,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppColors.text,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text.rich(
+                                          TextSpan(
+                                            children: [
+                                              TextSpan(
+                                                text:
+                                                    'Rs ${_prices[roomType]?.toStringAsFixed(0) ?? '0'}',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w800,
+                                                  color: AppColors.text,
+                                                ),
+                                              ),
+                                              const TextSpan(text: ' / hour'),
+                                            ],
+                                          ),
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: AppColors.muted,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  AppSoftButton(
+                                    label: 'Edit',
+                                    onTap: () => _showEditDialog(roomType),
+                                  ),
+                                ],
                               ),
                             ),
-                            Text(
-                              'Rs ${_prices[roomType]?.toStringAsFixed(0) ?? '0'} / hour',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF6B7280),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () => _showEditDialog(roomType),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primaryColor,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                        ),
-                        child: const Text('Edit',
-                            style: TextStyle(color: Colors.white)),
+                          )),
+                      const SizedBox(height: 4),
+                      const AppInfoNote(
+                        text:
+                            'A new price applies to free beds (Available and Under Maintenance) right away. Occupied beds keep their old price until the patient is released.',
                       ),
                     ],
                   ),
-                );
-              },
-            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -441,151 +360,100 @@ class _ManageTestPricesScreenState extends State<ManageTestPricesScreen> {
     final priceController = TextEditingController();
     bool isSaving = false;
 
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Add Test',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
-              IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.grey),
-                onPressed: () => Navigator.pop(dialogContext),
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Test Name',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  hintText: 'Type...',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: primaryColor),
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text('Price',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              TextField(
-                controller: priceController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  hintText: 'Type...',
-                  prefixText: 'Rs ',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: primaryColor),
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: isSaving
-                    ? null
-                    : () async {
-                        final name = nameController.text.trim();
-                        if (name.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Test name is required'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          return;
-                        }
+    showAppSheet(
+      context,
+      (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AppSheet(
+          title: 'Add test',
+          children: [
+            const AppFieldLabel('Test name'),
+            TextField(
+              controller: nameController,
+              decoration: appInputDecoration(hint: 'Type...'),
+            ),
+            const SizedBox(height: 14),
+            const AppFieldLabel('Price'),
+            TextField(
+              controller: priceController,
+              keyboardType: TextInputType.number,
+              decoration:
+                  appInputDecoration(hint: 'Type...', prefixText: 'Rs '),
+            ),
+            const SizedBox(height: 20),
+            AppPrimaryButton(
+              label: 'Save',
+              onPressed: isSaving
+                  ? null
+                  : () async {
+                      final name = nameController.text.trim();
+                      if (name.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Test name is required'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
 
-                        setDialogState(() => isSaving = true);
+                      setDialogState(() => isSaving = true);
 
-                        try {
-                          final existing = await _firestore
-                              .collection('test_type_prices')
-                              .where('testType', isEqualTo: name)
-                              .limit(1)
-                              .get();
+                      try {
+                        final existing = await _firestore
+                            .collection('test_type_prices')
+                            .where('testType', isEqualTo: name)
+                            .limit(1)
+                            .get();
 
-                          if (existing.docs.isNotEmpty) {
-                            if (dialogContext.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                      'This test already exists. Use Edit instead.'),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                            setDialogState(() => isSaving = false);
-                            return;
-                          }
-
-                          final price =
-                              double.tryParse(priceController.text.trim()) ?? 0;
-
-                          final docRef =
-                              _firestore.collection('test_type_prices').doc();
-                          await docRef.set({
-                            'testType': name,
-                            'charge': price,
-                            'updatedAt': DateTime.now(),
-                          });
-
+                        if (existing.docs.isNotEmpty) {
                           if (dialogContext.mounted) {
-                            Navigator.pop(dialogContext);
-                          }
-                          _loadTests();
-                        } catch (e) {
-                          setDialogState(() => isSaving = false);
-                          if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Failed to save test: $e'),
+                              const SnackBar(
+                                content: Text(
+                                    'This test already exists. Use Edit instead.'),
                                 backgroundColor: Colors.red,
                               ),
                             );
                           }
+                          setDialogState(() => isSaving = false);
+                          return;
                         }
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2),
-                      )
-                    : const Text('Save',
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w600)),
-              ),
+
+                        final price =
+                            double.tryParse(priceController.text.trim()) ?? 0;
+
+                        final docRef =
+                            _firestore.collection('test_type_prices').doc();
+                        await docRef.set({
+                          'testType': name,
+                          'charge': price,
+                          'updatedAt': DateTime.now(),
+                        });
+
+                        if (dialogContext.mounted) {
+                          Navigator.pop(dialogContext);
+                        }
+                        _loadTests();
+                      } catch (e) {
+                        setDialogState(() => isSaving = false);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to save test: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : null,
             ),
           ],
         ),
@@ -597,77 +465,33 @@ class _ManageTestPricesScreenState extends State<ManageTestPricesScreen> {
     final priceController =
         TextEditingController(text: (test['charge'] ?? 0).toStringAsFixed(0));
 
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('Edit Price',
-                style: TextStyle(fontWeight: FontWeight.w700)),
-            IconButton(
-              icon: const Icon(Icons.close_rounded, color: Colors.grey),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(test['testType'] ?? '',
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: primaryColor)),
-            const SizedBox(height: 12),
-            const Text('Price',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: priceController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                prefixText: 'Rs ',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: primaryColor),
-                ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () async {
-                final price = double.tryParse(priceController.text.trim()) ?? 0;
-                await _firestore
-                    .collection('test_type_prices')
-                    .doc(test['id'])
-                    .update({
-                  'charge': price,
-                  'updatedAt': DateTime.now(),
-                });
-                Navigator.pop(context);
-                _loadTests();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: const Text('Save',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
+    showAppSheet(
+      context,
+      (_) => AppSheet(
+        title: 'Edit price',
+        subtitle: test['testType'] ?? '',
+        children: [
+          const AppFieldLabel('Price'),
+          TextField(
+            controller: priceController,
+            keyboardType: TextInputType.number,
+            decoration: appInputDecoration(prefixText: 'Rs '),
+          ),
+          const SizedBox(height: 20),
+          AppPrimaryButton(
+            label: 'Save',
+            onPressed: () async {
+              final price = double.tryParse(priceController.text.trim()) ?? 0;
+              await _firestore
+                  .collection('test_type_prices')
+                  .doc(test['id'])
+                  .update({
+                'charge': price,
+                'updatedAt': DateTime.now(),
+              });
+              Navigator.pop(context);
+              _loadTests();
+            },
           ),
         ],
       ),
@@ -678,30 +502,58 @@ class _ManageTestPricesScreenState extends State<ManageTestPricesScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Test',
-            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.red)),
-        content: Text('Are you sure you want to delete "${test['testType']}"?'),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: const Text('Delete test',
+            style: TextStyle(
+                fontWeight: FontWeight.w800, color: Color(0xFF9A2E16))),
+        content: Text(
+          'Are you sure you want to delete "${test['testType']}"?',
+          style: const TextStyle(fontSize: 13, color: Color(0xFF3B4F53)),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await _firestore
-                  .collection('test_type_prices')
-                  .doc(test['id'])
-                  .delete();
-              Navigator.pop(context);
-              _loadTests();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(46),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Cancel',
+                      style: TextStyle(
+                          color: AppColors.text, fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    await _firestore
+                        .collection('test_type_prices')
+                        .doc(test['id'])
+                        .delete();
+                    Navigator.pop(context);
+                    _loadTests();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(46),
+                    backgroundColor: AppColors.danger,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Delete',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w800)),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -711,140 +563,89 @@ class _ManageTestPricesScreenState extends State<ManageTestPricesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: primaryColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Test Type Prices',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
+      backgroundColor: AppColors.bg,
+      floatingActionButton:
+          AppFab(label: 'Add test', onPressed: _showAddDialog),
+      body: Column(
+        children: [
+          AppHeader(
+            title: 'Test type prices',
+            subtitle: _isLoading ? null : '${_tests.length} tests',
           ),
-        ),
-        centerTitle: true,
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
-        backgroundColor: primaryColor,
-        child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: primaryColor))
-          : _tests.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.biotech_rounded,
-                          size: 64, color: primaryColor.withOpacity(0.3)),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'No tests yet',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF6B7280),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Tap + to add a test',
-                        style: TextStyle(fontSize: 14, color: primaryColor),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _tests.length,
-                  itemBuilder: (context, index) {
-                    final test = _tests[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : _tests.isEmpty
+                    ? ListView(
+                        padding: const EdgeInsets.all(20),
+                        children: const [
+                          AppEmptyState(
+                            icon: Icons.biotech_rounded,
+                            title: 'No tests yet',
+                            subtitle: 'Tap + to add a test',
                           ),
                         ],
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(Icons.biotech_rounded,
-                                color: primaryColor, size: 22),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 100),
+                        itemCount: _tests.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final test = _tests[index];
+                          return AppCard(
+                            child: Row(
                               children: [
-                                Text(
-                                  test['testType'] ?? '',
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF1A1A2E),
+                                const AppIconTile(
+                                  icon: Icons.biotech_rounded,
+                                  color: AppColors.blue,
+                                  background: AppColors.blueSoft,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        test['testType'] ?? '',
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.text,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Rs ${(test['charge'] ?? 0).toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.teal,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                Text(
-                                  'Rs ${(test['charge'] ?? 0).toStringAsFixed(0)}',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF6B7280),
-                                  ),
+                                // Edit Button
+                                AppSoftButton(
+                                  label: 'Edit',
+                                  onTap: () => _showEditDialog(test),
+                                ),
+                                const SizedBox(width: 8),
+                                // Delete Button
+                                AppDeleteButton(
+                                  size: 38,
+                                  onTap: () => _showDeleteConfirm(test),
                                 ),
                               ],
                             ),
-                          ),
-                          // Edit Button
-                          ElevatedButton(
-                            onPressed: () => _showEditDialog(test),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
-                            ),
-                            child: const Text('Edit',
-                                style: TextStyle(color: Colors.white)),
-                          ),
-                          const SizedBox(width: 8),
-                          // Delete Button
-                          ElevatedButton(
-                            onPressed: () => _showDeleteConfirm(test),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
-                            ),
-                            child: const Text('Delete',
-                                style: TextStyle(color: Colors.white)),
-                          ),
-                        ],
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+          ),
+        ],
+      ),
     );
   }
 }

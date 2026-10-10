@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/notification_service.dart';
+import '../widgets/app_ui.dart';
 
 /// LAB PAYMENTS (Receptionist)
 ///
@@ -21,8 +22,7 @@ class LabPaymentsScreen extends StatefulWidget {
 }
 
 class _LabPaymentsScreenState extends State<LabPaymentsScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
+  static const Color _primary = Color(0xFF0B2E33);
 
   bool _isLoading = true;
   String? _processingId;
@@ -107,7 +107,7 @@ class _LabPaymentsScreenState extends State<LabPaymentsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content:
               Text('$_autoExpired lab test(s) auto-cancelled (24hr timeout)'),
-          backgroundColor: const Color(0xFFB8860B),
+          backgroundColor: const Color(0xFF8A6D00),
           behavior: SnackBarBehavior.floating,
         ));
       }
@@ -136,13 +136,16 @@ class _LabPaymentsScreenState extends State<LabPaymentsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Confirm payment received'),
         content: Text('Patient: ${test['patientName']}\n'
             'Test: ${test['testType']}\n\n'
             'Cash received: Rs. ${test['charge']}?'),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.muted),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Back'),
           ),
@@ -219,19 +222,23 @@ class _LabPaymentsScreenState extends State<LabPaymentsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
         title: const Text('Cancel this test?'),
         content: const Text(
             'Use this if the patient does not want to proceed with the '
             'test. No payment has been collected yet.'),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.muted),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Back'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFB23A1E), elevation: 0),
             child: const Text('Cancel Test',
                 style: TextStyle(color: Colors.white)),
           ),
@@ -262,7 +269,7 @@ class _LabPaymentsScreenState extends State<LabPaymentsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -272,7 +279,7 @@ class _LabPaymentsScreenState extends State<LabPaymentsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: _primary,
+      backgroundColor: AppColors.teal,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -281,80 +288,93 @@ class _LabPaymentsScreenState extends State<LabPaymentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : _pending.isEmpty
-                      ? _buildEmpty()
-                      : RefreshIndicator(
-                          onRefresh: _loadAndProcess,
-                          color: _primary,
-                          child: ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                            itemCount: _pending.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (ctx, i) => _card(_pending[i]),
-                          ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : _pending.isEmpty
+                    ? _buildEmpty()
+                    : RefreshIndicator(
+                        onRefresh: _loadAndProcess,
+                        color: AppColors.teal,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                          itemCount: _pending.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (ctx, i) => _card(_pending[i]),
                         ),
-            ),
-          ],
-        ),
+                      ),
+          ),
+        ],
       ),
     );
   }
 
+  // UI only: header total is calculated from the already-loaded list
+  num _chargeOf(Map<String, dynamic> t) {
+    final c = t['charge'];
+    if (c is num) return c;
+    return num.tryParse('$c') ?? 0;
+  }
+
   Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
+    final num total = _pending.fold<num>(0, (sum, t) => sum + _chargeOf(t));
+    final count = _pending.length;
+    return AppHeader(
+      title: 'Lab payments',
+      subtitle: 'Collect cash and send test to lab',
+      bottom: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('To collect',
+                    style: TextStyle(
+                        color: AppColors.headerMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(_isLoading ? '—' : 'Rs. $total',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800)),
+              ],
             ),
           ),
-          const SizedBox(width: 14),
-          const Text('Lab Payments',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.bold)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.mint.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              '$count test${count == 1 ? '' : 's'} pending',
+              style: const TextStyle(
+                  color: AppColors.mint,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800),
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.science_outlined,
-              size: 64, color: _primary.withValues(alpha: 0.3)),
-          const SizedBox(height: 16),
-          const Text('No pending lab payments',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF6B7280))),
-        ],
+    return const SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 24),
+      child: AppEmptyState(
+        icon: Icons.science_outlined,
+        title: 'No pending lab payments',
       ),
     );
   }
@@ -362,32 +382,17 @@ class _LabPaymentsScreenState extends State<LabPaymentsScreen> {
   Widget _card(Map<String, dynamic> test) {
     final isProcessing = _processingId == test['testId'];
 
-    return Container(
-      width: double.infinity,
+    return AppCard(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD9ECF8),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.science_outlined,
-                    color: Color(0xFF1565C0), size: 20),
+              const AppIconTile(
+                icon: Icons.science_outlined,
+                color: AppColors.blue,
+                background: AppColors.blueSoft,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -397,19 +402,20 @@ class _LabPaymentsScreenState extends State<LabPaymentsScreen> {
                     Text(test['patientName'],
                         style: const TextStyle(
                             fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A2F3A))),
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.text)),
+                    const SizedBox(height: 3),
                     Text('${test['testType']} · Dr. ${test['doctorName']}',
                         style: const TextStyle(
-                            fontSize: 12, color: Colors.black54)),
+                            fontSize: 12, color: AppColors.muted)),
                   ],
                 ),
               ),
               Text('Rs. ${test['charge']}',
                   style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: _primary)),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0B5E57))),
             ],
           ),
           const SizedBox(height: 14),
@@ -417,7 +423,7 @@ class _LabPaymentsScreenState extends State<LabPaymentsScreen> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(8),
-                child: CircularProgressIndicator(color: _primary),
+                child: CircularProgressIndicator(color: AppColors.teal),
               ),
             )
           else
@@ -427,15 +433,17 @@ class _LabPaymentsScreenState extends State<LabPaymentsScreen> {
                   child: OutlinedButton(
                     onPressed: () => _cancelTest(test),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: Color(0xFFD9534F)),
+                      minimumSize: const Size.fromHeight(44),
+                      backgroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0xFFF0C9BE)),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text('Cancel',
                         style: TextStyle(
-                            color: Color(0xFFD9534F),
-                            fontWeight: FontWeight.w600)),
+                            color: Color(0xFF9A2E16),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800)),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -444,14 +452,17 @@ class _LabPaymentsScreenState extends State<LabPaymentsScreen> {
                   child: ElevatedButton(
                     onPressed: () => _markPaid(test),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _primary,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      backgroundColor: AppColors.header,
+                      elevation: 0,
+                      minimumSize: const Size.fromHeight(44),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text('Mark as Paid',
                         style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w600)),
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800)),
                   ),
                 ),
               ],

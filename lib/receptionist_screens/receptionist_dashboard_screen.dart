@@ -9,6 +9,8 @@ import 'admissions_screen.dart';
 import 'refunds_pending_screen.dart';
 import 'receptionist_profile_screen.dart';
 import '../widgets/notification_bell_icon.dart';
+import '../widgets/app_ui.dart';
+import 'package:intl/intl.dart';
 
 /// RECEPTIONIST DASHBOARD — professional layout
 ///
@@ -40,9 +42,6 @@ class ReceptionistDashboardScreen extends StatefulWidget {
 
 class _ReceptionistDashboardScreenState
     extends State<ReceptionistDashboardScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   String _receptionistName = '';
   bool _isLoading = true;
 
@@ -63,10 +62,8 @@ class _ReceptionistDashboardScreenState
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid != null) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .get();
+        final userDoc =
+            await FirebaseFirestore.instance.collection('users').doc(uid).get();
         _receptionistName = userDoc.data()?['name'] ?? 'Receptionist';
       }
 
@@ -100,71 +97,116 @@ class _ReceptionistDashboardScreenState
     }
   }
 
+  // ── Navigation helpers (same push + reload as before) ──
+  Future<void> _openVerify() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const VerifyPaymentsScreen()),
+    );
+    _loadData();
+  }
+
+  Future<void> _openLab() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const LabPaymentsScreen()),
+    );
+    _loadData();
+  }
+
+  Future<void> _openAdmissions() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AdmissionsScreen()),
+    );
+    _loadData();
+  }
+
+  Future<void> _openRefunds() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const RefundsPendingScreen()),
+    );
+    _loadData();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadData,
-          color: _primary,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 16),
-                _buildStatChips(),
-                const SizedBox(height: 20),
-                const Text(
-                  'Quick actions',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF6B7280),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                _buildActionGrid(),
-                const SizedBox(height: 10),
-                _buildListCard(
-                  icon: Icons.bed_outlined,
-                  cardBg: const Color(0xFFEAE3F7),
-                  iconColor: const Color(0xFF7E57C2),
-                  title: 'Admissions',
-                  subtitle: 'Assign and release beds',
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AdmissionsScreen(),
+      backgroundColor: AppColors.bg,
+      body: RefreshIndicator(
+        onRefresh: _loadData,
+        color: AppColors.teal,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeader(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Quick actions',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.text,
                       ),
-                    );
-                    _loadData();
-                  },
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _gridCard(
+                            icon: Icons.payments_outlined,
+                            tint: const Color(0xFFF6F2E2),
+                            iconColor: const Color(0xFF8A6D00),
+                            title: 'Verify payments',
+                            subtitle: 'Review screenshots',
+                            badge: _pendingPayments,
+                            onTap: _openVerify,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _gridCard(
+                            icon: Icons.science_outlined,
+                            tint: AppColors.blueSoft,
+                            iconColor: AppColors.blue,
+                            title: 'Lab payments',
+                            subtitle: 'Collect and forward',
+                            onTap: _openLab,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildListCard(
+                      icon: Icons.bed_outlined,
+                      tint: const Color(0xFFEEE8FB),
+                      iconColor: const Color(0xFF5B3FA8),
+                      title: 'Admissions',
+                      subtitle: 'Assign and release beds',
+                      onTap: _openAdmissions,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildListCard(
+                      icon: Icons.currency_exchange_outlined,
+                      tint: const Color(0xFFFBE6E0),
+                      iconColor: const Color(0xFF9A2E16),
+                      title: 'Pending refunds',
+                      subtitle: 'Pay and mark done',
+                      badge: _pendingRefunds,
+                      onTap: _openRefunds,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                _buildListCard(
-                  icon: Icons.currency_exchange_outlined,
-                  cardBg: const Color(0xFFFDE6E0),
-                  iconColor: const Color(0xFFD9534F),
-                  title: 'Pending refunds',
-                  subtitle: 'Pay and mark done',
-                  badge: _pendingRefunds,
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const RefundsPendingScreen(),
-                      ),
-                    );
-                    _loadData();
-                  },
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -172,131 +214,115 @@ class _ReceptionistDashboardScreenState
     );
   }
 
-  // ✅ CHANGED: compact bar (solid color, no gradient) + logo mark
-  // (replaces hamburger — is screen pe sidebar nahi hai) + name k
-  // neechay "Receptionist" role tag. Bell icon aur uska logic same.
+  // Dark header: logo + date/name + bell, then 3 stat tiles.
   Widget _buildHeader() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: _primary,
-        borderRadius: BorderRadius.circular(16),
+      decoration: const BoxDecoration(
+        color: AppColors.header,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
       ),
-      child: Row(
-        children: [
-          // Logo mark (replaces hamburger/menu icon — no sidebar on this screen)
-          // Round logo, no white box background — just the image itself.
-          ClipOval(
-            child: Image.asset(
-              'assets/Logo.png',
-              width: 70,
-              height: 70,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                // Asset path galat ho to app crash nahi hogi, ye
-                // fallback icon dikhega taake pata chal jaye.
-                return Container(
-                  width: 40,
-                  height: 40,
-                  color: Colors.white24,
-                  child: const Icon(
-                    Icons.local_hospital,
-                    color: Colors.white,
-                    size: 22,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: ClipOval(
+                      child: Transform.scale(
+                        scale: 1.6,
+                        child: Image.asset(
+                          'assets/Logo.png',
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.local_hospital,
+                              color: AppColors.header,
+                              size: 22,
+                            );
+                          },
+                        ),
+                      ),
+                    ),
                   ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Name + role tag
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _isLoading ? 'Loading...' : _receptionistName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Front desk · ${DateFormat('EEE, d MMM').format(DateTime.now())}',
+                          style: const TextStyle(
+                            color: AppColors.headerMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _isLoading ? 'Loading...' : _receptionistName,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 3),
-                const Text(
-                  'Receptionist',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                  // Notification Bell (same reusable widget + logic)
+                  const NotificationBellIcon(
+                    iconColor: Colors.white,
+                    backgroundColor: Color(0x14FFFFFF),
+                    size: 20,
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  _statChip('Pending', _pendingPayments, AppColors.star),
+                  const SizedBox(width: 8),
+                  _statChip('Today', _todayAppointments, AppColors.mint),
+                  const SizedBox(width: 8),
+                  _statChip(
+                      'Refunds', _pendingRefunds, const Color(0xFFFFB4A3)),
+                ],
+              ),
+            ],
           ),
-
-          // Notification Bell
-          // Uses the existing reusable NotificationBellIcon.
-          // Unread notifications will show a red count badge.
-          const NotificationBellIcon(
-            iconColor: Colors.white,
-            backgroundColor: Color(0x26FFFFFF),
-            size: 20,
-          ),
-        ],
+        ),
       ),
-    );
-  }
-
-  Widget _buildStatChips() {
-    return Row(
-      children: [
-        _statChip(
-          'Pending',
-          _pendingPayments,
-          const Color(0xFFB8860B),
-        ),
-        const SizedBox(width: 8),
-        _statChip(
-          'Today',
-          _todayAppointments,
-          _primary,
-        ),
-        const SizedBox(width: 8),
-        _statChip(
-          'Refunds',
-          _pendingRefunds,
-          const Color(0xFFD9534F),
-        ),
-      ],
     );
   }
 
   Widget _statChip(String label, int count, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          color: Colors.white.withOpacity(0.07),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               _isLoading ? '—' : '$count',
               style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
                 color: color,
               ),
             ),
@@ -304,9 +330,9 @@ class _ReceptionistDashboardScreenState
             Text(
               label,
               style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF9CA3AF),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.headerMuted,
               ),
             ),
           ],
@@ -315,127 +341,67 @@ class _ReceptionistDashboardScreenState
     );
   }
 
-  // Quick-action grid — "Verify payments" ab yahan hai (Walk-in ki jagah).
-  // Walk-in ab bottom nav mein dedicated tab ban gaya hai.
-  Widget _buildActionGrid() {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 1.05,
-      children: [
-        _gridCard(
-          icon: Icons.payments_outlined,
-          cardBg: const Color(0xFFFCEFD8),
-          iconColor: const Color(0xFFB8860B),
-          title: 'Verify payments',
-          subtitle: 'Review screenshots',
-          badge: _pendingPayments,
-          onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const VerifyPaymentsScreen(),
-              ),
-            );
-            _loadData();
-          },
+  Widget _badge(int count) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 24),
+      height: 24,
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0xFF9A2E16),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$count',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
         ),
-        _gridCard(
-          icon: Icons.science_outlined,
-          cardBg: const Color(0xFFD9ECF8),
-          iconColor: const Color(0xFF1565C0),
-          title: 'Lab payments',
-          subtitle: 'Collect and forward',
-          onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const LabPaymentsScreen(),
-              ),
-            );
-            _loadData();
-          },
-        ),
-      ],
+      ),
     );
   }
 
-  // Card background is the full tint color (like the patient
-  // dashboard's "Our services" cards), not just the icon chip.
   Widget _gridCard({
     required IconData icon,
-    required Color cardBg,
+    required Color tint,
     required Color iconColor,
     required String title,
     required String subtitle,
     int badge = 0,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return AppCard(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+      padding: const EdgeInsets.all(16),
+      child: SizedBox(
+        height: 104,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(
-                  icon,
-                  color: iconColor,
-                  size: 22,
-                ),
-                if (badge > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD9534F),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '$badge',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                AppIconTile(
+                    icon: icon, color: iconColor, background: tint, size: 44),
+                if (badge > 0) _badge(badge),
               ],
             ),
             const Spacer(),
             Text(
               title,
               style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1A2F3A),
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppColors.text,
               ),
             ),
             const SizedBox(height: 2),
             Text(
               subtitle,
               style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF9CA3AF),
+                fontSize: 12,
+                color: AppColors.muted,
               ),
             ),
           ],
@@ -444,93 +410,49 @@ class _ReceptionistDashboardScreenState
     );
   }
 
-  // Full-width list-style card — Admissions + Pending Refunds share this.
-  //  CHANGED: ab poora card tinted background use karta hai
-  // (cardBg), bilkul _gridCard jaisa — pehle sirf ek chhoti icon-chip
-  // rangeen thi aur baaqi card plain white tha. Icon, title, subtitle,
-  // badge, chevron — sab bilkul waisa hi hai, sirf background style.
   Widget _buildListCard({
     required IconData icon,
-    required Color cardBg,
+    required Color tint,
     required Color iconColor,
     required String title,
     required String subtitle,
     int badge = 0,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return AppCard(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: iconColor,
-              size: 22,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1A2F3A),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF9CA3AF),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (badge > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD9534F),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '$badge',
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          AppIconTile(icon: icon, color: iconColor, background: tint),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
                   ),
                 ),
-              ),
-            const SizedBox(width: 6),
-            const Icon(
-              Icons.chevron_right,
-              color: Color(0xFF9CA3AF),
-              size: 18,
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.muted,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          if (badge > 0) ...[_badge(badge), const SizedBox(width: 6)],
+          const Icon(Icons.chevron_right_rounded,
+              color: AppColors.faint, size: 22),
+        ],
       ),
     );
   }
@@ -539,47 +461,71 @@ class _ReceptionistDashboardScreenState
   // "Payments" ab yahan nahi (Quick actions grid mein move ho gaya),
   // is ki jagah "Walk-in" tab yahan aa gaya hai.
   Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: _selectedIndex,
-      selectedItemColor: _primary,
-      unselectedItemColor: Colors.grey,
-      type: BottomNavigationBarType.fixed,
-      onTap: (index) async {
-        if (index == 0) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.divider)),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        selectedItemColor: AppColors.header,
+        unselectedItemColor: AppColors.faint,
+        selectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        type: BottomNavigationBarType.fixed,
+        onTap: (index) async {
+          if (index == 0) {
+            setState(() => _selectedIndex = 0);
+            return;
+          }
+          if (index == 1) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AppointmentsTodayScreen(),
+              ),
+            );
+          } else if (index == 2) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const WalkInScreen(),
+              ),
+            );
+          } else if (index == 3) {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ReceptionistProfileScreen(),
+              ),
+            );
+          }
           setState(() => _selectedIndex = 0);
-          return;
-        }
-        if (index == 1) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const AppointmentsTodayScreen(),
-            ),
-          );
-        } else if (index == 2) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const WalkInScreen(),
-            ),
-          );
-        } else if (index == 3) {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const ReceptionistProfileScreen(),
-            ),
-          );
-        }
-        setState(() => _selectedIndex = 0);
-        _loadData();
-      },
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.event_note_outlined), label: 'Appointments'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_add_alt_1_outlined), label: 'Walk-in'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-      ],
+          _loadData();
+        },
+        items: const [
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home_rounded),
+              label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.event_note_outlined),
+              activeIcon: Icon(Icons.event_note_rounded),
+              label: 'Appointments'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_add_alt_1_outlined),
+              activeIcon: Icon(Icons.person_add_alt_1_rounded),
+              label: 'Walk-in'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person_rounded),
+              label: 'Profile'),
+        ],
+      ),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../widgets/app_ui.dart';
 
 class ViewPaymentRecordsScreen extends StatefulWidget {
   const ViewPaymentRecordsScreen({super.key});
@@ -199,9 +200,8 @@ class _ViewPaymentRecordsScreenState extends State<ViewPaymentRecordsScreen> {
       int count = 0;
       for (final g in groups) {
         for (final p in g.payments) {
-          batch.delete(FirebaseFirestore.instance
-              .collection('payments')
-              .doc(p['id']));
+          batch.delete(
+              FirebaseFirestore.instance.collection('payments').doc(p['id']));
           count++;
         }
       }
@@ -225,101 +225,61 @@ class _ViewPaymentRecordsScreenState extends State<ViewPaymentRecordsScreen> {
     }
   }
 
+  // Type ke hisaab se chhota rang wala dot (sirf design).
+  Color _typeColor(String type) {
+    switch (type) {
+      case 'Consultation':
+        return AppColors.teal;
+      case 'Lab':
+        return AppColors.blue;
+      case 'Room':
+        return const Color(0xFF8A5A00);
+      default:
+        return AppColors.faint;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasActiveFilters = _typeFilter != 'All' || _statusFilter != 'All';
 
     return Scaffold(
-      backgroundColor: _bg,
-      appBar: AppBar(
-        backgroundColor: _primary,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Payment Records',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
-        ),
-      ),
+      backgroundColor: AppColors.bg,
       body: Column(
         children: [
           // Filters section
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          AppHeader(
+            title: 'Billing records',
+            subtitle: 'Grouped by appointment',
+            bottom: Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _DropdownFilter(
-                        label: 'Type',
-                        value: _typeFilter,
-                        options: _typeOptions,
-                        color: _primary,
-                        onChanged: (v) {
-                          setState(() => _typeFilter = v);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _DropdownFilter(
-                        label: 'Status',
-                        value: _statusFilter,
-                        options: _statusOptions,
-                        color: _primary,
-                        displayLabel: _statusLabel,
-                        onChanged: (v) {
-                          setState(() => _statusFilter = v);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                if (hasActiveFilters) ...[
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(Icons.info_outline_rounded,
-                          size: 13, color: Color(0xFF6B7280)),
-                      const SizedBox(width: 5),
-                      const Expanded(
-                        child: Text(
-                          'Showing full appointment bills that have a matching payment',
-                          style:
-                              TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _typeFilter = 'All';
-                            _statusFilter = 'All';
-                          });
-                        },
-                        child: const Padding(
-                          padding: EdgeInsets.only(left: 8),
-                          child: Text(
-                            'Clear',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFFDB4437),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                Expanded(
+                  child: AppHeaderDropdown(
+                    label: 'Type',
+                    value: _typeFilter,
+                    options: _typeOptions,
+                    displayOf: (o) => o == 'All' ? 'All types' : o,
+                    dotColorOf: _typeColor,
+                    onChanged: (v) {
+                      setState(() => _typeFilter = v);
+                    },
                   ),
-                ],
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: AppHeaderDropdown(
+                    label: 'Status',
+                    value: _statusFilter,
+                    options: _statusOptions,
+                    displayOf: (o) =>
+                        o == 'All' ? 'All statuses' : _statusLabel(o),
+                    dotColorOf: (o) =>
+                        o == 'All' ? AppColors.faint : _statusColor(o),
+                    onChanged: (v) {
+                      setState(() => _statusFilter = v);
+                    },
+                  ),
+                ),
               ],
             ),
           ),
@@ -336,13 +296,13 @@ class _ViewPaymentRecordsScreenState extends State<ViewPaymentRecordsScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDB4437).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          color: AppColors.dangerSoft,
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
                           'Error loading payments: ${snapshot.error}',
                           style: const TextStyle(
-                            color: Color(0xFFDB4437),
+                            color: AppColors.danger,
                             fontSize: 13,
                           ),
                         ),
@@ -353,7 +313,7 @@ class _ViewPaymentRecordsScreenState extends State<ViewPaymentRecordsScreen> {
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                      child: CircularProgressIndicator(color: _primary));
+                      child: CircularProgressIndicator(color: AppColors.teal));
                 }
 
                 final docs = snapshot.data?.docs ?? [];
@@ -364,101 +324,103 @@ class _ViewPaymentRecordsScreenState extends State<ViewPaymentRecordsScreen> {
                     if (groupSnapshot.connectionState ==
                         ConnectionState.waiting) {
                       return const Center(
-                          child: CircularProgressIndicator(color: _primary));
+                          child:
+                              CircularProgressIndicator(color: AppColors.teal));
                     }
 
                     final groups = groupSnapshot.data ?? [];
 
                     return Column(
                       children: [
-                        Container(
-                          width: double.infinity,
-                          color: const Color(0xFFDCEFE9),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          child: Row(
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                          child: Column(
                             children: [
-                              Expanded(
-                                child: Text(
-                                  '${groups.length} appointment bill${groups.length == 1 ? '' : 's'} found',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: _primary,
+                              if (hasActiveFilters) ...[
+                                AppInfoNote(
+                                  text:
+                                      'Showing full appointment bills that have a matching payment',
+                                  trailing: Material(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(10),
+                                      onTap: () {
+                                        setState(() {
+                                          _typeFilter = 'All';
+                                          _statusFilter = 'All';
+                                        });
+                                      },
+                                      child: const Padding(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 7),
+                                        child: Text(
+                                          'Clear',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppColors.danger,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
+                                const SizedBox(height: 8),
+                              ],
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '${groups.length} appointment bill${groups.length == 1 ? '' : 's'} found',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppColors.teal,
+                                      ),
+                                    ),
+                                  ),
+                                  if (groups.isNotEmpty)
+                                    AppDeleteAllButton(
+                                      onTap: () =>
+                                          _deleteAllPayments(context, groups),
+                                    ),
+                                ],
                               ),
-                              // ── NAYA: Delete All — jo bhi filter abhi
-                              // lagi hai, usi ke andar jo groups (aur
-                              // unki saari payment lines) dikh rahe
-                              // hain, sab delete. Koi confirmation nahi.
-                              if (groups.isNotEmpty)
-                                TextButton.icon(
-                                  onPressed: () =>
-                                      _deleteAllPayments(context, groups),
-                                  icon: const Icon(Icons.delete_sweep_outlined,
-                                      size: 16, color: Color(0xFFDB4437)),
-                                  label: const Text('Delete All',
-                                      style: TextStyle(
-                                          color: Color(0xFFDB4437),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600)),
-                                ),
                             ],
                           ),
                         ),
                         Expanded(
                           child: groups.isEmpty
                               ? ListView(
-                                  children: [
-                                    SizedBox(
-                                      height:
-                                          MediaQuery.of(context).size.height *
-                                              0.55,
-                                      child: Center(
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.receipt_long_outlined,
-                                                size: 64,
-                                                color:
-                                                    _primary.withOpacity(0.3)),
-                                            const SizedBox(height: 16),
-                                            const Text(
-                                              'No payment records found',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                                color: Color(0xFF6B7280),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            const Text(
-                                              'Try adjusting your filters',
-                                              style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: Color(0xFF9CA3AF)),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                                  padding: const EdgeInsets.all(20),
+                                  children: const [
+                                    AppEmptyState(
+                                      icon: Icons.receipt_long_outlined,
+                                      title: 'No payment records found',
+                                      subtitle: 'Try adjusting your filters',
                                     ),
                                   ],
                                 )
                               : ListView.separated(
-                                  padding: const EdgeInsets.all(16),
+                                  padding:
+                                      const EdgeInsets.fromLTRB(20, 8, 20, 24),
                                   itemCount: groups.length,
                                   separatorBuilder: (_, __) =>
                                       const SizedBox(height: 12),
                                   itemBuilder: (context, index) {
+                                    final group = groups[index];
                                     return _PaymentGroupCard(
-                                      group: groups[index],
+                                      group: group,
+                                      filtersActive: hasActiveFilters,
                                       statusColor: _statusColor,
                                       statusLabel: _statusLabel,
-                                      typeIcon: _typeIcon,
-                                      onDeletePayment: (id) =>
-                                          _deletePayment(context, id),
+                                      typeColor: _typeColor,
+                                      // Ek bill = ek delete. Wahi purana
+                                      // _deleteAllPayments function, sirf
+                                      // is ek bill ke saath.
+                                      onDeleteBill: () =>
+                                          _deleteAllPayments(context, [group]),
                                     );
                                   },
                                 ),
@@ -498,79 +460,22 @@ class _PaymentGroup {
   }
 }
 
-class _DropdownFilter extends StatelessWidget {
-  final String label;
-  final String value;
-  final List<String> options;
-  final Color color;
-  final ValueChanged<String> onChanged;
-  final String Function(String)? displayLabel;
-
-  const _DropdownFilter({
-    required this.label,
-    required this.value,
-    required this.options,
-    required this.color,
-    required this.onChanged,
-    this.displayLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isActive = value != 'All';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: isActive ? color.withOpacity(0.1) : const Color(0xFFF4F7F6),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isActive ? color : const Color(0xFFE5E7EB),
-        ),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          icon: Icon(Icons.keyboard_arrow_down_rounded,
-              color: isActive ? color : const Color(0xFF6B7280), size: 18),
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: isActive ? color : const Color(0xFF6B7280),
-          ),
-          items: options.map((opt) {
-            final display =
-                opt == 'All' ? '$label: All' : (displayLabel?.call(opt) ?? opt);
-            return DropdownMenuItem(
-              value: opt,
-              child: Text(display, overflow: TextOverflow.ellipsis),
-            );
-          }).toList(),
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
-        ),
-      ),
-    );
-  }
-}
-
 class _PaymentGroupCard extends StatelessWidget {
   final _PaymentGroup group;
+  final bool filtersActive;
   final Color Function(String) statusColor;
   final String Function(String) statusLabel;
-  final IconData Function(String) typeIcon;
-  final ValueChanged<String> onDeletePayment;
+  final Color Function(String) typeColor;
+  final VoidCallback onDeleteBill;
 
   const _PaymentGroupCard({
     required this.group,
+    required this.filtersActive,
     required this.statusColor,
     required this.statusLabel,
-    required this.typeIcon,
-    required this.onDeletePayment,
+    required this.typeColor,
+    required this.onDeleteBill,
   });
-
-  static const Color _primary = Color(0xFF1F8A70);
 
   String _formatDate(dynamic ts) {
     if (ts == null) return 'N/A';
@@ -584,195 +489,163 @@ class _PaymentGroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    final count = group.payments.length;
+    return AppCard(
+      padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header: patient name + date
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: _primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.person_outline_rounded,
-                      color: _primary, size: 18),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        group.patientName,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A2E),
-                        ),
+          // Header: patient name + date | total + delete
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      group.patientName,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.text,
                       ),
-                      Text(
-                        _formatDate(group.payments.first['createdAt']),
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF9CA3AF),
-                        ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${_formatDate(group.payments.first['createdAt'])} · $count payment${count == 1 ? '' : 's'}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.faint,
                       ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const Divider(height: 1, color: Color(0xFFE5E7EB)),
-
-          // Each payment line within the group
-          ...group.payments.map((p) {
-            final isHighlighted = group.matchingIds.contains(p['id']);
-            final type = p['type'] ?? 'Unknown';
-            final status = p['status'] ?? 'Unknown';
-            final amount = p['amount'] ?? 0;
-            final method = p['paymentMethod'] ?? 'N/A';
-            final paymentId = p['id'] as String;
-
-            return Container(
-              decoration: BoxDecoration(
-                color: isHighlighted
-                    ? _primary.withOpacity(0.05)
-                    : Colors.transparent,
-                border: const Border(
-                  bottom: BorderSide(color: Color(0xFFF0F0F0), width: 1),
+                    ),
+                  ],
                 ),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Icon(typeIcon(type),
-                      size: 16, color: const Color(0xFF6B7280)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          type,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1A1A2E),
-                          ),
-                        ),
-                        Text(
-                          method,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF9CA3AF),
-                          ),
-                        ),
-                      ],
+                  const Text(
+                    'TOTAL',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      color: AppColors.faint,
                     ),
                   ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'Rs. $amount',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A2E),
-                        ),
-                      ),
-                      Container(
-                        margin: const EdgeInsets.only(top: 2),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: statusColor(status).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          statusLabel(status),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: statusColor(status),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  // ── NAYA: delete icon, har payment line ke end
-                  // mein — status se qata-nazar, admin kisi bhi ek
-                  // payment record ko individually delete kar sake.
-                  const SizedBox(width: 6),
-                  GestureDetector(
-                    onTap: () => onDeletePayment(paymentId),
-                    child: Container(
-                      padding: const EdgeInsets.all(5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDB4437).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Icon(Icons.delete_outline,
-                          size: 14, color: Color(0xFFDB4437)),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Rs ${group.total}',
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.teal,
                     ),
                   ),
                 ],
               ),
-            );
-          }),
-
-          // Total row
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF4F7F6),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
+              const SizedBox(width: 10),
+              AppDeleteButton(
+                tooltip: 'Delete this bill',
+                onTap: onDeleteBill,
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Each payment line within the group
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF6F8F8),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
               children: [
-                const Text(
-                  'Total Bill',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF6B7280),
-                  ),
-                ),
-                Text(
-                  'Rs. ${group.total}',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: _primary,
-                  ),
-                ),
+                for (int i = 0; i < group.payments.length; i++)
+                  _line(group.payments[i], i == 0),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _line(Map<String, dynamic> p, bool isFirst) {
+    final isHighlighted = group.matchingIds.contains(p['id']);
+    final type = p['type'] ?? 'Unknown';
+    final status = p['status'] ?? 'Unknown';
+    final amount = p['amount'] ?? 0;
+    final method = p['paymentMethod'] ?? 'N/A';
+
+    return Opacity(
+      opacity: filtersActive && !isHighlighted ? 0.45 : 1.0,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        decoration: BoxDecoration(
+          border: isFirst
+              ? null
+              : const Border(top: BorderSide(color: AppColors.divider)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: typeColor(type),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    type,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(text: '$method · '),
+                        TextSpan(
+                          text: statusLabel(status),
+                          style: TextStyle(
+                            color: statusColor(status),
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.faint,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              'Rs $amount',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: AppColors.text,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../widgets/app_ui.dart';
 
 class ViewFeedbackScreen extends StatefulWidget {
   const ViewFeedbackScreen({super.key});
@@ -121,54 +122,65 @@ class _ViewFeedbackScreenState extends State<ViewFeedbackScreen> {
     }
   }
 
+  Widget _stars(int filled, double size, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (i) {
+        return Icon(
+          i < filled ? Icons.star_rounded : Icons.star_border_rounded,
+          size: size,
+          color: color,
+        );
+      }),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
-      appBar: AppBar(
-        backgroundColor: _primary,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'View Feedback',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
-        ),
-      ),
+      backgroundColor: AppColors.bg,
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: _buildQuery().snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDB4437).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'Error loading feedback: ${snapshot.error}',
-                    style: const TextStyle(
-                      color: Color(0xFFDB4437),
-                      fontSize: 13,
+            return Column(
+              children: [
+                const AppHeader(title: 'Feedback', subtitle: 'Patient reviews'),
+                Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.dangerSoft,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          'Error loading feedback: ${snapshot.error}',
+                          style: const TextStyle(
+                            color: AppColors.danger,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             );
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-                child: CircularProgressIndicator(color: _primary));
+            return const Column(
+              children: [
+                AppHeader(title: 'Feedback', subtitle: 'Patient reviews'),
+                Expanded(
+                  child: Center(
+                      child: CircularProgressIndicator(color: AppColors.teal)),
+                ),
+              ],
+            );
           }
 
           final docs = snapshot.data?.docs ?? [];
@@ -177,69 +189,119 @@ class _ViewFeedbackScreenState extends State<ViewFeedbackScreen> {
             future: _enrichWithNames(docs),
             builder: (context, nameSnapshot) {
               if (nameSnapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                    child: CircularProgressIndicator(color: _primary));
+                return const Column(
+                  children: [
+                    AppHeader(title: 'Feedback', subtitle: 'Patient reviews'),
+                    Expanded(
+                      child: Center(
+                          child:
+                              CircularProgressIndicator(color: AppColors.teal)),
+                    ),
+                  ],
+                );
               }
 
               final feedbackList = nameSnapshot.data ?? [];
               final avgRating = _averageRating(feedbackList);
+              final reviewText =
+                  '${feedbackList.length} review${feedbackList.length == 1 ? '' : 's'}';
 
               return Column(
                 children: [
                   // Summary header
-                  if (feedbackList.isNotEmpty)
-                    Container(
-                      width: double.infinity,
-                      color: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
+                  AppHeader(
+                    title: 'Feedback',
+                    subtitle: 'Patient reviews',
+                    bottom: feedbackList.isEmpty
+                        ? null
+                        : Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFF4B400).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.white.withOpacity(0.07),
+                              borderRadius: BorderRadius.circular(18),
                             ),
-                            child: const Icon(Icons.star_rounded,
-                                color: Color(0xFFF4B400), size: 24),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Row(
                               children: [
-                                Text(
-                                  avgRating.toStringAsFixed(1),
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF1A1A2E),
+                                Container(
+                                  width: 52,
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.star.withOpacity(0.16),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
+                                  child: const Icon(Icons.star_rounded,
+                                      color: AppColors.star, size: 30),
                                 ),
-                                Text(
-                                  'Average rating \u2022 ${feedbackList.length} review${feedbackList.length == 1 ? '' : 's'}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF6B7280),
-                                  ),
+                                const SizedBox(width: 14),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.baseline,
+                                      textBaseline: TextBaseline.alphabetic,
+                                      children: [
+                                        Text(
+                                          avgRating.toStringAsFixed(1),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 30,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        const Text(
+                                          '/ 5 average',
+                                          style: TextStyle(
+                                            color: AppColors.headerMuted,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        _stars(avgRating.round(), 15,
+                                            AppColors.star),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          reviewText,
+                                          style: const TextStyle(
+                                            color: AppColors.headerMuted,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-                          // ── NAYA: Delete All — jo bhi feedback abhi
-                          // list mein dikh raha hai, sab delete. Koi
-                          // confirmation nahi.
-                          TextButton.icon(
-                            onPressed: () =>
+                  ),
+
+                  if (feedbackList.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              reviewText,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.teal,
+                              ),
+                            ),
+                          ),
+                          AppDeleteAllButton(
+                            onTap: () =>
                                 _deleteAllFeedback(context, feedbackList),
-                            icon: const Icon(Icons.delete_sweep_outlined,
-                                size: 16, color: Color(0xFFDB4437)),
-                            label: const Text('Delete All',
-                                style: TextStyle(
-                                    color: Color(0xFFDB4437),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600)),
                           ),
                         ],
                       ),
@@ -248,44 +310,20 @@ class _ViewFeedbackScreenState extends State<ViewFeedbackScreen> {
                   Expanded(
                     child: feedbackList.isEmpty
                         ? ListView(
-                            children: [
-                              SizedBox(
-                                height:
-                                    MediaQuery.of(context).size.height * 0.6,
-                                child: Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.star_outline_rounded,
-                                          size: 64,
-                                          color: _primary.withOpacity(0.3)),
-                                      const SizedBox(height: 16),
-                                      const Text(
-                                        'No feedback yet',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF6B7280),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      const Text(
-                                        'Patient reviews will appear here',
-                                        style: TextStyle(
-                                            fontSize: 13,
-                                            color: Color(0xFF9CA3AF)),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                            padding: const EdgeInsets.all(20),
+                            children: const [
+                              AppEmptyState(
+                                icon: Icons.star_outline_rounded,
+                                title: 'No feedback yet',
+                                subtitle: 'Patient reviews will appear here',
                               ),
                             ],
                           )
                         : ListView.separated(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                             itemCount: feedbackList.length,
                             separatorBuilder: (_, __) =>
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 12),
                             itemBuilder: (context, index) {
                               final fb = feedbackList[index];
                               return _FeedbackCard(
@@ -312,8 +350,6 @@ class _FeedbackCard extends StatelessWidget {
 
   const _FeedbackCard({required this.feedback, required this.onDelete});
 
-  static const Color _primary = Color(0xFF1F8A70);
-
   String _formatDate(dynamic ts) {
     if (ts == null) return 'N/A';
     try {
@@ -328,132 +364,85 @@ class _FeedbackCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final rating = ((feedback['rating'] ?? 0) as num).toInt();
     final comment = feedback['comment'];
+    final String name = feedback['patientName'] ?? 'N/A';
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Top row: patient name + rating stars + delete
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: AppColors.tealSoft,
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    color: AppColors.teal,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-                child: const Icon(Icons.person_outline_rounded,
-                    color: _primary, size: 18),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  feedback['patientName'] ?? 'N/A',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.text,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(5, (i) {
+                        return Icon(
+                          i < rating
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          size: 16,
+                          color: const Color(0xFFE0A800),
+                        );
+                      }),
+                    ),
+                  ],
                 ),
               ),
-              Row(
-                children: List.generate(5, (i) {
-                  return Icon(
-                    i < rating ? Icons.star_rounded : Icons.star_border_rounded,
-                    size: 16,
-                    color: const Color(0xFFF4B400),
-                  );
-                }),
-              ),
-              // ── NAYA: delete icon, har card ke top par — admin kisi
-              // bhi feedback ko individually delete kar sake.
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onDelete,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDB4437).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(Icons.delete_outline,
-                      size: 16, color: Color(0xFFDB4437)),
-                ),
-              ),
+              AppDeleteButton(size: 34, onTap: onDelete),
             ],
           ),
           const SizedBox(height: 12),
-
-          // Doctor row
-          Row(
-            children: [
-              const Icon(Icons.medical_services_outlined,
-                  size: 16, color: Color(0xFF6B7280)),
-              const SizedBox(width: 8),
-              const Text(
-                'Doctor: ',
-                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-              ),
-              Expanded(
-                child: Text(
-                  feedback['doctorName'] ?? 'N/A',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-
-          // Date row
-          Row(
-            children: [
-              const Icon(Icons.access_time_rounded,
-                  size: 16, color: Color(0xFF6B7280)),
-              const SizedBox(width: 8),
-              Text(
-                _formatDate(feedback['createdAt']),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-            ],
-          ),
+          AppInfoRow(
+              label: 'Doctor',
+              value: feedback['doctorName'] ?? 'N/A',
+              labelWidth: 56),
+          AppInfoRow(
+              label: 'Date',
+              value: _formatDate(feedback['createdAt']),
+              labelWidth: 56),
 
           // Comment (if present)
           if (comment != null && comment != '') ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF4F7F6),
-                borderRadius: BorderRadius.circular(10),
+                color: AppColors.bg,
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
-                comment,
+                '\u201C$comment\u201D',
                 style: const TextStyle(
                   fontSize: 13,
-                  color: Color(0xFF374151),
+                  height: 1.5,
+                  color: Color(0xFF3B4F53),
                   fontStyle: FontStyle.italic,
                 ),
               ),

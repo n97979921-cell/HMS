@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'lab_test_detail_screen.dart';
 import 'lab_staff_profile_screen.dart';
 import '../widgets/notification_bell_icon.dart';
+import '../widgets/app_ui.dart';
 
 /// LAB STAFF DASHBOARD — aaj/sab Confirmed tests dikhata hai
 ///
@@ -40,9 +41,6 @@ class LabStaffDashboardScreen extends StatefulWidget {
 }
 
 class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   String _staffName = '';
   bool _isLoading = true;
   String _selectedTab = 'Confirmed'; // Confirmed | In Progress | Completed
@@ -77,10 +75,10 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
         )
         .snapshots()
         .listen((_) {
-      _loadData();
-    }, onError: (_) {
-      setState(() => _isLoading = false);
-    });
+          _loadData();
+        }, onError: (_) {
+          setState(() => _isLoading = false);
+        });
   }
 
   Future<void> _loadData() async {
@@ -88,10 +86,8 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid != null) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(uid)
-            .get();
+        final userDoc =
+            await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
         _staffName = userDoc.data()?['name'] ?? 'Lab Staff';
       }
@@ -161,7 +157,7 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: const Color(0xFFDB4437),
+        backgroundColor: const Color(0xFF9A2E16),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
@@ -176,7 +172,7 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: _primary,
+        backgroundColor: AppColors.teal,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
@@ -229,8 +225,10 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
         ),
         title: const Text('Log out?'),
         content: const Text(
@@ -238,13 +236,14 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.muted),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: const Color(0xFFB23A1E),
             ),
             child: const Text(
               'Log out',
@@ -267,175 +266,155 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildTabToggle(),
-            if (_selectedTab == 'Completed' &&
-                !_isLoading &&
-                _tests.isNotEmpty)
-              _buildDeleteAllBar(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: _primary,
-                      ),
-                    )
-                  : _tests.isEmpty
-                      ? _buildEmpty()
-                      : RefreshIndicator(
-                          onRefresh: _loadData,
-                          color: _primary,
-                          child: ListView.separated(
-                            physics:
-                                const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(
-                              18,
-                              8,
-                              18,
-                              24,
-                            ),
-                            itemCount: _tests.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (ctx, i) => _card(_tests[i]),
-                          ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(),
+          if (_selectedTab == 'Completed' && !_isLoading && _tests.isNotEmpty)
+            _buildDeleteAllBar(),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal),
+                  )
+                : _tests.isEmpty
+                    ? _buildEmpty()
+                    : RefreshIndicator(
+                        onRefresh: _loadData,
+                        color: AppColors.teal,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(
+                              20, _selectedTab == 'Completed' ? 4 : 16, 20, 24),
+                          itemCount: _tests.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (ctx, i) => _card(_tests[i]),
                         ),
-            ),
-          ],
-        ),
+                      ),
+          ),
+        ],
       ),
     );
   }
 
-  // ✅ CHANGED: sirf logo add kiya gaya hai (left side, round). Baqi
-  // sab — gradient, "Welcome,", name, tagline, bell icon, profile
-  // button — bilkul pehle jaisa hi hai, kuch nahi hataya.
+  // Dark header: logo, "Welcome,", name, tagline, bell, profile button
+  // + Ready / In Progress / Completed toggle (same actions as before)
   Widget _buildHeader() {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(18, 16, 18, 0),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_primary, _primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
+      decoration: const BoxDecoration(
+        color: AppColors.header,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
       ),
-      child: Row(
-        children: [
-          // Logo mark — round, no white box background.
-          ClipOval(
-            child: Image.asset(
-              'assets/Logo.png',
-              width: 70,
-              height: 70,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                // Asset path galat ho to app crash nahi hogi, ye
-                // fallback icon dikhega taake pata chal jaye.
-                return Container(
-                  width: 44,
-                  height: 44,
-                  color: Colors.white24,
-                  child: const Icon(
-                    Icons.local_hospital,
-                    color: Colors.white,
-                    size: 24,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  ClipOval(
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      color: Colors.white,
+                      child: Image.asset(
+                        'assets/Logo.png',
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(
+                            Icons.local_hospital,
+                            color: AppColors.header,
+                            size: 24,
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Welcome,',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 13,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Welcome,',
+                          style: TextStyle(
+                            color: AppColors.headerMuted,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          _isLoading ? 'Loading...' : _staffName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const Text(
+                          'Lab Test Management',
+                          style: TextStyle(
+                            color: AppColors.headerLabel,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _isLoading ? 'Loading...' : _staffName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                  // Notification Bell (unread count automatic)
+                  const NotificationBellIcon(
+                    iconColor: Colors.white,
+                    backgroundColor: Color(0x26FFFFFF),
+                    size: 20,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  'Lab Test Management',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LabStaffProfileScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.person_outline,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // Notification Bell
-          // Unread notifications ka red count automatically show hoga.
-          const NotificationBellIcon(
-            iconColor: Colors.white,
-            backgroundColor: Color(0x26FFFFFF),
-            size: 20,
-          ),
-
-          const SizedBox(width: 10),
-
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const LabStaffProfileScreen(),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+                ],
               ),
-              child: const Icon(
-                Icons.person_outline,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
+              const SizedBox(height: 18),
+              _buildTabToggle(),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildTabToggle() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(18, 14, 18, 8),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-          ),
-        ],
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
@@ -454,19 +433,20 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () => _changeTab(value),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          height: 40,
           decoration: BoxDecoration(
-            color: isSelected ? _primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(26),
+            color: isSelected ? AppColors.mint : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.grey,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
+              color: isSelected ? AppColors.header : Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
             ),
           ),
         ),
@@ -474,48 +454,57 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
     );
   }
 
-  // "Delete All" bar — sirf Completed tab par, jab list khali na ho.
-  // Koi confirmation dialog nahi — seedha tap par saare completed
-  // records permanent delete ho jaate hain.
+  // "Delete All" — sirf Completed tab par, bina confirmation (pehle jaisa)
   Widget _buildDeleteAllBar() {
+    final n = _tests.length;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: TextButton.icon(
-          onPressed: _deleteAllCompleted,
-          icon: const Icon(Icons.delete_sweep_outlined,
-              size: 18, color: Color(0xFFD9534F)),
-          label: const Text('Delete All',
-              style: TextStyle(
-                  color: Color(0xFFD9534F),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600)),
-        ),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '$n completed record${n == 1 ? '' : 's'}',
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.muted),
+            ),
+          ),
+          GestureDetector(
+            onTap: _deleteAllCompleted,
+            child: Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: AppColors.dangerSoft,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.delete_sweep_outlined,
+                      size: 16, color: AppColors.danger),
+                  SizedBox(width: 6),
+                  Text('Delete All',
+                      style: TextStyle(
+                          color: AppColors.danger,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.science_outlined,
-            size: 64,
-            color: _primary.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No ${_selectedTab.toLowerCase()} tests',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF6B7280),
-            ),
-          ),
-        ],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      child: AppEmptyState(
+        icon: Icons.science_outlined,
+        title: 'No ${_selectedTab.toLowerCase()} tests',
       ),
     );
   }
@@ -538,31 +527,18 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
       },
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD9ECF8),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.science_outlined,
-                color: Color(0xFF1565C0),
-                size: 20,
-              ),
+            const AppIconTile(
+              icon: Icons.science_outlined,
+              color: AppColors.blue,
+              background: AppColors.blueSoft,
+              size: 44,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -572,33 +548,33 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
                   Text(
                     test['patientName'],
                     style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A2F3A),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.text,
                     ),
                   ),
+                  const SizedBox(height: 3),
                   Text(
                     '${test['testType']} · Dr. ${test['doctorName']}',
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Colors.black54,
+                      color: AppColors.muted,
                     ),
                   ),
                 ],
               ),
             ),
-            // Individual delete — sirf Completed cards par. Bina
-            // confirmation ke, seedha us akele test ka record delete.
-            if (isCompleted)
-              IconButton(
-                onPressed: () => _deleteTest(test['testId']),
-                icon: const Icon(Icons.delete_outline,
-                    color: Color(0xFFD9534F), size: 20),
-                tooltip: 'Delete',
+            // Individual delete — sirf Completed cards par (pehle jaisa)
+            if (isCompleted) ...[
+              const SizedBox(width: 6),
+              AppDeleteButton(
+                onTap: () => _deleteTest(test['testId']),
+                size: 32,
               ),
+            ],
             const Icon(
-              Icons.chevron_right,
-              color: Color(0xFF9CA3AF),
+              Icons.chevron_right_rounded,
+              color: AppColors.faint,
             ),
           ],
         ),

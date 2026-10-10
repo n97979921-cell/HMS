@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'rooms_list_screen.dart';
+import '../widgets/app_ui.dart';
 
 class ManageRoomsScreen extends StatelessWidget {
   const ManageRoomsScreen({super.key});
@@ -15,112 +16,74 @@ class ManageRoomsScreen extends StatelessWidget {
       'label': 'ICU',
       'subtitle': 'Intensive Care Unit',
       'icon': Icons.monitor_heart_outlined,
-      'color': Color(0xFFDB4437),
+      'color': Color(0xFF9A2E16),
     },
     {
       'type': 'General',
       'label': 'General',
       'subtitle': 'General Ward',
       'icon': Icons.bed_outlined,
-      'color': Color(0xFF1F8A70),
+      'color': Color(0xFF0E6E68),
     },
     {
       'type': 'Private',
       'label': 'Private',
       'subtitle': 'Private Room',
       'icon': Icons.king_bed_outlined,
-      'color': Color(0xFF1A73E8),
+      'color': Color(0xFF1D4F91),
     },
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
-      appBar: AppBar(
-        backgroundColor: _primary,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Manage Rooms & Beds',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          const AppHeader(
+            title: 'Rooms & beds',
+            subtitle: 'Select a room type to manage rooms and beds',
           ),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: _primary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _primary.withOpacity(0.2)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline_rounded, color: _primary, size: 20),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text(
-                      'Select a room type to manage rooms and beds.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: _primary,
-                        fontWeight: FontWeight.w500,
-                      ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+              children: [
+                const Text(
+                  'ROOM TYPES',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    color: AppColors.muted,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                for (final rt in _roomTypes)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _RoomTypeCard(
+                      type: rt['type'],
+                      label: rt['label'],
+                      subtitle: rt['subtitle'],
+                      icon: rt['icon'],
+                      color: rt['color'],
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => RoomsListScreen(
+                              roomType: rt['type'],
+                              roomTypeColor: rt['color'],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'Room Types',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.separated(
-                itemCount: _roomTypes.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final rt = _roomTypes[index];
-                  return _RoomTypeCard(
-                    type: rt['type'],
-                    label: rt['label'],
-                    subtitle: rt['subtitle'],
-                    icon: rt['icon'],
-                    color: rt['color'],
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => RoomsListScreen(
-                            roomType: rt['type'],
-                            roomTypeColor: rt['color'],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -145,86 +108,49 @@ class _RoomTypeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return AppCard(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE5E7EB)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E),
-                    ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+      child: Row(
+        children: [
+          AppIconTile(icon: icon, color: color, size: 52),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF6B7280),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 3),
+                // Real-time room count
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('rooms')
+                      .where('roomType', isEqualTo: type)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    final count = snapshot.data?.docs.length ?? 0;
+                    return Text(
+                      '$subtitle · $count Rooms',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.muted,
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
-            // Real-time room count
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('rooms')
-                  .where('roomType', isEqualTo: type)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                final count = snapshot.data?.docs.length ?? 0;
-                return Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '$count Rooms',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: color,
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.arrow_forward_ios_rounded, size: 16, color: color),
-          ],
-        ),
+          ),
+          const Icon(Icons.chevron_right_rounded,
+              color: AppColors.muted, size: 24),
+        ],
       ),
     );
   }

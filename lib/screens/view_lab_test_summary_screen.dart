@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../widgets/app_ui.dart';
 
 class ViewLabTestSummaryScreen extends StatefulWidget {
   const ViewLabTestSummaryScreen({super.key});
@@ -123,10 +124,7 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
   //    qata-nazar. StreamBuilder khud-ba-khud list refresh kar dega.
   Future<void> _deleteTest(BuildContext context, String id) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('lab_tests')
-          .doc(id)
-          .delete();
+      await FirebaseFirestore.instance.collection('lab_tests').doc(id).delete();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Lab test deleted'),
@@ -177,40 +175,41 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
     }
   }
 
+  AppChipColors _chipColors(String status) {
+    switch (status) {
+      case 'Pending':
+        return AppChipColors.yellow;
+      case 'In Progress':
+        return AppChipColors.blue;
+      case 'Completed':
+        return AppChipColors.green;
+      case 'Cancelled':
+        return AppChipColors.red;
+      default:
+        return AppChipColors.grey;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bg,
-      appBar: AppBar(
-        backgroundColor: _primary,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'View Lab Test Summary',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-          ),
-        ),
-      ),
+      backgroundColor: AppColors.bg,
       body: Column(
         children: [
-          // Status filter
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            child: Row(
+          AppHeader(
+            title: 'Lab test summary',
+            subtitle: 'All tests ordered by doctors',
+            // Status filter
+            bottom: Row(
               children: [
                 Expanded(
-                  child: _DropdownFilter(
+                  child: AppHeaderDropdown(
                     label: 'Status',
                     value: _statusFilter,
                     options: _statusOptions,
-                    color: _primary,
+                    displayOf: (o) => o == 'All' ? 'All statuses' : o,
+                    dotColorOf: (o) =>
+                        o == 'All' ? AppColors.faint : _statusColor(o),
                     onChanged: (v) {
                       setState(() => _statusFilter = v);
                     },
@@ -218,16 +217,18 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
                 ),
                 if (_statusFilter != 'All') ...[
                   const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: () => setState(() => _statusFilter = 'All'),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDB4437).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
+                  Material(
+                    color: const Color(0xFFFFB4A3).withOpacity(0.16),
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => setState(() => _statusFilter = 'All'),
+                      child: const SizedBox(
+                        width: 54,
+                        height: 54,
+                        child: Icon(Icons.close_rounded,
+                            color: Color(0xFFFFB4A3), size: 20),
                       ),
-                      child: const Icon(Icons.close_rounded,
-                          size: 18, color: Color(0xFFDB4437)),
                     ),
                   ),
                 ],
@@ -247,13 +248,13 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFDB4437).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          color: AppColors.dangerSoft,
+                          borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
                           'Error loading lab tests: ${snapshot.error}',
                           style: const TextStyle(
-                            color: Color(0xFFDB4437),
+                            color: AppColors.danger,
                             fontSize: 13,
                           ),
                         ),
@@ -264,7 +265,7 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
-                      child: CircularProgressIndicator(color: _primary));
+                      child: CircularProgressIndicator(color: AppColors.teal));
                 }
 
                 final docs = snapshot.data?.docs ?? [];
@@ -276,44 +277,31 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
                     if (nameSnapshot.connectionState ==
                         ConnectionState.waiting) {
                       return const Center(
-                          child: CircularProgressIndicator(color: _primary));
+                          child:
+                              CircularProgressIndicator(color: AppColors.teal));
                     }
 
                     final tests = nameSnapshot.data ?? [];
 
                     return Column(
                       children: [
-                        Container(
-                          width: double.infinity,
-                          color: const Color(0xFFDCEFE9),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
                           child: Row(
                             children: [
                               Expanded(
                                 child: Text(
                                   '${tests.length} lab test${tests.length == 1 ? '' : 's'} found',
                                   style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: _primary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.teal,
                                   ),
                                 ),
                               ),
-                              // ── NAYA: Delete All — jo bhi filter abhi
-                              // lagi hai usi ke andar jo list dikh rahi
-                              // hai, sab delete. Koi confirmation nahi.
                               if (tests.isNotEmpty)
-                                TextButton.icon(
-                                  onPressed: () =>
-                                      _deleteAllTests(context, tests),
-                                  icon: const Icon(Icons.delete_sweep_outlined,
-                                      size: 16, color: Color(0xFFDB4437)),
-                                  label: const Text('Delete All',
-                                      style: TextStyle(
-                                          color: Color(0xFFDB4437),
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600)),
+                                AppDeleteAllButton(
+                                  onTap: () => _deleteAllTests(context, tests),
                                 ),
                             ],
                           ),
@@ -321,54 +309,27 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
                         Expanded(
                           child: tests.isEmpty
                               ? ListView(
-                                  children: [
-                                    SizedBox(
-                                      height:
-                                          MediaQuery.of(context).size.height *
-                                              0.55,
-                                      child: Center(
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.biotech_outlined,
-                                                size: 64,
-                                                color:
-                                                    _primary.withOpacity(0.3)),
-                                            const SizedBox(height: 16),
-                                            const Text(
-                                              'No lab tests found',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                                color: Color(0xFF6B7280),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            const Text(
-                                              'Try a different status filter',
-                                              style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: Color(0xFF9CA3AF)),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                                  padding: const EdgeInsets.all(20),
+                                  children: const [
+                                    AppEmptyState(
+                                      icon: Icons.biotech_outlined,
+                                      title: 'No lab tests found',
+                                      subtitle: 'Try a different status filter',
                                     ),
                                   ],
                                 )
                               : ListView.separated(
-                                  padding: const EdgeInsets.all(16),
+                                  padding:
+                                      const EdgeInsets.fromLTRB(20, 8, 20, 24),
                                   itemCount: tests.length,
                                   separatorBuilder: (_, __) =>
-                                      const SizedBox(height: 10),
+                                      const SizedBox(height: 12),
                                   itemBuilder: (context, index) {
                                     final test = tests[index];
                                     final status = test['status'] ?? 'Unknown';
                                     return _LabTestCard(
                                       test: test,
-                                      statusColor: _statusColor(status),
-                                      statusIcon: _statusIcon(status),
+                                      chipColors: _chipColors(status),
                                       onDelete: () =>
                                           _deleteTest(context, test['id']),
                                     );
@@ -388,74 +349,16 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
   }
 }
 
-class _DropdownFilter extends StatelessWidget {
-  final String label;
-  final String value;
-  final List<String> options;
-  final Color color;
-  final ValueChanged<String> onChanged;
-
-  const _DropdownFilter({
-    required this.label,
-    required this.value,
-    required this.options,
-    required this.color,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isActive = value != 'All';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: isActive ? color.withOpacity(0.1) : const Color(0xFFF4F7F6),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isActive ? color : const Color(0xFFE5E7EB),
-        ),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          icon: Icon(Icons.keyboard_arrow_down_rounded,
-              color: isActive ? color : const Color(0xFF6B7280), size: 18),
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: isActive ? color : const Color(0xFF6B7280),
-          ),
-          items: options.map((opt) {
-            final display = opt == 'All' ? '$label: All' : opt;
-            return DropdownMenuItem(
-              value: opt,
-              child: Text(display, overflow: TextOverflow.ellipsis),
-            );
-          }).toList(),
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
-        ),
-      ),
-    );
-  }
-}
-
 class _LabTestCard extends StatelessWidget {
   final Map<String, dynamic> test;
-  final Color statusColor;
-  final IconData statusIcon;
+  final AppChipColors chipColors;
   final VoidCallback onDelete;
 
   const _LabTestCard({
     required this.test,
-    required this.statusColor,
-    required this.statusIcon,
+    required this.chipColors,
     required this.onDelete,
   });
-
-  static const Color _primary = Color(0xFF1F8A70);
 
   String _formatDate(dynamic ts) {
     if (ts == null) return 'N/A';
@@ -472,200 +375,62 @@ class _LabTestCard extends StatelessWidget {
     final status = test['status'] ?? 'Unknown';
     final paymentStatus = test['paymentStatus']; // null or 'Paid'
     final charge = test['charge'];
+    final isPaid = paymentStatus == 'Paid';
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Top row: test type + status + delete
           Row(
             children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: _primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.biotech_outlined,
-                          color: _primary, size: 18),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        test['testType'] ?? 'Unknown Test',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1A1A2E),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
+              const AppIconTile(
+                icon: Icons.biotech_outlined,
+                color: AppColors.blue,
+                background: AppColors.blueSoft,
+                size: 38,
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(statusIcon, size: 12, color: statusColor),
-                    const SizedBox(width: 4),
-                    Text(
-                      status,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: statusColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // ── NAYA: delete icon, har card ke top par, status se
-              // qata-nazar — admin kisi bhi lab test ko individually
-              // delete kar sake, "Delete All" ke ilawa.
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: onDelete,
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFDB4437).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(Icons.delete_outline,
-                      size: 16, color: Color(0xFFDB4437)),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
-          // Patient row
-          Row(
-            children: [
-              const Icon(Icons.person_outline_rounded,
-                  size: 16, color: Color(0xFF6B7280)),
-              const SizedBox(width: 8),
-              const Text(
-                'Patient: ',
-                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  test['patientName'] ?? 'N/A',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
-                  ),
+                  test['testType'] ?? 'Unknown Test',
                   overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-
-          // Doctor row
-          Row(
-            children: [
-              const Icon(Icons.medical_services_outlined,
-                  size: 16, color: Color(0xFF6B7280)),
-              const SizedBox(width: 8),
-              const Text(
-                'Doctor: ',
-                style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
-              ),
-              Expanded(
-                child: Text(
-                  test['doctorName'] ?? 'N/A',
                   style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 6),
-
-          // Date row
-          Row(
-            children: [
-              const Icon(Icons.access_time_rounded,
-                  size: 16, color: Color(0xFF6B7280)),
               const SizedBox(width: 8),
-              Text(
-                _formatDate(test['createdAt']),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
+              AppStatusChip(label: status, colors: chipColors),
+              const SizedBox(width: 8),
+              AppDeleteButton(size: 34, onTap: onDelete),
             ],
           ),
+          const SizedBox(height: 12),
+          AppInfoRow(label: 'Patient', value: test['patientName'] ?? 'N/A'),
+          AppInfoRow(label: 'Doctor', value: test['doctorName'] ?? 'N/A'),
+          AppInfoRow(label: 'Ordered', value: _formatDate(test['createdAt'])),
+          const SizedBox(height: 6),
+          const Divider(height: 1, color: AppColors.divider),
           const SizedBox(height: 10),
-
           // Bottom row: charge + payment status
           Row(
             children: [
-              if (charge != null) ...[
-                const Icon(Icons.payments_outlined,
-                    size: 16, color: Color(0xFF0F9D58)),
-                const SizedBox(width: 6),
+              if (charge != null)
                 Text(
-                  'Rs. $charge',
+                  'Rs $charge',
                   style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F9D58),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0B5E57),
                   ),
                 ),
-              ],
               const Spacer(),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: paymentStatus == 'Paid'
-                      ? const Color(0xFF0F9D58).withOpacity(0.1)
-                      : const Color(0xFFF4B400).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  paymentStatus == 'Paid' ? 'Paid' : 'Payment Pending',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: paymentStatus == 'Paid'
-                        ? const Color(0xFF0F9D58)
-                        : const Color(0xFFF4B400),
-                  ),
-                ),
+              AppStatusChip(
+                label: isPaid ? 'Paid' : 'Payment pending',
+                colors: isPaid ? AppChipColors.green : AppChipColors.yellow,
               ),
             ],
           ),

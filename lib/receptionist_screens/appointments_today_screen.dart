@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'walk_in_screen.dart';
 import 'receptionist_profile_screen.dart';
+import '../widgets/app_ui.dart';
 
 /// APPOINTMENTS TODAY — CHECK-IN + LAZY AUTO-CANCEL (Phase 4)
 ///
@@ -40,9 +41,6 @@ class AppointmentsTodayScreen extends StatefulWidget {
 }
 
 class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _primaryDark = Color(0xFF0D6B5A);
-
   bool _isLoading = true;
   int _autoProcessed = 0; // kitni expired process huin (info ke liye)
   List<Map<String, dynamic>> _appointments = [];
@@ -74,10 +72,10 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
         .where('status', whereIn: ['Confirmed', 'CheckedIn'])
         .snapshots()
         .listen((_) {
-      _loadAndProcess();
-    }, onError: (_) {
-      setState(() => _isLoading = false);
-    });
+          _loadAndProcess();
+        }, onError: (_) {
+          setState(() => _isLoading = false);
+        });
   }
 
   String _todayStr() {
@@ -309,13 +307,20 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Cancel this walk-in?'),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        title: const Text('Cancel this walk-in?',
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.danger)),
         content: Text('${appt['patientName']} decided not to proceed before '
             'check-in. This will cancel the appointment and process a '
             'FULL refund.'),
         actions: [
           TextButton(
+              style: TextButton.styleFrom(foregroundColor: AppColors.muted),
               onPressed: () => Navigator.pop(context),
               child: const Text('Back')),
           ElevatedButton(
@@ -323,7 +328,8 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
               Navigator.pop(context);
               _cancelWalkIn(appt);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.danger, elevation: 0),
             child: const Text('Cancel & Refund',
                 style: TextStyle(color: Colors.white)),
           ),
@@ -406,7 +412,7 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: _primary,
+      backgroundColor: AppColors.teal,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -414,90 +420,104 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final waiting =
+        _appointments.where((a) => a['status'] != 'CheckedIn').length;
+    final checked =
+        _appointments.where((a) => a['status'] == 'CheckedIn').length;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _primary))
-                  : _appointments.isEmpty
-                      ? _buildEmpty()
-                      : RefreshIndicator(
-                          onRefresh: _loadAndProcess,
-                          color: _primary,
-                          child: ListView.separated(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
-                            itemCount: _appointments.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (ctx, i) =>
-                                _appointmentCard(_appointments[i]),
-                          ),
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          _buildHeader(waiting, checked),
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.teal))
+                : _appointments.isEmpty
+                    ? _buildEmpty()
+                    : RefreshIndicator(
+                        onRefresh: _loadAndProcess,
+                        color: AppColors.teal,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                          itemCount: _appointments.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (ctx, i) =>
+                              _appointmentCard(_appointments[i]),
                         ),
-            ),
-          ],
-        ),
+                      ),
+          ),
+        ],
       ),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      color: _primaryDark,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+  Widget _buildHeader(int waiting, int checked) {
+    Widget pill(String label, int n, Color color) {
+      return Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.07),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.headerMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
-              child:
-                  const Icon(Icons.arrow_back, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 14),
-          const Expanded(
-            child: Text("Today's Appointments",
+              Text(
+                _isLoading ? '—' : '$n',
                 style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold)),
+                  color: color,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
           ),
-          GestureDetector(
-            onTap: _loadAndProcess,
-            child: const Icon(Icons.refresh, color: Colors.white, size: 22),
-          ),
+        ),
+      );
+    }
+
+    return AppHeader(
+      title: "Today's appointments",
+      subtitle: 'In-person & walk-in',
+      trailing: AppHeaderIconButton(
+        icon: Icons.refresh_rounded,
+        tooltip: 'Refresh',
+        onTap: _loadAndProcess,
+      ),
+      bottom: Row(
+        children: [
+          pill('Waiting', waiting, AppColors.star),
+          const SizedBox(width: 8),
+          pill('Checked in', checked, AppColors.mint),
         ],
       ),
     );
   }
 
   Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.event_available_outlined,
-              size: 64, color: _primary.withValues(alpha: 0.3)),
-          const SizedBox(height: 16),
-          const Text('No appointments for today',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF6B7280))),
-        ],
-      ),
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: const [
+        AppEmptyState(
+          icon: Icons.event_available_outlined,
+          title: 'No appointments for today',
+        ),
+      ],
     );
   }
 
@@ -510,19 +530,20 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
             ? 'Video'
             : 'In-person';
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2))
-        ],
+    final checkInButton = ElevatedButton(
+      onPressed: () => _checkIn(appt),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.header,
+        elevation: 0,
+        minimumSize: const Size.fromHeight(44),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
+      child: const Text('Check-in',
+          style: TextStyle(
+              color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)),
+    );
+
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -530,15 +551,18 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
             children: [
               // Time chip
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                width: 60,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDCEFE9),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.tealSoft,
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Text(appt['startTime'],
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: _primaryDark)),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF0B5E57))),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -547,96 +571,85 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
                   children: [
                     Text(appt['patientName'],
                         style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A2F3A))),
-                    const SizedBox(height: 2),
-                    Text('${appt['doctorName']} · $typeLabel',
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.black54)),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.text)),
+                    const SizedBox(height: 3),
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(text: '${appt['doctorName']} · '),
+                          TextSpan(
+                            text: typeLabel,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: isWalkIn
+                                  ? const Color(0xFF8A5A00)
+                                  : AppColors.teal,
+                            ),
+                          ),
+                        ],
+                      ),
+                      style:
+                          const TextStyle(fontSize: 12, color: AppColors.muted),
+                    ),
                   ],
                 ),
               ),
               if (isCheckedIn)
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFDCEFE9),
-                    borderRadius: BorderRadius.circular(8),
+                    color: const Color(0xFFDDF3EE),
+                    borderRadius: BorderRadius.circular(999),
                   ),
                   child: const Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.check_circle, color: _primary, size: 14),
+                      Icon(Icons.check_rounded,
+                          color: Color(0xFF0B5E57), size: 14),
                       SizedBox(width: 4),
                       Text('Checked in',
                           style: TextStyle(
                               fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: _primary)),
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF0B5E57))),
                     ],
                   ),
                 ),
             ],
           ),
-          // Walk-in ke liye: Check-in se pehle patient khud mana kar
-          // sakta hai — "Cancel" button (FULL refund, kyunki patient
-          // ki galti nahi, khud mana kiya).
+          // Walk-in: Cancel (full refund) + Check-in — same as before
           if (isWalkIn && !isCheckedIn) ...[
-            const SizedBox(height: 10),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: AppColors.divider),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => _confirmCancelWalkIn(appt),
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      side: const BorderSide(color: Color(0xFFD9534F)),
+                      minimumSize: const Size.fromHeight(44),
+                      side: const BorderSide(color: Color(0xFFF0C9BE)),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text('Cancel',
                         style: TextStyle(
-                            color: Color(0xFFD9534F),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600)),
+                            color: Color(0xFF9A2E16),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800)),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton(
-                    onPressed: () => _checkIn(appt),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _primary,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: const Text('Check-in',
-                        style: TextStyle(color: Colors.white, fontSize: 12)),
-                  ),
-                ),
+                const SizedBox(width: 10),
+                Expanded(flex: 2, child: checkInButton),
               ],
             ),
           ] else if (!isCheckedIn) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _checkIn(appt),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _primary,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-                child: const Text('Check-in',
-                    style: TextStyle(color: Colors.white, fontSize: 12)),
-              ),
-            ),
+            const SizedBox(height: 12),
+            SizedBox(width: double.infinity, child: checkInButton),
           ],
         ],
       ),
@@ -650,37 +663,58 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
   // - Walk-in: WalkInScreen par switch (pushReplacement)
   // - Profile: ReceptionistProfileScreen push
   Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: 1,
-      selectedItemColor: _primary,
-      unselectedItemColor: Colors.grey,
-      type: BottomNavigationBarType.fixed,
-      onTap: (index) {
-        if (index == 1) return; // already on Appointments
-        if (index == 0) {
-          Navigator.popUntil(context, (route) => route.isFirst);
-        } else if (index == 2) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const WalkInScreen()),
-          );
-        } else if (index == 3) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => const ReceptionistProfileScreen()),
-          );
-        }
-      },
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.event_note_outlined), label: 'Appointments'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.person_add_alt_1_outlined), label: 'Walk-in'),
-        BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline), label: 'Profile'),
-      ],
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.divider)),
+      ),
+      child: BottomNavigationBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        selectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+        currentIndex: 1,
+        selectedItemColor: AppColors.header,
+        unselectedItemColor: AppColors.faint,
+        type: BottomNavigationBarType.fixed,
+        onTap: (index) {
+          if (index == 1) return; // already on Appointments
+          if (index == 0) {
+            Navigator.popUntil(context, (route) => route.isFirst);
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const WalkInScreen()),
+            );
+          } else if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const ReceptionistProfileScreen()),
+            );
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home_rounded),
+              label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.event_note_outlined),
+              activeIcon: Icon(Icons.event_note_rounded),
+              label: 'Appointments'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_add_alt_1_outlined),
+              activeIcon: Icon(Icons.person_add_alt_1_rounded),
+              label: 'Walk-in'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person_rounded),
+              label: 'Profile'),
+        ],
+      ),
     );
   }
 }

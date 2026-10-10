@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../widgets/app_ui.dart';
+import 'reports_screen.dart';
 
 // This widget renders the Overview report content (toggle + date nav +
 // cards). It does NOT include its own Scaffold/AppBar — it's designed
@@ -15,8 +17,8 @@ class ReportsOverviewTab extends StatefulWidget {
 
 class _ReportsOverviewTabState extends State<ReportsOverviewTab> {
   // Theme colors — matched to Admin Dashboard's green palette
-  static const Color _primary = Color(0xFF1F8A70);
-  static const Color _bg = Color(0xFFF4F7F6);
+  static const Color _primary = Color(0xFF0E6E68);
+  static const Color _bg = Color(0xFFF2F5F5);
 
   // true = Daily tab selected, false = Monthly tab selected
   bool _isDaily = true;
@@ -223,7 +225,7 @@ class _ReportsOverviewTabState extends State<ReportsOverviewTab> {
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: const Color(0xFF9A2E16),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -298,112 +300,84 @@ class _ReportsOverviewTabState extends State<ReportsOverviewTab> {
       color: _bg,
       child: Column(
         children: [
-          // Daily / Monthly toggle
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          // Daily / Monthly toggle + date navigation (dark strip)
+          ReportsHeaderStrip(
             child: Row(
               children: [
-                Expanded(
-                  child: _ToggleButton(
-                    label: 'Daily',
-                    isActive: _isDaily,
-                    onTap: () => _switchTab(true),
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    children: [
+                      _ToggleButton(
+                        label: 'Daily',
+                        isActive: _isDaily,
+                        onTap: () => _switchTab(true),
+                      ),
+                      _ToggleButton(
+                        label: 'Monthly',
+                        isActive: !_isDaily,
+                        onTap: () => _switchTab(false),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _ToggleButton(
-                    label: 'Monthly',
-                    isActive: !_isDaily,
-                    onTap: () => _switchTab(false),
-                  ),
+                const Spacer(),
+                ReportsDateNav(
+                  label: _isDaily
+                      ? DateFormat('MMM d, yyyy').format(_selectedDate)
+                      : DateFormat('MMMM yyyy').format(_selectedDate),
+                  onPrev: _canGoPrevious() ? () => _navigate(-1) : null,
+                  onNext: _canGoNext() ? () => _navigate(1) : null,
                 ),
               ],
             ),
           ),
-
-          // Date navigation
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  onPressed: _canGoPrevious() ? () => _navigate(-1) : null,
-                  icon: Icon(Icons.chevron_left_rounded,
-                      color: _canGoPrevious()
-                          ? _primary
-                          : const Color(0xFFD1D5DB)),
-                ),
-                Text(
-                  _dateLabel,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                ),
-                IconButton(
-                  onPressed: _canGoNext() ? () => _navigate(1) : null,
-                  icon: Icon(Icons.chevron_right_rounded,
-                      color: _canGoNext() ? _primary : const Color(0xFFD1D5DB)),
-                ),
-              ],
-            ),
-          ),
-
-          // Quick snapshot strip — a fast horizontal glance at the
-          // headline numbers before scrolling into the detailed cards.
-          if (!_isLoading)
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.only(bottom: 12),
-              height: 92,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: [
-                  _SnapshotChip(
-                    icon: Icons.calendar_today_rounded,
-                    iconColor: const Color(0xFF1A73E8),
-                    value: '${_reportData['totalAppts'] ?? 0}',
-                    label: 'Appts',
-                  ),
-                  _SnapshotChip(
-                    icon: Icons.payments_outlined,
-                    iconColor: const Color(0xFF0F9D58),
-                    value: 'Rs ${_reportData['totalRev'] ?? 0}',
-                    label: 'Collected',
-                  ),
-                  _SnapshotChip(
-                    icon: Icons.hourglass_empty_rounded,
-                    iconColor: const Color(0xFFF4B400),
-                    value: 'Rs ${_reportData['pendingAmount'] ?? 0}',
-                    label: 'Bills Due',
-                  ),
-                  _SnapshotChip(
-                    icon: Icons.bed_outlined,
-                    iconColor: const Color(0xFF7C4DFF),
-                    value: '${_reportData['occupancyPct'] ?? 0}%',
-                    label: 'Occupied',
-                  ),
-                ],
-              ),
-            ),
 
           // Report content
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(color: _primary))
+                    child: CircularProgressIndicator(color: AppColors.teal))
                 : RefreshIndicator(
                     onRefresh: _loadReport,
-                    color: _primary,
+                    color: AppColors.teal,
                     child: ListView(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                       children: [
+                        // Quick snapshot tiles — same 4 headline numbers
+                        Row(
+                          children: [
+                            _SnapshotChip(
+                              label: 'Appointments',
+                              value: '${_reportData['totalAppts'] ?? 0}',
+                            ),
+                            const SizedBox(width: 10),
+                            _SnapshotChip(
+                              label: 'Revenue collected',
+                              value: 'Rs ${_reportData['totalRev'] ?? 0}',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            _SnapshotChip(
+                              label:
+                                  'Pending bills (${_reportData['pendingCount'] ?? 0})',
+                              value: 'Rs ${_reportData['pendingAmount'] ?? 0}',
+                            ),
+                            const SizedBox(width: 10),
+                            _SnapshotChip(
+                              label: 'Bed occupancy',
+                              value: '${_reportData['occupancyPct'] ?? 0}%',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
                         _AppointmentsCard(data: _reportData),
                         const SizedBox(height: 12),
                         _RevenueCard(data: _reportData),
@@ -432,27 +406,70 @@ class _ToggleButton extends StatelessWidget {
     required this.onTap,
   });
 
-  static const Color _primary = Color(0xFF1F8A70);
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: isActive ? _primary : const Color(0xFFF4F7F6),
-          borderRadius: BorderRadius.circular(10),
+          color: isActive ? AppColors.mint : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
           label,
-          textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isActive ? Colors.white : const Color(0xFF6B7280),
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: isActive ? AppColors.header : Colors.white,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// White card with a bold title.
+class _ReportCard extends StatelessWidget {
+  final String title;
+  final Widget? trailing;
+  final List<Widget> children;
+
+  const _ReportCard({
+    required this.title,
+    this.trailing,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
+                  ),
+                ),
+              ),
+              if (trailing != null) trailing!,
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...children,
+        ],
       ),
     );
   }
@@ -463,78 +480,49 @@ class _AppointmentsCard extends StatelessWidget {
 
   const _AppointmentsCard({required this.data});
 
-  static const Color _primary = Color(0xFF1F8A70);
-
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.calendar_today_rounded,
-                  size: 16, color: _primary),
-              const SizedBox(width: 8),
-              const Text(
-                'APPOINTMENTS',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF6B7280),
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _StatBlock(label: 'Total', value: '${data['totalAppts'] ?? 0}'),
-              _StatBlock(
-                label: 'Completed',
-                value: '${data['completed'] ?? 0}',
-                color: const Color(0xFF0F9D58),
-              ),
-              _StatBlock(
-                label: 'Pending',
-                value: '${data['pending'] ?? 0}',
-                color: const Color(0xFFF4B400),
-              ),
-              _StatBlock(
-                label: 'Cancelled',
-                value: '${data['cancelled'] ?? 0}',
-                color: const Color(0xFFDB4437),
-              ),
-            ],
-          ),
-          if ((data['totalAppts'] ?? 0) > 0) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                _TypeChip(label: 'In-Person', count: data['inPerson'] ?? 0),
-                _TypeChip(label: 'Video Call', count: data['videoCall'] ?? 0),
-                _TypeChip(label: 'Walk-In', count: data['walkIn'] ?? 0),
-              ],
+    return _ReportCard(
+      title: 'Appointments',
+      children: [
+        Row(
+          children: [
+            _StatBlock(label: 'Total', value: '${data['totalAppts'] ?? 0}'),
+            _StatBlock(
+              label: 'Completed',
+              value: '${data['completed'] ?? 0}',
+              color: const Color(0xFF0B5E57),
+            ),
+            _StatBlock(
+              label: 'Pending',
+              value: '${data['pending'] ?? 0}',
+              color: const Color(0xFF8A6D00),
+            ),
+            _StatBlock(
+              label: 'Cancelled',
+              value: '${data['cancelled'] ?? 0}',
+              color: const Color(0xFF9A2E16),
             ),
           ],
+        ),
+        if ((data['totalAppts'] ?? 0) > 0) ...[
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.bg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                _TypeChip(label: 'In-person', count: data['inPerson'] ?? 0),
+                _TypeChip(label: 'Video call', count: data['videoCall'] ?? 0),
+                _TypeChip(label: 'Walk-in', count: data['walkIn'] ?? 0),
+              ],
+            ),
+          ),
         ],
-      ),
+      ],
     );
   }
 }
@@ -554,16 +542,18 @@ class _StatBlock extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: FontWeight.w800,
-              color: color ?? const Color(0xFF1A1A2E),
+              color: color ?? AppColors.text,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             label,
             style: const TextStyle(
               fontSize: 11,
-              color: Color(0xFF6B7280),
+              fontWeight: FontWeight.w600,
+              color: AppColors.muted,
             ),
           ),
         ],
@@ -580,18 +570,25 @@ class _TypeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1F8A70).withOpacity(0.08),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        '$label: $count',
+    return Expanded(
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: '$label '),
+            TextSpan(
+              text: '$count',
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                color: AppColors.text,
+              ),
+            ),
+          ],
+        ),
+        textAlign: TextAlign.center,
         style: const TextStyle(
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF1F8A70),
+          color: AppColors.muted,
         ),
       ),
     );
@@ -603,154 +600,81 @@ class _RevenueCard extends StatelessWidget {
 
   const _RevenueCard({required this.data});
 
-  static const Color _primary = Color(0xFF1F8A70);
-
   @override
   Widget build(BuildContext context) {
     final consultation = (data['consultationRev'] ?? 0) as num;
     final lab = (data['labRev'] ?? 0) as num;
     final room = (data['roomRev'] ?? 0) as num;
     final total = (data['totalRev'] ?? 0) as num;
-    final pendingAmount = (data['pendingAmount'] ?? 0) as num;
-    final pendingCount = data['pendingCount'] ?? 0;
 
     final consultationPct = total > 0 ? consultation / total : 0.0;
     final labPct = total > 0 ? lab / total : 0.0;
     final roomPct = total > 0 ? room / total : 0.0;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    const cConsult = Color(0xFF0E6E68);
+    const cLab = Color(0xFF7FB8E8);
+    const cRoom = Color(0xFFE0B04A);
+
+    return _ReportCard(
+      title: 'Revenue',
+      trailing: Text(
+        'Rs $total',
+        style: const TextStyle(
+          fontSize: 17,
+          fontWeight: FontWeight.w800,
+          color: AppColors.teal,
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+      children: [
+        if (total > 0) ...[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: SizedBox(
+              height: 10,
+              child: Row(
                 children: [
-                  const Icon(Icons.payments_outlined,
-                      size: 16, color: Color(0xFF0F9D58)),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'REVENUE',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF6B7280),
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                'Rs. $total',
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F9D58),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          if (total > 0) ...[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: SizedBox(
-                height: 10,
-                child: Row(
-                  children: [
+                  if (consultation > 0)
                     Expanded(
                       flex: (consultationPct * 1000).round().clamp(1, 1000),
-                      child: Container(color: const Color(0xFF1F8A70)),
+                      child: Container(color: cConsult),
                     ),
+                  if (lab > 0)
                     Expanded(
                       flex: (labPct * 1000).round().clamp(1, 1000),
-                      child: Container(color: const Color(0xFF4DB6AC)),
+                      child: Container(color: cLab),
                     ),
+                  if (room > 0)
                     Expanded(
                       flex: (roomPct * 1000).round().clamp(1, 1000),
-                      child: Container(color: const Color(0xFFB2DFDB)),
+                      child: Container(color: cRoom),
                     ),
-                  ],
-                ),
+                ],
               ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 12,
-              runSpacing: 4,
-              children: [
-                _LegendDot(
-                    color: const Color(0xFF1F8A70),
-                    label:
-                        'Consultation ${(consultationPct * 100).toStringAsFixed(0)}%'),
-                _LegendDot(
-                    color: const Color(0xFF4DB6AC),
-                    label: 'Lab ${(labPct * 100).toStringAsFixed(0)}%'),
-                _LegendDot(
-                    color: const Color(0xFFB2DFDB),
-                    label: 'Room ${(roomPct * 100).toStringAsFixed(0)}%'),
-              ],
-            ),
-            const SizedBox(height: 12),
-          ] else
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'No revenue collected in this period',
-                style: TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
-              ),
-            ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF4B400).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.hourglass_empty_rounded,
-                        size: 14, color: Color(0xFFF4B400)),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Pending Bills ($pendingCount)',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFB8860B),
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  'Rs. $pendingAmount',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFFB8860B),
-                  ),
-                ),
-              ],
             ),
           ),
-        ],
-      ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 14,
+            runSpacing: 4,
+            children: [
+              _LegendDot(
+                  color: cConsult,
+                  label:
+                      'Consultation ${(consultationPct * 100).toStringAsFixed(0)}%'),
+              _LegendDot(
+                  color: cLab,
+                  label: 'Lab ${(labPct * 100).toStringAsFixed(0)}%'),
+              _LegendDot(
+                  color: cRoom,
+                  label: 'Room ${(roomPct * 100).toStringAsFixed(0)}%'),
+            ],
+          ),
+        ] else
+          const Text(
+            'No revenue collected in this period',
+            style: TextStyle(fontSize: 12, color: AppColors.faint),
+          ),
+      ],
     );
   }
 }
@@ -774,7 +698,11 @@ class _LegendDot extends StatelessWidget {
         const SizedBox(width: 5),
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: AppColors.muted,
+          ),
         ),
       ],
     );
@@ -786,111 +714,90 @@ class _PatientStatsCard extends StatelessWidget {
 
   const _PatientStatsCard({required this.data});
 
-  static const Color _primary = Color(0xFF1F8A70);
-
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return _ReportCard(
+      title: 'Patients',
+      trailing: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: AppColors.bg,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: const Text(
+          'Monthly only',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: AppColors.muted,
           ),
-        ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.people_outline_rounded,
-                  size: 16, color: Color(0xFF7C4DFF)),
-              const SizedBox(width: 8),
-              const Text(
-                'PATIENT STATS',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF6B7280),
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _StatBlock(
-                  label: 'Total Patients',
-                  value: '${data['totalPatients'] ?? 0}'),
-              _StatBlock(
-                label: 'New This Month',
-                value: '${data['newPatients'] ?? 0}',
-                color: const Color(0xFF0F9D58),
-              ),
-              _StatBlock(
-                label: 'Returning',
-                value: '${data['returningPatients'] ?? 0}',
-                color: const Color(0xFF1A73E8),
-              ),
-            ],
-          ),
-        ],
-      ),
+      children: [
+        Row(
+          children: [
+            _StatBlock(label: 'Total', value: '${data['totalPatients'] ?? 0}'),
+            _StatBlock(
+              label: 'New',
+              value: '${data['newPatients'] ?? 0}',
+              color: AppColors.teal,
+            ),
+            _StatBlock(
+              label: 'Returning',
+              value: '${data['returningPatients'] ?? 0}',
+              color: AppColors.blue,
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
 
 class _SnapshotChip extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
   final String value;
   final String label;
 
   const _SnapshotChip({
-    required this.icon,
-    required this.iconColor,
     required this.value,
     required this.label,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(right: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 18, color: iconColor),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A2E),
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.muted,
+              ),
             ),
-          ),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Color(0xFF6B7280),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppColors.text,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
