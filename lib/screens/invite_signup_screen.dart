@@ -42,8 +42,8 @@ class _InviteSignupScreenState extends State<InviteSignupScreen> {
   Map<String, dynamic>? _inviteData; // validated invite ka data
   String? _errorMessage; // invalid/expired link ka message
 
-  // Theme colors — matched to Admin Dashboard's green palette
-  static const Color _primary = Color(0xFF1F8A70);
+  // Theme colors — login screen (Option 2) se match
+  static const Color _primary = Color(0xFF0B2E33);
   static const Color _bg = Color(0xFFF4F7F6);
 
   @override
@@ -167,57 +167,116 @@ class _InviteSignupScreenState extends State<InviteSignupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
-      appBar: AppBar(
-        backgroundColor: _primary,
-        elevation: 0,
-        title: const Text('Staff Sign Up',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        iconTheme: const IconThemeData(color: Colors.white),
+      body: SafeArea(
+        child: _isValidating
+            ? const Center(child: CircularProgressIndicator(color: _primary))
+            : _errorMessage != null
+                ? _buildErrorView()
+                : _buildSignupForm(),
       ),
-      body: _isValidating
-          ? const Center(child: CircularProgressIndicator(color: _primary))
-          : _errorMessage != null
-              ? _buildErrorView()
-              : _buildSignupForm(),
     );
   }
+
+  // Logo + hospital name (login screen jaisa)
+  Widget _buildBrand() {
+    return Column(
+      children: [
+        Image.asset(
+          'assets/Logo.png',
+          width: 96,
+          height: 100,
+          fit: BoxFit.contain,
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Family Well Care Hospital',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: _primary,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Staff Sign Up',
+          style: TextStyle(
+            color: Colors.black54,
+            fontSize: 13,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
+    );
+  }
+
+  BoxDecoration get _cardDecoration => BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      );
 
   // Invalid / expired / no-code
   Widget _buildErrorView() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.link_off_rounded,
-                size: 64, color: Color(0xFFD9534F)),
-            const SizedBox(height: 20),
-            Text(
-              _errorMessage!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontSize: 15, color: Color(0xFF1A2F3A), height: 1.4),
-            ),
-            const SizedBox(height: 28),
-            SizedBox(
-              height: 50,
-              width: 200,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _primary,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30)),
-                ),
-                child: const Text('Go to Login',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold)),
+            _buildBrand(),
+            const SizedBox(height: 26),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(22, 28, 22, 26),
+              decoration: _cardDecoration,
+              child: Column(
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFBEDE8),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.link_off_rounded,
+                        size: 36, color: Color(0xFFB23A1E)),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    _errorMessage!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 15, color: _primary, height: 1.4),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    height: 54,
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _primary,
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                      ),
+                      child: const Text('Go to Login',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -229,104 +288,129 @@ class _InviteSignupScreenState extends State<InviteSignupScreen> {
   // Valid invite — details + password (koi code box nahi)
   Widget _buildSignupForm() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 10),
-            const Text(
-              'Welcome! Complete your account',
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A2F5A)),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Set a password to finish creating your staff account.',
-              style: TextStyle(fontSize: 13, color: Colors.black54),
-            ),
-            const SizedBox(height: 20),
-
-            // Invite details (read-only)
+            _buildBrand(),
+            const SizedBox(height: 26),
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
+              padding: const EdgeInsets.fromLTRB(22, 26, 22, 26),
+              decoration: _cardDecoration,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _detailRow('Name', _inviteData!['name'] ?? '—'),
-                  const SizedBox(height: 8),
-                  _detailRow('Email', _inviteData!['email'] ?? '—'),
-                  const SizedBox(height: 8),
-                  _detailRow('Role',
-                      (_inviteData!['role'] ?? '—').toString().toUpperCase()),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
+                  const Text(
+                    'Welcome! Complete your account',
+                    style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: _primary),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Set a password to finish creating your staff account.',
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 20),
 
-            const Text(
-              'Set your password',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A2F5A)),
-            ),
-            const SizedBox(height: 12),
-            _passwordField(
-              controller: _passwordController,
-              hint: 'Password',
-              obscure: _obscurePassword,
-              onToggle: () =>
-                  setState(() => _obscurePassword = !_obscurePassword),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Password is required';
-                if (v.length < 6) return 'Minimum 6 characters';
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            _passwordField(
-              controller: _confirmController,
-              hint: 'Confirm Password',
-              obscure: _obscureConfirm,
-              onToggle: () =>
-                  setState(() => _obscureConfirm = !_obscureConfirm),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Please confirm password';
-                if (v != _passwordController.text) {
-                  return 'Passwords do not match';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _isSigningUp ? null : _completeSignup,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _primary,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30)),
-                ),
-                child: _isSigningUp
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2.5))
-                    : const Text('Create Account',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
+                  // Invite details (read-only)
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _bg,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _detailRow('Name', _inviteData!['name'] ?? '—'),
+                        const SizedBox(height: 8),
+                        _detailRow('Email', _inviteData!['email'] ?? '—'),
+                        const SizedBox(height: 8),
+                        _detailRow(
+                            'Role',
+                            (_inviteData!['role'] ?? '—')
+                                .toString()
+                                .toUpperCase()),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    'Password',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _primary),
+                  ),
+                  const SizedBox(height: 6),
+                  _passwordField(
+                    controller: _passwordController,
+                    hint: 'Password',
+                    obscure: _obscurePassword,
+                    onToggle: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Password is required';
+                      if (v.length < 6) return 'Minimum 6 characters';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Confirm password',
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _primary),
+                  ),
+                  const SizedBox(height: 6),
+                  _passwordField(
+                    controller: _confirmController,
+                    hint: 'Confirm Password',
+                    obscure: _obscureConfirm,
+                    onToggle: () =>
+                        setState(() => _obscureConfirm = !_obscureConfirm),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) {
+                        return 'Please confirm password';
+                      }
+                      if (v != _passwordController.text) {
+                        return 'Passwords do not match';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    height: 54,
+                    child: ElevatedButton(
+                      onPressed: _isSigningUp ? null : _completeSignup,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _primary,
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                      ),
+                      child: _isSigningUp
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2.5))
+                          : const Text('Create Account',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -341,14 +425,12 @@ class _InviteSignupScreenState extends State<InviteSignupScreen> {
         SizedBox(
           width: 60,
           child: Text(label,
-              style: const TextStyle(fontSize: 13, color: Colors.grey)),
+              style: const TextStyle(fontSize: 13, color: Colors.black54)),
         ),
         Expanded(
           child: Text(value,
               style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A2F3A))),
+                  fontSize: 14, fontWeight: FontWeight.w600, color: _primary)),
         ),
       ],
     );
@@ -368,9 +450,8 @@ class _InviteSignupScreenState extends State<InviteSignupScreen> {
       style: const TextStyle(fontSize: 15, color: Colors.black87),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.grey, fontSize: 15),
-        prefixIcon:
-            const Icon(Icons.lock_outline, color: Colors.grey, size: 20),
+        hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+        prefixIcon: const Icon(Icons.lock_outline, color: _primary, size: 20),
         suffixIcon: IconButton(
           icon: Icon(
             obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
@@ -379,17 +460,29 @@ class _InviteSignupScreenState extends State<InviteSignupScreen> {
           onPressed: onToggle,
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: _bg,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: _primary, width: 1.5),
         ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.redAccent),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.redAccent),
+        ),
         contentPadding:
-            const EdgeInsets.symmetric(vertical: 16, horizontal: 22),
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       ),
     );
   }

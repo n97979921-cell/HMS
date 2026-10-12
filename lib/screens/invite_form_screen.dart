@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import '../Services/invite_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../widgets/app_ui.dart';
 
 class InviteFormScreen extends StatefulWidget {
   final String role;
@@ -47,21 +48,6 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
     });
   }
 
-  Color get _roleColor {
-    switch (widget.role) {
-      case 'doctor':
-        return const Color(0xFF1A73E8);
-      case 'admin':
-        return const Color(0xFF0F9D58);
-      case 'receptionist':
-        return const Color(0xFFF4B400);
-      case 'labstaff':
-        return const Color(0xFFDB4437);
-      default:
-        return const Color(0xFF1A73E8);
-    }
-  }
-
   String get _roleLabel {
     switch (widget.role) {
       case 'doctor':
@@ -89,7 +75,8 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
       final status = await _inviteService.checkInviteStatus(email);
 
       if (status == "pending") {
-        _showError('An invite is already active for this email. Please wait until it is used or expires.');
+        _showError(
+            'An invite is already active for this email. Please wait until it is used or expires.');
         setState(() => _isLoading = false);
         return;
       }
@@ -138,26 +125,28 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE6F4EA),
+              decoration: const BoxDecoration(
+                color: AppColors.tealSoft,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.check_rounded,
-                  color: Color(0xFF0F9D58), size: 40),
+                  color: AppColors.teal, size: 40),
             ),
             const SizedBox(height: 16),
             const Text(
               'Invite Sent!',
               style: TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
+                fontWeight: FontWeight.w800,
+                color: AppColors.text,
               ),
             ),
             const SizedBox(height: 8),
@@ -166,29 +155,29 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 13,
-                color: Color(0xFF6B7280),
+                color: AppColors.muted,
               ),
             ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF4F7F6),
-                borderRadius: BorderRadius.circular(10),
+                color: AppColors.bg,
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 children: [
                   const Text(
                     'Invite Code',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+                    style: TextStyle(fontSize: 11, color: AppColors.faint),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     inviteCode,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: _roleColor,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.teal,
                     ),
                   ),
                 ],
@@ -205,14 +194,15 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
                 Navigator.pop(context); // go back to list
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: _roleColor,
+                backgroundColor: AppColors.header,
+                elevation: 0,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(14)),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               child: const Text('Done',
                   style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600)),
+                      color: Colors.white, fontWeight: FontWeight.w800)),
             ),
           ),
         ],
@@ -224,7 +214,7 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: const Color(0xFFDB4437),
+        backgroundColor: AppColors.danger,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -245,227 +235,185 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: Color(0xFF1A1A2E)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Invite $_roleLabel',
-          style: const TextStyle(
-            color: Color(0xFF1A1A2E),
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
+      backgroundColor: AppColors.bg,
+      body: Column(
+        children: [
+          AppHeader(
+            title: 'Invite $_roleLabel',
+            subtitle: 'Send an invite link by email',
           ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _roleColor.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _roleColor.withOpacity(0.2)),
-                ),
-                child: Row(
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(Icons.info_outline_rounded,
-                        color: _roleColor, size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'An invite link will be sent to the email address. User will set their own password.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: _roleColor,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    const AppInfoNote(
+                      text:
+                          'An invite link will be sent to the email address. User will set their own password.',
+                    ),
+                    const SizedBox(height: 16),
+                    AppCard(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Common Fields
+                          _buildLabel('Full Name'),
+                          _buildField(
+                            controller: _nameController,
+                            hint: 'Enter full name',
+                            icon: Icons.person_outline_rounded,
+                            validator: (v) =>
+                                v!.isEmpty ? 'Name is required' : null,
+                          ),
+                          const SizedBox(height: 14),
+
+                          _buildLabel('Email Address'),
+                          _buildField(
+                            controller: _emailController,
+                            hint: 'Enter email address',
+                            icon: Icons.email_outlined,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (v) {
+                              if (v!.isEmpty) return 'Email is required';
+                              if (!v.contains('@')) return 'Enter valid email';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 14),
+
+                          _buildLabel('Phone Number'),
+                          _buildField(
+                            controller: _phoneController,
+                            hint: '03XXXXXXXXX',
+                            icon: Icons.phone_outlined,
+                            keyboardType: TextInputType.phone,
+                            validator: (v) {
+                              if (v == null || v.isEmpty) {
+                                return 'Phone is required';
+                              }
+                              if (!RegExp(r'^03\d{9}$').hasMatch(v.trim())) {
+                                return 'Enter valid Pakistani number (03XXXXXXXXX)';
+                              }
+                              return null;
+                            },
+                          ),
+                          // Doctor-specific fields
+                          if (_isDoctor) ...[
+                            const SizedBox(height: 14),
+                            _buildLabel('Specialization'),
+                            _buildField(
+                              controller: _specializationController,
+                              hint: 'e.g. Cardiologist, Dentist',
+                              icon: Icons.medical_services_outlined,
+                              validator: (v) => v!.isEmpty
+                                  ? 'Specialization is required'
+                                  : null,
+                            ),
+                            const SizedBox(height: 14),
+                            _buildLabel('Department'),
+                            DropdownButtonFormField<String>(
+                              value: _selectedDepartmentId,
+                              dropdownColor: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              decoration: _fieldDecoration(
+                                  icon: Icons.business_outlined),
+                              hint: const Text('Select Department',
+                                  style: TextStyle(
+                                      color: AppColors.faint, fontSize: 14)),
+                              items: _departments.map((dept) {
+                                return DropdownMenuItem<String>(
+                                  value: dept['id'],
+                                  child: Text(dept['name']),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedDepartmentId = value;
+                                  _selectedDepartmentName =
+                                      _departments.firstWhere(
+                                          (d) => d['id'] == value)['name'];
+                                });
+                              },
+                              validator: (v) =>
+                                  v == null ? 'Department is required' : null,
+                            ),
+                            const SizedBox(height: 14),
+                            _buildLabel('Licence No.'),
+                            _buildField(
+                              controller: _licenceController,
+                              hint: 'Enter medical licence number',
+                              icon: Icons.badge_outlined,
+                              validator: (v) => v!.isEmpty
+                                  ? 'Licence number is required'
+                                  : null,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
+
+                    const SizedBox(height: 24),
+
+                    // Send Invite Button
+                    AppPrimaryButton(
+                      label: 'Send Invite',
+                      onPressed: _isLoading ? null : _sendInvite,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.send_rounded,
+                                    color: Colors.white, size: 19),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Send Invite',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Common Fields
-              _buildLabel('Full Name'),
-              _buildField(
-                controller: _nameController,
-                hint: 'Enter full name',
-                icon: Icons.person_outline_rounded,
-                validator: (v) => v!.isEmpty ? 'Name is required' : null,
-              ),
-              const SizedBox(height: 16),
-
-              _buildLabel('Email Address'),
-              _buildField(
-                controller: _emailController,
-                hint: 'Enter email address',
-                icon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-                validator: (v) {
-                  if (v!.isEmpty) return 'Email is required';
-                  if (!v.contains('@')) return 'Enter valid email';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              _buildLabel('Phone Number'),
-              _buildField(
-                controller: _phoneController,
-                hint: '03XXXXXXXXX',
-                icon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
-                validator: (v) {
-                  if (v == null || v.isEmpty) return 'Phone is required';
-                  if (!RegExp(r'^03\d{9}$').hasMatch(v.trim())) {
-                    return 'Enter valid Pakistani number (03XXXXXXXXX)';
-                  }
-                  return null;
-                },
-              ),
-              // Doctor-specific fields
-              if (_isDoctor) ...[
-                const SizedBox(height: 16),
-                _buildLabel('Specialization'),
-                _buildField(
-                  controller: _specializationController,
-                  hint: 'e.g. Cardiologist, Dentist',
-                  icon: Icons.medical_services_outlined,
-                  validator: (v) =>
-                      v!.isEmpty ? 'Specialization is required' : null,
-                ),
-                const SizedBox(height: 16),
-                _buildLabel('Department'),
-                DropdownButtonFormField<String>(
-                  value: _selectedDepartmentId,
-                  decoration: InputDecoration(
-                    prefixIcon: Icon(Icons.business_outlined,
-                        color: _roleColor, size: 20),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: _roleColor, width: 1.5),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: Color(0xFFDB4437), width: 1.5),
-                    ),
-                  ),
-                  hint: const Text('Select Department',
-                      style: TextStyle(color: Color(0xFFB0B8C1), fontSize: 14)),
-                  items: _departments.map((dept) {
-                    return DropdownMenuItem<String>(
-                      value: dept['id'],
-                      child: Text(dept['name']),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedDepartmentId = value;
-                      _selectedDepartmentName = _departments
-                          .firstWhere((d) => d['id'] == value)['name'];
-                    });
-                  },
-                  validator: (v) => v == null ? 'Department is required' : null,
-                ),
-                const SizedBox(height: 16),
-                _buildLabel('Licence No.'),
-                _buildField(
-                  controller: _licenceController,
-                  hint: 'Enter medical licence number',
-                  icon: Icons.badge_outlined,
-                  validator: (v) =>
-                      v!.isEmpty ? 'Licence number is required' : null,
-                ),
-              ],
-
-              const SizedBox(height: 32),
-
-              // Send Invite Button
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _sendInvite,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _roleColor,
-                    disabledBackgroundColor: _roleColor.withOpacity(0.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.5,
-                          ),
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.send_rounded,
-                                color: Colors.white, size: 20),
-                            SizedBox(width: 10),
-                            Text(
-                              'Send Invite',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF374151),
-        ),
-      ),
+  Widget _buildLabel(String text) => AppFieldLabel(text);
+
+  InputDecoration _fieldDecoration({String? hint, required IconData icon}) {
+    OutlineInputBorder b(Color c, [double w = 1]) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: c, width: w),
+        );
+    return appInputDecoration(hint: hint, filled: true).copyWith(
+      prefixIcon: Icon(icon, color: AppColors.teal, size: 20),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
+      border: b(Colors.transparent),
+      enabledBorder: b(Colors.transparent),
+      focusedBorder: b(AppColors.teal, 1.5),
+      errorBorder: b(AppColors.danger, 1.5),
+      focusedErrorBorder: b(AppColors.danger, 1.5),
     );
   }
 
@@ -480,36 +428,8 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
       controller: controller,
       keyboardType: keyboardType,
       validator: validator,
-      style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A2E)),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFFB0B8C1), fontSize: 14),
-        prefixIcon: Icon(icon, color: _roleColor, size: 20),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: _roleColor, width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFDB4437), width: 1.5),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFDB4437), width: 1.5),
-        ),
-      ),
+      style: const TextStyle(fontSize: 14, color: AppColors.text),
+      decoration: _fieldDecoration(hint: hint, icon: icon),
     );
   }
 }
