@@ -9,6 +9,7 @@ import 'add_prescription_screen.dart';
 import 'patient_profile_view_screen.dart';
 import 'request_lab_test_screen.dart';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/notification_service.dart';
 import 'package:http/http.dart' as http;
@@ -769,7 +770,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
               children: [
                 _buildPatientCard(),
                 const SizedBox(height: 12),
-                if (widget.appointment.symptoms?.isNotEmpty ?? false) ...[
+                if ((widget.appointment.symptoms?.isNotEmpty ?? false) ||
+                    _patientReportBytes != null) ...[
                   _buildAppointmentInfoCard(),
                   const SizedBox(height: 12),
                 ],
@@ -972,7 +974,108 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                 style: const TextStyle(
                     fontSize: 13.5, height: 1.5, color: AppColors.text)),
           ],
+          // NAYA: patient ki upload ki hui report (video + in-person dono)
+          if (_patientReportBytes != null) ...[
+            if (widget.appointment.symptoms?.isNotEmpty ?? false)
+              const SizedBox(height: 12),
+            const Text('Report',
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.faint)),
+            const SizedBox(height: 6),
+            GestureDetector(
+              onTap: _openPatientReport,
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.memory(
+                      _patientReportBytes!,
+                      height: 170,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 80,
+                        color: AppColors.bg,
+                        alignment: Alignment.center,
+                        child: const Text('Report could not be loaded',
+                            style: TextStyle(
+                                fontSize: 12, color: AppColors.muted)),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 8,
+                    bottom: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.header.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.zoom_out_map_rounded,
+                              size: 14, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text('Tap to view',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  // Patient report (base64) -> bytes; ghalat data ho to null
+  late final Uint8List? _patientReportBytes = () {
+    final b64 = widget.appointment.patientReportBase64;
+    if (b64 == null || b64.isEmpty) return null;
+    try {
+      return base64Decode(b64);
+    } catch (_) {
+      return null;
+    }
+  }();
+
+  // Report full screen (zoom ke saath)
+  void _openPatientReport() {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            InteractiveViewer(
+              minScale: 1,
+              maxScale: 5,
+              child: Center(child: Image.memory(_patientReportBytes!)),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close_rounded, color: Colors.white),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

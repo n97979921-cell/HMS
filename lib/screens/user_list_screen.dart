@@ -162,10 +162,15 @@ class _UserListScreenState extends State<UserListScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text(
           'Delete selected users?',
-          style: TextStyle(fontWeight: FontWeight.w700, color: Colors.red),
+          style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 19,
+              color: AppColors.danger),
         ),
         content: Text(
           'Are you sure you want to delete ${_selectedUids.length} user(s)? This cannot be undone.',
@@ -173,16 +178,22 @@ class _UserListScreenState extends State<UserListScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            child: const Text('Cancel',
+                style: TextStyle(
+                    color: AppColors.muted, fontWeight: FontWeight.w700)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.danger,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(14)),
             ),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            child: const Text('Delete',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w800)),
           ),
         ],
       ),
@@ -465,25 +476,37 @@ class _UserCardState extends State<_UserCard> {
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: const Text('Set Timing',
-              style: TextStyle(fontWeight: FontWeight.w700)),
+              style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 19,
+                  color: AppColors.text)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading:
-                    const Icon(Icons.access_time_rounded, color: primaryColor),
+                leading: const AppIconTile(
+                  icon: Icons.access_time_rounded,
+                  color: AppColors.teal,
+                  background: AppColors.tealSoft,
+                  size: 40,
+                ),
                 title: const Text('Start Time',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.muted)),
                 subtitle: Text(
                   startTime.format(context),
                   style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E)),
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.text),
                 ),
                 onTap: () async {
                   // FIX (updated): dial-only mode — pehle
@@ -513,19 +536,26 @@ class _UserCardState extends State<_UserCard> {
                   }
                 },
               ),
-              const Divider(),
+              const Divider(color: AppColors.divider),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.access_time_filled_rounded,
-                    color: primaryColor),
+                leading: const AppIconTile(
+                  icon: Icons.access_time_filled_rounded,
+                  color: AppColors.teal,
+                  background: AppColors.tealSoft,
+                  size: 40,
+                ),
                 title: const Text('End Time',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF6B7280))),
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.muted)),
                 subtitle: Text(
                   endTime.format(context),
                   style: const TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1A1A2E)),
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.text),
                 ),
                 onTap: () async {
                   // Same fix as Start Time — dialOnly removes the
@@ -550,10 +580,10 @@ class _UserCardState extends State<_UserCard> {
               ),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.tealSoft,
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -566,7 +596,7 @@ class _UserCardState extends State<_UserCard> {
                       style: const TextStyle(
                           color: primaryColor,
                           fontSize: 13,
-                          fontWeight: FontWeight.w600),
+                          fontWeight: FontWeight.w800),
                     ),
                   ],
                 ),
@@ -576,7 +606,9 @@ class _UserCardState extends State<_UserCard> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+              child: const Text('Cancel',
+                  style: TextStyle(
+                      color: AppColors.muted, fontWeight: FontWeight.w700)),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -606,11 +638,16 @@ class _UserCardState extends State<_UserCard> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryColor,
+                backgroundColor: AppColors.header,
+                elevation: 0,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(14)),
               ),
-              child: const Text('Save', style: TextStyle(color: Colors.white)),
+              child: const Text('Save',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w800)),
             ),
           ],
         ),
@@ -630,9 +667,14 @@ class _UserCardState extends State<_UserCard> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text('Set Consultation Fee',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+            style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 19,
+                color: AppColors.text)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -641,8 +683,8 @@ class _UserCardState extends State<_UserCard> {
               Text(widget.user['name'] ?? '',
                   style: const TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: primaryColor)),
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.teal)),
               const SizedBox(height: 16),
               _feeField('In-Person Fee', inPersonController),
               const SizedBox(height: 12),
@@ -655,7 +697,7 @@ class _UserCardState extends State<_UserCard> {
                 style: TextStyle(
                   fontSize: 11,
                   fontStyle: FontStyle.italic,
-                  color: Colors.grey.shade600,
+                  color: AppColors.faint,
                 ),
               ),
             ],
@@ -664,7 +706,9 @@ class _UserCardState extends State<_UserCard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            child: const Text('Cancel',
+                style: TextStyle(
+                    color: AppColors.muted, fontWeight: FontWeight.w700)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -709,11 +753,15 @@ class _UserCardState extends State<_UserCard> {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
+              backgroundColor: AppColors.header,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(14)),
             ),
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
+            child: const Text('Save',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w800)),
           ),
         ],
       ),
@@ -726,21 +774,15 @@ class _UserCardState extends State<_UserCard> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.text)),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            prefixText: 'Rs ',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: primaryColor),
-            ),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          ),
+          decoration: appInputDecoration(prefixText: 'Rs ', filled: true),
         ),
       ],
     );
@@ -760,36 +802,33 @@ class _UserCardState extends State<_UserCard> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text('Edit User',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+            style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 19,
+                color: AppColors.text)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              decoration: InputDecoration(
+              decoration: appInputDecoration(filled: true).copyWith(
                 labelText: 'Name',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: primaryColor),
-                ),
+                labelStyle: const TextStyle(color: AppColors.muted),
+                floatingLabelStyle: const TextStyle(color: AppColors.teal),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: phoneController,
               keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
+              decoration: appInputDecoration(filled: true).copyWith(
                 labelText: 'Phone Number',
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: primaryColor),
-                ),
+                labelStyle: const TextStyle(color: AppColors.muted),
+                floatingLabelStyle: const TextStyle(color: AppColors.teal),
               ),
             ),
           ],
@@ -797,7 +836,9 @@ class _UserCardState extends State<_UserCard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            child: const Text('Cancel',
+                style: TextStyle(
+                    color: AppColors.muted, fontWeight: FontWeight.w700)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -811,11 +852,15 @@ class _UserCardState extends State<_UserCard> {
               widget.onChanged();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: primaryColor,
+              backgroundColor: AppColors.header,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(14)),
             ),
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
+            child: const Text('Save',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w800)),
           ),
         ],
       ),
@@ -826,15 +871,22 @@ class _UserCardState extends State<_UserCard> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text('Delete User',
-            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.red)),
+            style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 19,
+                color: AppColors.danger)),
         content: Text(
             'Are you sure you want to delete ${widget.user['name']}? This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            child: const Text('Cancel',
+                style: TextStyle(
+                    color: AppColors.muted, fontWeight: FontWeight.w700)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -843,11 +895,15 @@ class _UserCardState extends State<_UserCard> {
               widget.onChanged();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.danger,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                  borderRadius: BorderRadius.circular(14)),
             ),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            child: const Text('Delete',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w800)),
           ),
         ],
       ),
