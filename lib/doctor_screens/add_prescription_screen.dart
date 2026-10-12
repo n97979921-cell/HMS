@@ -96,7 +96,7 @@ class _AddPrescriptionScreenState extends State<AddPrescriptionScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Prescription saved'),
-            backgroundColor: _RxColors.primary,
+            backgroundColor: AppColors.header,
           ),
         );
         Navigator.pop(context, true);
