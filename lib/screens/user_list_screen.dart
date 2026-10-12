@@ -633,7 +633,7 @@ class _UserCardState extends State<_UserCard> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Timing saved successfully!'),
-                    backgroundColor: primaryColor,
+                    backgroundColor: AppColors.header,
                   ),
                 );
               },
@@ -748,7 +748,7 @@ class _UserCardState extends State<_UserCard> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Fee saved successfully!'),
-                  backgroundColor: primaryColor,
+                  backgroundColor: AppColors.header,
                 ),
               );
             },
@@ -1162,7 +1162,7 @@ class _UserCardState extends State<_UserCard> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Password reset email sent!'),
-                                backgroundColor: primaryColor,
+                                backgroundColor: AppColors.header,
                               ),
                             );
                           } else if (value == 'delete') {

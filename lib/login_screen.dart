@@ -86,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Login Successful! Welcome '),
-        backgroundColor: Color(0xFF0B2E33),
+        backgroundColor: const Color(0xFF0B2E33),
       ),
     );
 
@@ -133,7 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please sign up first to complete your profile.'),
-            backgroundColor: Color(0xFF0B2E33),
+            backgroundColor: const Color(0xFF0B2E33),
           ),
         );
       } else {

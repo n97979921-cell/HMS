@@ -124,7 +124,7 @@ class _LabStaffProfileScreenState extends State<LabStaffProfileScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: isError ? const Color(0xFF9A2E16) : AppColors.teal,
+      backgroundColor: isError ? const Color(0xFF9A2E16) : AppColors.header,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -451,7 +451,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Password changed successfully'),
-          backgroundColor: AppColors.teal,
+          backgroundColor: AppColors.header,
           behavior: SnackBarBehavior.floating,
         ));
       }

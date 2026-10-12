@@ -173,7 +173,7 @@ class _ViewPaymentRecordsScreenState extends State<ViewPaymentRecordsScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Payment record deleted'),
-          backgroundColor: _primary,
+          backgroundColor: AppColors.header,
           behavior: SnackBarBehavior.floating,
         ));
       }
@@ -210,7 +210,7 @@ class _ViewPaymentRecordsScreenState extends State<ViewPaymentRecordsScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('$count payment record(s) deleted'),
-          backgroundColor: _primary,
+          backgroundColor: AppColors.header,
           behavior: SnackBarBehavior.floating,
         ));
       }

@@ -280,7 +280,7 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Appointment marked as completed'),
-            backgroundColor: _DetailColors.primary,
+            backgroundColor: AppColors.header,
           ),
         );
         // Screen par hi raho — doctor turant Add Prescription kar sake.

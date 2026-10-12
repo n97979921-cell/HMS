@@ -75,7 +75,7 @@ class _ViewFeedbackScreenState extends State<ViewFeedbackScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Feedback deleted'),
-          backgroundColor: _primary,
+          backgroundColor: AppColors.header,
           behavior: SnackBarBehavior.floating,
         ));
       }
@@ -107,7 +107,7 @@ class _ViewFeedbackScreenState extends State<ViewFeedbackScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('${feedbackList.length} feedback record(s) deleted'),
-          backgroundColor: _primary,
+          backgroundColor: AppColors.header,
           behavior: SnackBarBehavior.floating,
         ));
       }

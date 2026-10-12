@@ -113,7 +113,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
       backgroundColor:
-          isError ? const Color(0xFF9A2E16) : const Color(0xFF0B5E57),
+          isError ? const Color(0xFF9A2E16) : AppColors.header,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -562,7 +562,7 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text('Password changed successfully'),
-          backgroundColor: const Color(0xFF0B5E57),
+          backgroundColor: AppColors.header,
           behavior: SnackBarBehavior.floating,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

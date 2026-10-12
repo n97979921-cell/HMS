@@ -124,7 +124,7 @@ class _PaymentUploadScreenState extends State<PaymentUploadScreen> {
       Navigator.pop(context, true);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Payment submitted! Awaiting reception confirmation.'),
-        backgroundColor: AppColors.teal,
+        backgroundColor: AppColors.header,
       ));
     } catch (e) {
       _showError('Could not submit payment: $e');

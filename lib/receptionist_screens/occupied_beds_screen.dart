@@ -245,7 +245,7 @@ class _OccupiedBedsScreenState extends State<OccupiedBedsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: _primary,
+      backgroundColor: const Color(0xFF0B2E33),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));

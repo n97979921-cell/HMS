@@ -123,7 +123,7 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
       backgroundColor:
-          isError ? const Color(0xFFDB4437) : _ProfileColors.primary,
+          isError ? const Color(0xFFDB4437) : AppColors.header,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -664,7 +664,7 @@ class _DoctorChangePasswordSheetState
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: const Text('Password changed successfully'),
-          backgroundColor: const Color(0xFF0F9D58),
+          backgroundColor: AppColors.header,
           behavior: SnackBarBehavior.floating,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
