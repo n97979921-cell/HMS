@@ -221,6 +221,12 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
         children: [
           AppHeader(
             title: 'My Profile',
+            // Logout — top-right icon (same _logout() action)
+            trailing: AppHeaderIconButton(
+              icon: Icons.logout_rounded,
+              tooltip: 'Log out',
+              onTap: _logout,
+            ),
             bottom: _isLoading ? null : _buildAvatarHeader(),
           ),
           Expanded(
@@ -234,10 +240,6 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // ── LOGOUT (same _logout() action) ──
-                          _buildLogoutButton(),
-                          const SizedBox(height: 22),
-
                           // ── Personal ──
                           const _SectionLabel('Personal Information'),
                           const SizedBox(height: 10),
@@ -440,48 +442,6 @@ class _PatientProfileScreenState extends State<PatientProfileScreen> {
                   ),
           ),
         ],
-      ),
-    );
-  }
-
-  // Logout — same _logout() call, sirf look badla
-  Widget _buildLogoutButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _logout,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          height: 52,
-          decoration: BoxDecoration(
-            color: AppColors.dangerSoft,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 30,
-                height: 30,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.logout_rounded,
-                    color: AppColors.danger, size: 16),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                'Log Out',
-                style: TextStyle(
-                  color: AppColors.danger,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

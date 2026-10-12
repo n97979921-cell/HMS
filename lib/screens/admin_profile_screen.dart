@@ -142,6 +142,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         children: [
           AppHeader(
             title: 'My profile',
+            // Logout — top-right icon (same _logout() action)
+            trailing: AppHeaderIconButton(
+              icon: Icons.logout_rounded,
+              tooltip: 'Log out',
+              onTap: _logout,
+            ),
             bottom: _isLoading
                 ? null
                 : Row(
@@ -230,13 +236,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // ── LOGOUT — moved up (right after avatar header,
-                          // above Personal Information) and made prominent:
-                          // filled red card with icon chip + shadow, instead
-                          // of the plain outlined button it used to be.
-                          _buildLogoutButton(),
-                          const SizedBox(height: 24),
-
                           // Editable section
                           const _SectionLabel('Personal Information'),
                           const SizedBox(height: 12),
@@ -414,50 +413,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                   ),
           ),
         ],
-      ),
-    );
-  }
-
-  // Prominent logout button — same _logout() call as before, only
-  // visual treatment upgraded (filled red card, icon chip, shadow)
-  // and moved higher up on the page.
-  Widget _buildLogoutButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _logout,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppColors.dangerSoft,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.logout_rounded,
-                    color: AppColors.danger, size: 18),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                'Log Out',
-                style: TextStyle(
-                  color: AppColors.danger,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

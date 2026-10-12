@@ -138,6 +138,12 @@ class _LabStaffProfileScreenState extends State<LabStaffProfileScreen> {
         children: [
           AppHeader(
             title: 'My profile',
+            // Logout — top-right icon (same _logout() action)
+            trailing: AppHeaderIconButton(
+              icon: Icons.logout_rounded,
+              tooltip: 'Log out',
+              onTap: _logout,
+            ),
             bottom: _buildAvatarHeader(),
           ),
           Expanded(
@@ -154,8 +160,6 @@ class _LabStaffProfileScreenState extends State<LabStaffProfileScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              _buildLogoutButton(),
-                              const SizedBox(height: 22),
                               _sectionLabel('PERSONAL INFORMATION'),
                               const SizedBox(height: 10),
                               _cardWrap([
@@ -272,48 +276,6 @@ class _LabStaffProfileScreenState extends State<LabStaffProfileScreen> {
     return Text(text,
         style: const TextStyle(
             fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.text));
-  }
-
-  // Logout button — same _logout() call as before, only the look changed.
-  Widget _buildLogoutButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _logout,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          height: 52,
-          decoration: BoxDecoration(
-            color: AppColors.dangerSoft,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 30,
-                height: 30,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.logout_rounded,
-                    color: AppColors.danger, size: 16),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                'Log Out',
-                style: TextStyle(
-                  color: AppColors.danger,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildAvatarHeader() {

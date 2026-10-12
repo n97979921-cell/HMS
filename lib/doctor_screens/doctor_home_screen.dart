@@ -383,23 +383,30 @@ class _DoctorHomeScreenState extends State<DoctorHomeScreen> {
             children: [
               Row(
                 children: [
-                  ClipOval(
-                    child: Container(
-                      width: 50,
-                      height: 50,
+                  // Logo — receptionist dashboard jaisa (same size + crop)
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(
                       color: Colors.white,
-                      child: Image.asset(
-                        'assets/Logo.png',
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.local_hospital,
-                            color: AppColors.header,
-                            size: 24,
-                          );
-                        },
+                      shape: BoxShape.circle,
+                    ),
+                    child: ClipOval(
+                      child: Transform.scale(
+                        scale: 1.6,
+                        child: Image.asset(
+                          'assets/Logo.png',
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.local_hospital,
+                              color: AppColors.header,
+                              size: 22,
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),

@@ -185,6 +185,12 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
         children: [
           AppHeader(
             title: 'My Profile',
+            // Logout — top-right icon (same _confirmLogout() action)
+            trailing: AppHeaderIconButton(
+              icon: Icons.logout_rounded,
+              tooltip: 'Log out',
+              onTap: _confirmLogout,
+            ),
             bottom: (!_isLoading && _profile != null)
                 ? _buildHeaderCard(_profile!)
                 : null,
@@ -240,9 +246,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildLogoutButton(),
-              const SizedBox(height: 22),
-
               // ── Personal (editable) ──
               const _SectionLabel('Personal Information'),
               const SizedBox(height: 10),
@@ -466,47 +469,6 @@ class _DoctorProfileScreenState extends State<DoctorProfileScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildLogoutButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: _confirmLogout,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          height: 52,
-          decoration: BoxDecoration(
-            color: AppColors.dangerSoft,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 30,
-                height: 30,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.logout_rounded,
-                    color: AppColors.danger, size: 16),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                'Logout',
-                style: TextStyle(
-                  color: AppColors.danger,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 

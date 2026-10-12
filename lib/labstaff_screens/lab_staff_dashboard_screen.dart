@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'lab_test_detail_screen.dart';
 import 'lab_staff_profile_screen.dart';
-import '../widgets/notification_bell_icon.dart';
 import '../widgets/app_ui.dart';
 
 /// LAB STAFF DASHBOARD — aaj/sab Confirmed tests dikhata hai
@@ -315,23 +314,30 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
             children: [
               Row(
                 children: [
-                  ClipOval(
-                    child: Container(
-                      width: 50,
-                      height: 50,
+                  // Logo — receptionist dashboard jaisa (same size + crop)
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: const BoxDecoration(
                       color: Colors.white,
-                      child: Image.asset(
-                        'assets/Logo.png',
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(
-                            Icons.local_hospital,
-                            color: AppColors.header,
-                            size: 24,
-                          );
-                        },
+                      shape: BoxShape.circle,
+                    ),
+                    child: ClipOval(
+                      child: Transform.scale(
+                        scale: 1.6,
+                        child: Image.asset(
+                          'assets/Logo.png',
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.local_hospital,
+                              color: AppColors.header,
+                              size: 22,
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
@@ -368,13 +374,6 @@ class _LabStaffDashboardScreenState extends State<LabStaffDashboardScreen> {
                       ],
                     ),
                   ),
-                  // Notification Bell (unread count automatic)
-                  const NotificationBellIcon(
-                    iconColor: Colors.white,
-                    backgroundColor: Color(0x26FFFFFF),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () {
                       Navigator.push(

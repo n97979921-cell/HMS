@@ -170,8 +170,20 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
 
   // Token 3 dafa try karta hai, har dafa 20 second wait karta hai.
   Future<String?> _fetchToken() async {
+    // Video call mein doctor ka NAAM dikhe (pehle doctorId jati thi)
+    String doctorName = 'Doctor';
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.doctorId)
+          .get();
+      doctorName = (doc.data()?['name'] as String?)?.trim() ?? 'Doctor';
+      if (doctorName.isEmpty) doctorName = 'Doctor';
+    } catch (_) {}
+    final displayName = Uri.encodeQueryComponent('Dr. $doctorName');
+
     final uri = Uri.parse(
-      '$_tokenServerUrl/token?room=$_roomName&name=Dr.${widget.doctorId}&moderator=true',
+      '$_tokenServerUrl/token?room=$_roomName&name=$displayName&moderator=true',
     );
     for (int attempt = 1; attempt <= 3; attempt++) {
       try {
@@ -180,8 +192,8 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
         if (response.statusCode == 200) {
           return jsonDecode(response.body)['token'] as String;
         }
-      } catch (e) {
-        print('TOKEN FETCH ERROR (try $attempt): $e');
+      } catch (_) {
+        // Server so raha ho ya network masla — agli try karo
       }
       if (attempt < 3) await Future.delayed(const Duration(seconds: 2));
     }
