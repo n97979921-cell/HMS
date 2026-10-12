@@ -491,14 +491,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
                         const SizedBox(height: 10),
                         _buildDateSelector(),
                         const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            Expanded(child: _sectionLabel('AVAILABLE SLOTS')),
-                            _legendDot(Colors.white, 'Free', border: true),
-                            const SizedBox(width: 10),
-                            _legendDot(const Color(0xFFE6ECEC), 'Taken'),
-                          ],
-                        ),
+                        _sectionLabel('AVAILABLE SLOTS'),
                         const SizedBox(height: 10),
                         _isLoadingSlots
                             ? const Padding(
@@ -564,29 +557,6 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
             fontWeight: FontWeight.w800,
             letterSpacing: 0.8,
             color: AppColors.muted));
-  }
-
-  Widget _legendDot(Color color, String label, {bool border = false}) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(3),
-            border: border ? Border.all(color: AppColors.border) : null,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(label,
-            style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: AppColors.faint)),
-      ],
-    );
   }
 
   Widget _buildHeader() {

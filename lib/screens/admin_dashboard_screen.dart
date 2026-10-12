@@ -288,17 +288,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             ),
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () => _scaffoldKey.currentState?.openDrawer(),
-                          child: const Text(
-                            'See all',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.teal,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 10),

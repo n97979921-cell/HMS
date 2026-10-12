@@ -43,8 +43,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isGoogleLoading = false;
 
   // Theme colors — matched to Admin Dashboard's green palette
-  static const Color _navy = Color(0xFF1A2F5A);
-  static const Color _teal = Color(0xFF0E6E68);
+  static const Color _navy = Color(0xFF0B2E33);
+  static const Color _teal = Color(0xFF0B2E33);
   static const Color _bg = Color(0xFFF4F7F6);
 
   @override
@@ -86,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Login Successful! Welcome '),
-        backgroundColor: Color(0xFF0E6E68),
+        backgroundColor: Color(0xFF0B2E33),
       ),
     );
 
@@ -133,7 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please sign up first to complete your profile.'),
-            backgroundColor: Color(0xFF0E6E68),
+            backgroundColor: Color(0xFF0B2E33),
           ),
         );
       } else {
@@ -426,7 +426,7 @@ class _FieldLabel extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        color: Color(0xFF1A2F5A),
+        color: Color(0xFF0B2E33),
         fontSize: 13,
         fontWeight: FontWeight.w600,
       ),
@@ -482,7 +482,7 @@ class _GoogleButton extends StatelessWidget {
                 width: 22,
                 height: 22,
                 child: CircularProgressIndicator(
-                  color: Color(0xFF0E6E68),
+                  color: Color(0xFF0B2E33),
                   strokeWidth: 2.5,
                 ),
               )
@@ -498,7 +498,7 @@ class _GoogleButton extends StatelessWidget {
                   Text(
                     'Continue with Google',
                     style: TextStyle(
-                      color: Color(0xFF1A2F5A),
+                      color: Color(0xFF0B2E33),
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),

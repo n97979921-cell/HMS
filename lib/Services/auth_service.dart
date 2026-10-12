@@ -170,6 +170,20 @@ class AuthService {
         };
       }
 
+      // STAFF (role != patient): agar email verified nahi hai to ek
+      // verification email bhej do (login block NAHI hota).
+      // Wajah: Firebase "Continue with Google" par UNVERIFIED
+      // email/password account ka password mita deta hai. Email verified
+      // ho jaye to Google sirf link hota hai, password safe rehta hai —
+      // aur signInWithGoogle() staff ko waise bhi sign-out kar deta hai.
+      if (userRole != 'patient' && !cred.user!.emailVerified) {
+        try {
+          await cred.user!.sendEmailVerification();
+        } catch (e) {
+          _logger.w("Staff verification email not sent: $e");
+        }
+      }
+
       return {'success': true, 'user': userData};
     } on FirebaseAuthException catch (e) {
       _logger.e("Login FirebaseAuth error: ${e.code}");
@@ -265,7 +279,8 @@ class AuthService {
           await _auth.signOut();
           return {
             'success': false,
-            'error': 'This sign-in method is only available for patients.'
+            'error':
+                'Google sign-in is only for patients. Staff, please log in with email and password.'
           };
         }
 
@@ -419,6 +434,14 @@ class AuthService {
         password: password,
       );
       final String uid = cred.user!.uid;
+
+      // NAYA: staff ka email bhi verify karwao — warna "Continue with
+      // Google" dabane par Firebase is account ka password mita deta hai.
+      try {
+        await cred.user!.sendEmailVerification();
+      } catch (e) {
+        _logger.w("Staff verification email not sent: $e");
+      }
 
       await _firestore.runTransaction((transaction) async {
         final freshInvite = await transaction.get(inviteRef);

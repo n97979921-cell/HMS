@@ -32,8 +32,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final authService = AuthService();
 
   // Theme colors
-  static const Color _navy = Color(0xFF1A2F5A);
-  static const Color _teal = Color(0xFF0E6E68);
+  static const Color _navy = Color(0xFF0B2E33);
+  static const Color _teal = Color(0xFF0B2E33);
   static const Color _bg = Color(0xFFF4F7F6);
 
   @override
@@ -81,7 +81,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Account created! Check your email to verify.'),
-            backgroundColor: Color(0xFF0E6E68),
+            backgroundColor: Color(0xFF0B2E33),
             duration: Duration(seconds: 2),
           ),
         );
@@ -470,7 +470,7 @@ class _FieldLabel extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        color: Color(0xFF1A2F5A),
+        color: Color(0xFF0B2E33),
         fontSize: 13,
         fontWeight: FontWeight.w600,
       ),
