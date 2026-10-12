@@ -402,7 +402,7 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFFDB4437),
+      backgroundColor: AppColors.danger,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -494,11 +494,6 @@ class _AppointmentsTodayScreenState extends State<AppointmentsTodayScreen> {
     return AppHeader(
       title: "Today's appointments",
       subtitle: 'In-person & walk-in',
-      trailing: AppHeaderIconButton(
-        icon: Icons.refresh_rounded,
-        tooltip: 'Refresh',
-        onTap: _loadAndProcess,
-      ),
       bottom: Row(
         children: [
           pill('Waiting', waiting, AppColors.star),

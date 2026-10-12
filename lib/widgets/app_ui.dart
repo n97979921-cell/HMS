@@ -914,3 +914,40 @@ class AppHeaderSearch extends StatelessWidget {
     );
   }
 }
+
+/// "View" pill — poori app mein report / screenshot dekhne ka ek hi button.
+class AppViewButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onTap;
+
+  const AppViewButton({super.key, this.label = 'View', required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.header,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Container(
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.remove_red_eye_outlined,
+                  size: 15, color: Colors.white),
+              const SizedBox(width: 6),
+              Text(label,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

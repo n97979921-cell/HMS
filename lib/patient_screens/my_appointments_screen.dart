@@ -487,6 +487,36 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     }
   }
 
+  // ── NAYA: kaunsi appointment delete ho sakti hai (card wala hi rule) ──
+  bool _isDeletable(Map<String, dynamic> appt) {
+    final s = appt['status'];
+    return s == 'Cancelled' ||
+        s == 'NoShow' ||
+        s == 'CheckedIn' ||
+        (s == 'Completed' && appt['hasFeedback'] == true);
+  }
+
+  // ── NAYA: Delete All — current tab mein jo appointments delete ho
+  //    sakti hain (Cancelled / NoShow / CheckedIn / Completed + feedback),
+  //    sab ek batch mein, bina confirmation (baqi screens jaisa) ──
+  Future<void> _deleteAllDeletable() async {
+    final deletable = _filteredAppointments.where(_isDeletable).toList();
+    if (deletable.isEmpty) return;
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      for (final appt in deletable) {
+        batch.delete(FirebaseFirestore.instance
+            .collection('appointments')
+            .doc(appt['appointmentId']));
+      }
+      await batch.commit();
+      _showSuccess('${deletable.length} appointment(s) deleted');
+      _loadAppointments();
+    } catch (e) {
+      _showError('Error deleting all: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -494,9 +524,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
       body: Column(
         children: [
           _buildHeader(),
-          if (_selectedFilter == 'NoShow' &&
-              !_isLoading &&
-              _filteredAppointments.isNotEmpty)
+          if (!_isLoading && _filteredAppointments.any(_isDeletable))
             _buildDeleteAllBar(),
           Expanded(
             child: _isLoading
@@ -510,7 +538,10 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                         child: ListView.separated(
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: EdgeInsets.fromLTRB(
-                              20, _selectedFilter == 'NoShow' ? 4 : 16, 20, 24),
+                              20,
+                              _filteredAppointments.any(_isDeletable) ? 4 : 16,
+                              20,
+                              24),
                           itemCount: _filteredAppointments.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 12),
@@ -578,16 +609,23 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     );
   }
 
-  // "Delete All" — sirf NoShow filter par, bina confirmation (pehle jaisa)
+  // "Delete All" — har us tab par jahan delete hone wali appointments
+  // hon, bina confirmation (pehle jaisa). NoShow tab par purana
+  // _deleteAllNoShow() hi chalta hai.
   Widget _buildDeleteAllBar() {
-    final n = _filteredAppointments.length;
+    final isNoShowTab = _selectedFilter == 'NoShow';
+    final n = isNoShowTab
+        ? _filteredAppointments.length
+        : _filteredAppointments.where(_isDeletable).length;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
       child: Row(
         children: [
           Expanded(
             child: Text(
-              '$n no-show record${n == 1 ? '' : 's'}',
+              isNoShowTab
+                  ? '$n no-show record${n == 1 ? '' : 's'}'
+                  : '$n deletable appointment${n == 1 ? '' : 's'}',
               style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
@@ -595,7 +633,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
             ),
           ),
           GestureDetector(
-            onTap: _deleteAllNoShow,
+            onTap: isNoShowTab ? _deleteAllNoShow : _deleteAllDeletable,
             child: Container(
               height: 34,
               padding: const EdgeInsets.symmetric(horizontal: 12),

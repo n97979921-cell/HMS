@@ -426,30 +426,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
               const SizedBox(width: 8),
               // Report ready → "View" pill, warna status chip
               if (canView)
-                GestureDetector(
-                  onTap: () => _viewReport(reportBase64),
-                  child: Container(
-                    height: 34,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.teal,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.remove_red_eye_outlined,
-                            size: 15, color: Colors.white),
-                        SizedBox(width: 5),
-                        Text('View',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800)),
-                      ],
-                    ),
-                  ),
-                )
+                AppViewButton(onTap: () => _viewReport(reportBase64))
               else
                 AppStatusChip(
                   label: status,

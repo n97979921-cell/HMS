@@ -986,52 +986,38 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
             const SizedBox(height: 6),
             GestureDetector(
               onTap: _openPatientReport,
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Image.memory(
-                      _patientReportBytes!,
-                      height: 170,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        height: 80,
-                        color: AppColors.bg,
-                        alignment: Alignment.center,
-                        child: const Text('Report could not be loaded',
-                            style: TextStyle(
-                                fontSize: 12, color: AppColors.muted)),
-                      ),
-                    ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Image.memory(
+                  _patientReportBytes!,
+                  height: 170,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 80,
+                    color: AppColors.bg,
+                    alignment: Alignment.center,
+                    child: const Text('Report could not be loaded',
+                        style: TextStyle(fontSize: 12, color: AppColors.muted)),
                   ),
-                  Positioned(
-                    right: 8,
-                    bottom: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.header.withOpacity(0.85),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.zoom_out_map_rounded,
-                              size: 14, color: Colors.white),
-                          SizedBox(width: 4),
-                          Text('Tap to view',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(Icons.image_outlined,
+                    size: 16, color: AppColors.muted),
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text('Uploaded by patient',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.muted)),
+                ),
+                AppViewButton(onTap: _openPatientReport),
+              ],
             ),
           ],
         ],
@@ -1050,28 +1036,34 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
     }
   }();
 
-  // Report full screen (zoom ke saath)
+  // Report full screen (zoom ke saath) — baqi app ke viewer jaisa
   void _openPatientReport() {
     showDialog(
       context: context,
-      builder: (ctx) => Dialog(
+      builder: (ctx) => Dialog.fullscreen(
         backgroundColor: Colors.black,
-        insetPadding: const EdgeInsets.all(12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        clipBehavior: Clip.antiAlias,
         child: Stack(
           children: [
-            InteractiveViewer(
-              minScale: 1,
-              maxScale: 5,
-              child: Center(child: Image.memory(_patientReportBytes!)),
+            Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 5.0,
+                child: Image.memory(_patientReportBytes!),
+              ),
             ),
             Positioned(
-              top: 8,
-              right: 8,
-              child: IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.white),
-                onPressed: () => Navigator.pop(ctx),
+              top: 16,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(ctx),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 22),
+                ),
               ),
             ),
           ],

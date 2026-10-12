@@ -478,6 +478,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
             'will be cancelled and the slot freed. No refund.'),
         actions: [
           TextButton(
+              style: TextButton.styleFrom(foregroundColor: AppColors.muted),
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
           ElevatedButton(
@@ -508,6 +509,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
             'of Rs. ${payment['amount']} will be added to pending refunds.'),
         actions: [
           TextButton(
+              style: TextButton.styleFrom(foregroundColor: AppColors.muted),
               onPressed: () => Navigator.pop(context),
               child: const Text('Back')),
           ElevatedButton(
@@ -539,6 +541,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
             'Rs. ${payment['amount']} will be added to pending refunds.'),
         actions: [
           TextButton(
+              style: TextButton.styleFrom(foregroundColor: AppColors.muted),
               onPressed: () => Navigator.pop(context),
               child: const Text('Back')),
           ElevatedButton(
@@ -567,6 +570,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
             'be given.'),
         actions: [
           TextButton(
+              style: TextButton.styleFrom(foregroundColor: AppColors.muted),
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel')),
           ElevatedButton(
@@ -739,29 +743,9 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
     if (base64Img == null) return const SizedBox.shrink();
     return Align(
       alignment: Alignment.centerLeft,
-      child: Material(
-        color: AppColors.tealSoft,
-        borderRadius: BorderRadius.circular(999),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(999),
-          onTap: () => _viewScreenshot(base64Img),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.remove_red_eye_outlined,
-                    size: 16, color: AppColors.teal),
-                SizedBox(width: 6),
-                Text('View Screenshot',
-                    style: TextStyle(
-                        color: AppColors.teal,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800)),
-              ],
-            ),
-          ),
-        ),
+      child: AppViewButton(
+        label: 'View Screenshot',
+        onTap: () => _viewScreenshot(base64Img),
       ),
     );
   }
@@ -789,7 +773,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
                         style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A2F3A))),
+                            color: AppColors.text)),
                     if (p['doctorName'] != '')
                       Text(
                         p['slotLabel'] != null && p['slotLabel'] != ''
@@ -919,7 +903,7 @@ class _VerifyPaymentsScreenState extends State<VerifyPaymentsScreen> {
                         style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A2F3A))),
+                            color: AppColors.text)),
                     if (p['doctorName'] != '')
                       Text('Dr. ${p['doctorName']}',
                           style: const TextStyle(

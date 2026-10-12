@@ -257,7 +257,7 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
           ),
           const SizedBox(width: 8),
           if (isCompleted)
-            GestureDetector(
+            AppViewButton(
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -265,27 +265,6 @@ class _LabReportsScreenState extends State<LabReportsScreen> {
                     repository: widget.repository,
                     testId: item.testId,
                   ),
-                ),
-              ),
-              child: Container(
-                height: 34,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.teal,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.remove_red_eye_outlined,
-                        size: 15, color: Colors.white),
-                    SizedBox(width: 5),
-                    Text('View',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800)),
-                  ],
                 ),
               ),
             )
