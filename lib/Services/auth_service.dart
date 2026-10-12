@@ -184,6 +184,15 @@ class AuthService {
         }
       }
 
+      // NAYA: staff ki email 'staffEmails' list mein save karo, taake
+      // "Continue with Google" Firebase tak pohanchne se PEHLE hi block
+      // ho jaye (purane staff accounts bhi pehle password login par
+      // khud-ba-khud is list mein aa jate hain).
+      if (userRole != 'patient') {
+        await _saveStaffEmail(
+            cred.user!.email ?? email, userRole, cred.user!.uid);
+      }
+
       return {'success': true, 'user': userData};
     } on FirebaseAuthException catch (e) {
       _logger.e("Login FirebaseAuth error: ${e.code}");
@@ -240,6 +249,18 @@ class AuthService {
 
       if (googleUser == null) {
         return {'success': false, 'error': 'Google sign-in cancelled'};
+      }
+
+      // NAYA: Firebase ko credential dene se PEHLE check karo ke ye email
+      // staff ki to nahi. Agar staff hai to yahin ruk jao — is tarah
+      // Firebase account ko chhuta hi nahi aur password safe rehta hai.
+      if (await _isStaffEmail(googleUser.email)) {
+        await _googleSignIn.signOut();
+        return {
+          'success': false,
+          'error':
+              'Google sign-in is only for patients. Staff, please log in with email and password.'
+        };
       }
 
       final GoogleSignInAuthentication googleAuth =
@@ -407,6 +428,39 @@ class AuthService {
     }
   }
 
+  // ─── STAFF EMAILS (Google sign-in block) ───
+  // 'staffEmails/{email}' — sirf staff (role != patient) ki emails.
+  // Google sign-in se pehle ye check hota hai, is liye login ke baghair
+  // bhi ek document 'get' ho sakta hai (rules mein 'allow get: if true').
+  Future<void> _saveStaffEmail(String email, String role, String uid) async {
+    try {
+      await _firestore
+          .collection('staffEmails')
+          .doc(email.trim().toLowerCase())
+          .set({
+        'role': role,
+        'uid': uid,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      _logger.w("staffEmails save failed: $e");
+    }
+  }
+
+  Future<bool> _isStaffEmail(String email) async {
+    try {
+      final doc = await _firestore
+          .collection('staffEmails')
+          .doc(email.trim().toLowerCase())
+          .get();
+      return doc.exists;
+    } catch (e) {
+      // Rules update na hon to yahan permission-denied aata hai
+      _logger.w("staffEmails check failed: $e");
+      return false;
+    }
+  }
+
   // ─── INVITE SIGNUP — SHARED HELPER (transaction-safe) ───
   Future<bool> _signupWithInvite({
     required String inviteCode,
@@ -465,6 +519,18 @@ class AuthService {
           'used': true,
           'usedAt': FieldValue.serverTimestamp(),
         });
+
+        // NAYA: naye staff ki email bhi 'staffEmails' list mein
+        transaction.set(
+          _firestore
+              .collection('staffEmails')
+              .doc((inviteData['email'] as String).trim().toLowerCase()),
+          {
+            'role': inviteData['role'],
+            'uid': uid,
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+        );
       });
 
       _logger.i("Invite signup successful: ${inviteData['email']}");
