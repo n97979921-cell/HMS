@@ -195,7 +195,7 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Appointment deleted'),
-          backgroundColor: _primary,
+          backgroundColor: AppColors.header,
           behavior: SnackBarBehavior.floating,
         ));
       }
@@ -248,7 +248,7 @@ class _ViewAppointmentsScreenState extends State<ViewAppointmentsScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('${eligible.length} appointment(s) deleted'),
-          backgroundColor: _primary,
+          backgroundColor: AppColors.header,
           behavior: SnackBarBehavior.floating,
         ));
       }

@@ -63,7 +63,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Thank you for your feedback'),
-          backgroundColor: AppColors.teal,
+          backgroundColor: AppColors.header,
           behavior: SnackBarBehavior.floating,
         ));
         Navigator.pop(context, true); // true = feedback submitted

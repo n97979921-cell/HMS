@@ -128,7 +128,7 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Lab test deleted'),
-          backgroundColor: _primary,
+          backgroundColor: AppColors.header,
           behavior: SnackBarBehavior.floating,
         ));
       }
@@ -160,7 +160,7 @@ class _ViewLabTestSummaryScreenState extends State<ViewLabTestSummaryScreen> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('${tests.length} lab test(s) deleted'),
-          backgroundColor: _primary,
+          backgroundColor: AppColors.header,
           behavior: SnackBarBehavior.floating,
         ));
       }

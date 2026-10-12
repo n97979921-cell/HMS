@@ -138,7 +138,7 @@ class _InviteSignupScreenState extends State<InviteSignupScreen> {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Account created! Please log in.'),
-          backgroundColor: _primary,
+          backgroundColor: const Color(0xFF0B2E33),
         ));
         Navigator.pushReplacement(
           context,

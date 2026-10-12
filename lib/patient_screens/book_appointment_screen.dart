@@ -448,7 +448,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         // Payment submit ho gayi
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Booking requested! Awaiting reception confirmation.'),
-          backgroundColor: AppColors.teal,
+          backgroundColor: AppColors.header,
         ));
         Navigator.pop(context);
       } else {

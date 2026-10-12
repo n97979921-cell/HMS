@@ -144,7 +144,7 @@ class _RequestLabTestScreenState extends State<RequestLabTestScreen> {
           content: Text(successCount == 1
               ? 'Lab test requested'
               : '$successCount lab tests requested'),
-          backgroundColor: _RLColors.primary,
+          backgroundColor: AppColors.header,
         ),
       );
       Navigator.pop(context, true);

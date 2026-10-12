@@ -154,7 +154,7 @@ class _RoomsListScreenState extends State<RoomsListScreen> {
   void _showSuccess(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor: const Color(0xFF0F9D58),
+      backgroundColor: AppColors.header,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
