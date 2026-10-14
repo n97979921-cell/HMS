@@ -35,8 +35,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     _loadHomeData();
   }
 
-  Future<void> _loadHomeData() async {
-    setState(() => _isLoading = true);
+  // showLoader: pehli dafa poori screen par spinner dikhao.
+  // Kisi screen se wapas aane par chupke se (bina spinner) data refresh hota hai.
+  Future<void> _loadHomeData({bool showLoader = true}) async {
+    if (showLoader) setState(() => _isLoading = true);
 
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -396,7 +398,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 MaterialPageRoute(
                   builder: (_) => const HelpScreen(),
                 ),
-              );
+              ).then((_) => _loadHomeData(showLoader: false));
             },
             child: Container(
               height: 36,
@@ -524,7 +526,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   appointmentType: 'VIDEO_CALL',
                 ),
               ),
-            );
+            ).then((_) => _loadHomeData(showLoader: false));
           },
         ),
         _serviceCard(
@@ -540,7 +542,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   appointmentType: 'IN_PERSON',
                 ),
               ),
-            );
+            ).then((_) => _loadHomeData(showLoader: false));
           },
         ),
         _serviceCard(
@@ -554,7 +556,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               MaterialPageRoute(
                 builder: (_) => const LabReportsScreen(),
               ),
-            );
+            ).then((_) => _loadHomeData(showLoader: false));
           },
         ),
         _serviceCard(
@@ -568,7 +570,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               MaterialPageRoute(
                 builder: (_) => const PrescriptionsScreen(),
               ),
-            );
+            ).then((_) => _loadHomeData(showLoader: false));
           },
         ),
       ],
@@ -632,7 +634,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           MaterialPageRoute(
             builder: (_) => const BillingScreen(),
           ),
-        );
+        ).then((_) => _loadHomeData(showLoader: false));
       },
       child: Container(
         width: double.infinity,
@@ -790,14 +792,14 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               MaterialPageRoute(
                 builder: (_) => const MyAppointmentsScreen(),
               ),
-            );
+            ).then((_) => _loadHomeData(showLoader: false));
           } else if (index == 2) {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => const PatientProfileScreen(),
               ),
-            );
+            ).then((_) => _loadHomeData(showLoader: false));
           } else {
             setState(
               () => _currentNavIndex = index,

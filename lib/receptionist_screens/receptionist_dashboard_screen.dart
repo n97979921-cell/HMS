@@ -71,7 +71,26 @@ class _ReceptionistDashboardScreenState
           .collection('payments')
           .where('status', isEqualTo: 'Pending')
           .get();
-      _pendingPayments = paymentsSnap.docs.length;
+      // Verify Payments screen jaisa hi count: sirf wo payments gino jinki
+      // appointment maujood hai aur status Requested (Pending tab) ya
+      // Cancelled (Expired tab) hai. Jis payment ki appointment delete ho
+      // chuki ho, ya kisi aur status mein ho, wo screen par nahi dikhti —
+      // is liye yahan bhi nahi gini jati.
+      int visiblePayments = 0;
+      for (final doc in paymentsSnap.docs) {
+        final apptId = doc.data()['appointmentId'];
+        if (apptId == null) continue;
+        final apptDoc = await FirebaseFirestore.instance
+            .collection('appointments')
+            .doc(apptId)
+            .get();
+        if (!apptDoc.exists) continue;
+        final apptStatus = apptDoc.data()?['status'];
+        if (apptStatus == 'Requested' || apptStatus == 'Cancelled') {
+          visiblePayments++;
+        }
+      }
+      _pendingPayments = visiblePayments;
 
       final today = DateTime.now();
       final dateStr =
