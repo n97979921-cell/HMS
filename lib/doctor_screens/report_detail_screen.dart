@@ -261,49 +261,33 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 color: AppColors.muted)),
         const SizedBox(height: 10),
 
-        // Report (image, base64) — tap to view
+        // Report (image, base64) — View button se fullscreen khulti hai
         if (detail.reportBase64 != null && detail.reportBase64!.isNotEmpty) ...[
-          GestureDetector(
-            onTap: () => _viewReportFullscreen(detail.reportBase64!),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Image.memory(
-                      base64Decode(detail.reportBase64!),
-                      height: 220,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        height: 220,
-                        color: AppColors.bg,
-                        alignment: Alignment.center,
-                        child: const Text('Could not load report',
-                            style: TextStyle(color: AppColors.faint)),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.all(9),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.zoom_in,
-                          color: Colors.white, size: 19),
-                    ),
-                  ),
-                ],
-              ),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                const AppIconTile(
+                  icon: Icons.description_outlined,
+                  color: AppColors.teal,
+                  background: AppColors.tealSoft,
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text('Report uploaded',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.text)),
+                ),
+                AppViewButton(
+                  onTap: () => _viewReportFullscreen(detail.reportBase64!),
+                ),
+              ],
             ),
           ),
         ] else ...[
