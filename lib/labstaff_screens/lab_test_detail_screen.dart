@@ -131,6 +131,46 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
     }
   }
 
+  // ── Attached report ko fullscreen dekhna (pinch-zoom ke saath) ──
+  void _viewReport() {
+    final data = _reportBase64;
+    if (data == null) return;
+    final bytes = base64Decode(data);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 5.0,
+                child: Image.memory(bytes),
+              ),
+            ),
+            Positioned(
+              top: 16,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(dialogContext),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 22),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Complete: In Progress → Completed, report saved ──
   Future<void> _completeTest() async {
     if (_reportBase64 == null) {
@@ -692,12 +732,25 @@ class _LabTestDetailScreenState extends State<LabTestDetailScreen> {
         ),
         child: Column(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: Image.memory(base64Decode(_reportBase64!),
-                  height: 180, width: double.infinity, fit: BoxFit.cover),
+            Row(
+              children: [
+                const AppIconTile(
+                  icon: Icons.description_outlined,
+                  color: AppColors.teal,
+                  background: AppColors.tealSoft,
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text('Report attached',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.text)),
+                ),
+                AppViewButton(onTap: _viewReport),
+              ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             GestureDetector(
               onTap: _pickReport,
               child: Container(

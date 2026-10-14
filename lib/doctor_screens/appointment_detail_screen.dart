@@ -996,26 +996,6 @@ class _AppointmentDetailScreenState extends State<AppointmentDetailScreen> {
                     fontWeight: FontWeight.w700,
                     color: AppColors.faint)),
             const SizedBox(height: 6),
-            GestureDetector(
-              onTap: _openPatientReport,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: Image.memory(
-                  _patientReportBytes!,
-                  height: 170,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 80,
-                    color: AppColors.bg,
-                    alignment: Alignment.center,
-                    child: const Text('Report could not be loaded',
-                        style: TextStyle(fontSize: 12, color: AppColors.muted)),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
             Row(
               children: [
                 const Icon(Icons.image_outlined,
