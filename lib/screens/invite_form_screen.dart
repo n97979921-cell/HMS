@@ -278,8 +278,15 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
                             icon: Icons.email_outlined,
                             keyboardType: TextInputType.emailAddress,
                             validator: (v) {
-                              if (v!.isEmpty) return 'Email is required';
-                              if (!v.contains('@')) return 'Enter valid email';
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Email is required';
+                              }
+                              // Login screen jaisa hi email format check
+                              final emailRegex =
+                                  RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                              if (!emailRegex.hasMatch(v.trim())) {
+                                return 'Enter a valid email';
+                              }
                               return null;
                             },
                           ),

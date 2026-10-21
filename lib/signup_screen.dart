@@ -199,8 +199,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,
                           validator: (v) {
-                        if (v == null || v.isEmpty) return 'Email required';
-                        if (!v.contains('@')) return 'Enter valid email';
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Email required';
+                        }
+                        // Login screen jaisa hi email format check
+                        final emailRegex =
+                            RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                        if (!emailRegex.hasMatch(v.trim())) {
+                          return 'Enter a valid email';
+                        }
                         return null;
                       }),
                       const SizedBox(height: 14),

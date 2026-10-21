@@ -49,7 +49,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Reset link sent! Check your email.'),
+            // Neutral message — security ke liye ye nahi batate ke
+            // email registered hai ya nahi (Firebase bhi nahi batata).
+            content: Text(
+                'If this email is registered, a reset link has been sent.'),
             backgroundColor: const Color(0xFF0B2E33),
           ),
         );
@@ -66,7 +69,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Email not registered'),
+            content: Text('Could not send reset link. Please try again.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -160,10 +163,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                             validator: (v) {
-                              if (v == null || v.isEmpty) {
+                              if (v == null || v.trim().isEmpty) {
                                 return 'Email required';
                               }
-                              if (!v.contains('@')) return 'Enter valid email';
+                              // Login screen jaisa hi email format check
+                              final emailRegex =
+                                  RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                              if (!emailRegex.hasMatch(v.trim())) {
+                                return 'Enter a valid email';
+                              }
                               return null;
                             },
                             style: const TextStyle(
@@ -254,7 +262,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                   SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      'Check your inbox for the reset link.',
+                                      'If this email is registered, check your inbox for the reset link.',
                                       style:
                                           TextStyle(color: _teal, fontSize: 13),
                                     ),

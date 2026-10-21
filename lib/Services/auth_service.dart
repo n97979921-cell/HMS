@@ -311,7 +311,20 @@ class AuthService {
       // Is Google uid ke against Firestore me koi record nahi hai.
       // Login screen se naya account kabhi nahi banega — signup
       // hamesha email/password form se hota hai.
+      //
+      // FIX: signInWithCredential() ne agar abhi-abhi Firebase
+      // Authentication mein NAYA (khaali) account bana diya hai, to
+      // usay delete karo. Warna baad mein Sign Up form par isi email
+      // se "This email is already registered" aata tha.
+      if (userCred.additionalUserInfo?.isNewUser == true) {
+        try {
+          await firebaseUser.delete();
+        } catch (e) {
+          _logger.w("Empty Google account delete failed: $e");
+        }
+      }
       await _auth.signOut();
+      await _googleSignIn.signOut();
       return {
         'success': false,
         'error': 'This email is not registered. Please sign up first.'
