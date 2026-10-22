@@ -64,11 +64,17 @@ class _ManageDepartmentsScreenState extends State<ManageDepartmentsScreen> {
         onSave: () async {
           if (nameController.text.trim().isEmpty) return;
 
-          final existing = await _firestore
-              .collection('departments')
-              .where('name', isEqualTo: nameController.text.trim())
-              .get();
-          if (existing.docs.isNotEmpty) {
+          // Naam ka duplicate check — bare/chhote huroof aur extra
+          // spaces ka farq nahi dekhte ("Cardiology" = "cardiology" =
+          // "CARDIOLOGY"). Saare departments la kar compare karte hain
+          // (departments thore hote hain, is liye yeh tez hai).
+          String normalize(String v) =>
+              v.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+          final newName = normalize(nameController.text);
+          final allDepts = await _firestore.collection('departments').get();
+          final alreadyExists = allDepts.docs.any(
+              (d) => normalize((d.data()['name'] ?? '').toString()) == newName);
+          if (alreadyExists) {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(

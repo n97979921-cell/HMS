@@ -612,6 +612,22 @@ class _UserCardState extends State<_UserCard> {
             ),
             ElevatedButton(
               onPressed: () async {
+                // End time, start time ke BAAD hona chahiye — kam az kam
+                // 15 minute baad, taake kam se kam ek slot ban sake
+                // (har appointment slot 15 minute ka hai).
+                final startMinutes = startTime.hour * 60 + startTime.minute;
+                final endMinutes = endTime.hour * 60 + endTime.minute;
+                if (endMinutes - startMinutes < 15) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          'End time must be at least 15 minutes after start time.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return; // Save mat karo, dialog khula rahe
+                }
+
                 final start =
                     '${startTime.hour.toString().padLeft(2, '0')}:${startTime.minute.toString().padLeft(2, '0')}';
                 final end =

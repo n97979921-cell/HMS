@@ -266,8 +266,16 @@ class _InviteFormScreenState extends State<InviteFormScreen> {
                             controller: _nameController,
                             hint: 'Enter full name',
                             icon: Icons.person_outline_rounded,
-                            validator: (v) =>
-                                v!.isEmpty ? 'Name is required' : null,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Name is required';
+                              }
+                              // Kam az kam 3 characters (spaces gin kar nahi)
+                              if (v.trim().length < 3) {
+                                return 'Name must be at least 3 characters';
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 14),
 

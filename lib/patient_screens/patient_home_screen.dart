@@ -126,24 +126,39 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         });
       }
 
-      doctorRatings.sort(
-        (a, b) =>
-            (b['avgRating'] as double).compareTo(a['avgRating'] as double),
-      );
+      // Tarteeb: sab se zyada average pehle; average barabar ho to
+      // jis ke feedback zyada hon woh pehle.
+      doctorRatings.sort((a, b) {
+        final byRating =
+            (b['avgRating'] as double).compareTo(a['avgRating'] as double);
+        if (byRating != 0) return byRating;
+        return (b['reviewCount'] as int).compareTo(a['reviewCount'] as int);
+      });
 
+      // TOP DOCTORS rule: kam az kam 1 feedback (doctorRatings mein
+      // sirf wahi doctors hain jinhein feedback mila hai) aur average
+      // rating 4.0 ya zyada. Zyada se zyada 5 doctors dikhte hain.
+      const double minAvgRating = 4.0;
+      const int maxTopDoctors = 5;
       final topRated = doctorRatings
-          .where((d) =>
-              (d['avgRating'] as double) >= 4.7 &&
-              (d['reviewCount'] as int) >= 5)
+          .where((d) => (d['avgRating'] as double) >= minAvgRating)
           .toList();
 
       final List<Map<String, dynamic>> resolvedTopDoctors = [];
 
       for (final entry in topRated) {
+        if (resolvedTopDoctors.length >= maxTopDoctors) break;
+
         final doctorDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(entry['doctorId'])
             .get();
+
+        // Sirf ACTIVE doctors — deactivated/deleted doctor top list mein
+        // nahi aana chahiye (us se booking ho hi nahi sakti).
+        if (!doctorDoc.exists || doctorDoc.data()?['status'] != 'active') {
+          continue;
+        }
 
         final profileDoc = await FirebaseFirestore.instance
             .collection('doctor_profiles')
@@ -160,6 +175,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           'name': doctorDoc.data()?['name'] ?? 'Doctor',
           'specialty': specialization,
           'rating': (entry['avgRating'] as double).toStringAsFixed(1),
+          // NAYA: kitne feedback mile — card par "(12 reviews)" dikhta hai
+          'reviews': entry['reviewCount'] as int,
         });
       }
 
@@ -736,32 +753,52 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF6E0),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        color: Color(0xFFF2B233),
-                        size: 13,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF6E0),
+                        borderRadius: BorderRadius.circular(999),
                       ),
-                      const SizedBox(width: 3),
-                      Text(
-                        doc['rating'],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            color: Color(0xFFF2B233),
+                            size: 13,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            doc['rating'],
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF8A6D00),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // NAYA: rating ke saath feedback ki ginti
+                    Flexible(
+                      child: Text(
+                        doc['reviews'] == 1
+                            ? '1 review'
+                            : '${doc['reviews']} reviews',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF8A6D00),
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.muted,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),
