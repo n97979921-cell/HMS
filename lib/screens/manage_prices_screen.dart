@@ -183,7 +183,13 @@ class _ManageRoomPricesScreenState extends State<ManageRoomPricesScreen> {
           AppPrimaryButton(
             label: 'Save',
             onPressed: () async {
-              final price = double.tryParse(priceController.text.trim()) ?? 0;
+              // Price validation: number ho aur kam az kam Rs 50
+              final priceError = _priceError(priceController.text);
+              if (priceError != null) {
+                _showPriceError(context, priceError);
+                return; // save mat karo, sheet khuli rahe
+              }
+              final price = double.parse(priceController.text.trim());
 
               // 1. Master rate-card update
               await _firestore
@@ -396,16 +402,29 @@ class _ManageTestPricesScreenState extends State<ManageTestPricesScreen> {
                         return;
                       }
 
+                      // Price validation: number ho aur kam az kam Rs 50
+                      final priceError = _priceError(priceController.text);
+                      if (priceError != null) {
+                        _showPriceError(context, priceError);
+                        return;
+                      }
+
                       setDialogState(() => isSaving = true);
 
                       try {
-                        final existing = await _firestore
+                        // Duplicate check — bare/chhote huroof aur extra
+                        // spaces ka farq nahi ("CBC" = "cbc" = " Cbc ").
+                        // Saare tests la kar compare karte hain (thore hote hain).
+                        final allTests = await _firestore
                             .collection('test_type_prices')
-                            .where('testType', isEqualTo: name)
-                            .limit(1)
                             .get();
+                        final newName = _normalizeName(name);
+                        final alreadyExists = allTests.docs.any((d) =>
+                            _normalizeName(
+                                (d.data()['testType'] ?? '').toString()) ==
+                            newName);
 
-                        if (existing.docs.isNotEmpty) {
+                        if (alreadyExists) {
                           if (dialogContext.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -419,8 +438,7 @@ class _ManageTestPricesScreenState extends State<ManageTestPricesScreen> {
                           return;
                         }
 
-                        final price =
-                            double.tryParse(priceController.text.trim()) ?? 0;
+                        final price = double.parse(priceController.text.trim());
 
                         final docRef =
                             _firestore.collection('test_type_prices').doc();
@@ -481,7 +499,13 @@ class _ManageTestPricesScreenState extends State<ManageTestPricesScreen> {
           AppPrimaryButton(
             label: 'Save',
             onPressed: () async {
-              final price = double.tryParse(priceController.text.trim()) ?? 0;
+              // Price validation: number ho aur kam az kam Rs 50
+              final priceError = _priceError(priceController.text);
+              if (priceError != null) {
+                _showPriceError(context, priceError);
+                return;
+              }
+              final price = double.parse(priceController.text.trim());
               await _firestore
                   .collection('test_type_prices')
                   .doc(test['id'])
@@ -649,3 +673,32 @@ class _ManageTestPricesScreenState extends State<ManageTestPricesScreen> {
     );
   }
 }
+
+// ─────────────────────────────────────────
+// VALIDATION HELPERS (room aur test prices dono ke liye)
+// ─────────────────────────────────────────
+
+/// Kam se kam qeemat — room (per hour) aur lab test dono ke liye.
+const double kMinPrice = 50;
+
+/// Price check: khaali / text / Rs 50 se kam ho to error message,
+/// sahi ho to null.
+String? _priceError(String text) {
+  final value = double.tryParse(text.trim());
+  if (value == null) return 'Please enter a valid price';
+  if (value < kMinPrice) {
+    return 'Price must be at least Rs ${kMinPrice.toStringAsFixed(0)}';
+  }
+  return null;
+}
+
+void _showPriceError(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message), backgroundColor: Colors.red),
+  );
+}
+
+/// Naam compare karne ke liye: trim + lowercase + beech ki extra spaces
+/// ek space. Sirf compare ke liye — save wahi naam hota hai jo admin likhe.
+String _normalizeName(String v) =>
+    v.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');

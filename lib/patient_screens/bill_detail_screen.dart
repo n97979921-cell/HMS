@@ -83,6 +83,8 @@ class _BillDetailScreenState extends State<BillDetailScreen> {
       num total = 0;
       for (final doc in paySnap.docs) {
         final data = doc.data();
+        // Patient ki chhupai hui payments detail mein bhi na dikhein
+        if (data['patientHidden'] == true) continue;
 
         // Lab-type payment ke liye asal test-naam fetch karo
         // (referenceId = testId → lab_tests collection)

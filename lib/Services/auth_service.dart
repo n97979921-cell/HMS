@@ -67,6 +67,37 @@ class AuthService {
         password: password,
       );
 
+      // ── NAYA: CNIC duplicate check ──
+      // Ek CNIC par sirf ek registered (email wala) patient account.
+      // Walk-in records (email null) aur deleted users ko ignore karte
+      // hain — taake walk-in patient baad mein app account bana sake.
+      // Check account banne ke BAAD hota hai (login state mein query
+      // allowed hoti hai); duplicate mile to naya account foran delete.
+      try {
+        final dupSnap = await _firestore
+            .collection('users')
+            .where('cnic', isEqualTo: cnic.trim())
+            .get();
+        final hasRegisteredDuplicate = dupSnap.docs.any((d) {
+          final data = d.data();
+          final existingEmail = (data['email'] ?? '').toString().trim();
+          return d.id != cred!.user!.uid &&
+              existingEmail.isNotEmpty &&
+              data['status'] != 'deleted';
+        });
+        if (hasRegisteredDuplicate) {
+          await cred.user!.delete();
+          return {
+            'success': false,
+            'error':
+                'An account with this CNIC already exists. Please log in instead.'
+          };
+        }
+      } catch (e) {
+        // Query fail ho (jaise rules) to signup na rokein — sirf log
+        _logger.w("CNIC duplicate check failed: $e");
+      }
+
       await cred.user!.sendEmailVerification();
 
       await _firestore.collection('users').doc(cred.user!.uid).set({

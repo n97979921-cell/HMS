@@ -94,7 +94,17 @@ class _RoomsListScreenState extends State<RoomsListScreen> {
                 keyboardType: TextInputType.text,
                 style: const TextStyle(fontSize: 14),
                 decoration: appInputDecoration(hint: 'e.g. 101, A-201'),
-                validator: (v) => v!.isEmpty ? 'Room number is required' : null,
+                validator: (v) {
+                  // Sirf spaces bhi "khaali" maane jaate hain
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Room number is required';
+                  }
+                  // Sirf letters, numbers aur "-" (jaise 101, ICU-2)
+                  if (!RegExp(r'^[A-Za-z0-9-]+$').hasMatch(v.trim())) {
+                    return 'Use only letters, numbers and - (e.g. 101, ICU-2)';
+                  }
+                  return null;
+                },
               ),
             ],
           ),

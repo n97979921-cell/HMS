@@ -127,6 +127,11 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
       for (final doc in apptSnap.docs) {
         final data = doc.data();
 
+        // Patient ne jo appointment "delete" (chhupa) di, woh sirf
+        // patient ki list se hatti hai — record mehfooz (admin, billing,
+        // reports ke liye).
+        if (data['patientHidden'] == true) continue;
+
         // ── VIDEO CALL LAZY-CHECK (Patient-side) ──
         // Doctor-side (doctor_home_screen.dart) mein bhi yehi check
         // hai — jo bhi pehle list khole (Doctor ya Patient), wahi
@@ -442,15 +447,18 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
   }
 
   // ── Delete: sirf Cancelled, NoShow, ya (Completed + feedback diya ja
-  //    chuka) appointments ke liye. Bina confirmation ke, seedha permanent
-  //    delete — jaisa request kiya gaya. Appointment document Firestore
-  //    se hamesha ke liye hat jata hai, is se data halka ho jata hai.
+  //    chuka) appointments ke liye. Ab SOFT delete: document database
+  //    se mitaya NAHI jata, sirf patientHidden: true lagta hai — patient
+  //    ki list se hat jata hai, admin/billing/reports ka record mehfooz.
   Future<void> _deleteAppointment(Map<String, dynamic> appt) async {
     try {
       await FirebaseFirestore.instance
           .collection('appointments')
           .doc(appt['appointmentId'])
-          .delete();
+          .update({
+        'patientHidden': true,
+        'patientHiddenAt': FieldValue.serverTimestamp(),
+      });
       _showSuccess('Appointment deleted');
       _loadAppointments();
     } catch (e) {
@@ -476,7 +484,11 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
 
       final batch = FirebaseFirestore.instance.batch();
       for (final doc in snap.docs) {
-        batch.delete(doc.reference);
+        // SOFT delete — sirf patient se chhupao
+        batch.update(doc.reference, {
+          'patientHidden': true,
+          'patientHiddenAt': FieldValue.serverTimestamp(),
+        });
       }
       await batch.commit();
 
@@ -505,9 +517,15 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     try {
       final batch = FirebaseFirestore.instance.batch();
       for (final appt in deletable) {
-        batch.delete(FirebaseFirestore.instance
-            .collection('appointments')
-            .doc(appt['appointmentId']));
+        // SOFT delete — sirf patient se chhupao
+        batch.update(
+            FirebaseFirestore.instance
+                .collection('appointments')
+                .doc(appt['appointmentId']),
+            {
+              'patientHidden': true,
+              'patientHiddenAt': FieldValue.serverTimestamp(),
+            });
       }
       await batch.commit();
       _showSuccess('${deletable.length} appointment(s) deleted');

@@ -89,6 +89,9 @@ class _BillingScreenState extends State<BillingScreen> {
       final Map<String, List<Map<String, dynamic>>> byAppt = {};
       for (final doc in paySnap.docs) {
         final data = doc.data();
+        // Patient ne jo payment "delete" (chhupa) di, woh sirf patient ki
+        // screen se hatti hai — hospital ka record (admin/reports) mehfooz.
+        if (data['patientHidden'] == true) continue;
         final apptId = data['appointmentId'] as String?;
         if (apptId == null) continue;
         byAppt.putIfAbsent(apptId, () => []).add({
@@ -198,16 +201,23 @@ class _BillingScreenState extends State<BillingScreen> {
     ));
   }
 
-  // ── Delete ek bill (ek appointment ke SAARE payment records) —
-  //    bina confirmation ke seedha permanent delete ──
+  // ── Delete ek bill — ab SOFT delete: payment records database se
+  //    mitaye NAHI jaate, sirf patientHidden: true lagta hai. Is se
+  //    bill patient ki list se hat jata hai, lekin admin ke Billing
+  //    Records aur Reports (kamai) mein record mehfooz rehta hai. ──
   Future<void> _deleteBill(Map<String, dynamic> group) async {
     try {
       final payments = group['payments'] as List<Map<String, dynamic>>;
       final batch = FirebaseFirestore.instance.batch();
       for (final p in payments) {
-        batch.delete(FirebaseFirestore.instance
-            .collection('payments')
-            .doc(p['paymentId']));
+        batch.update(
+            FirebaseFirestore.instance
+                .collection('payments')
+                .doc(p['paymentId']),
+            {
+              'patientHidden': true,
+              'patientHiddenAt': FieldValue.serverTimestamp(),
+            });
       }
       await batch.commit();
       _showSuccess('Bill deleted');
@@ -229,9 +239,15 @@ class _BillingScreenState extends State<BillingScreen> {
       for (final group in paidGroups) {
         final payments = group['payments'] as List<Map<String, dynamic>>;
         for (final p in payments) {
-          batch.delete(FirebaseFirestore.instance
-              .collection('payments')
-              .doc(p['paymentId']));
+          // SOFT delete — sirf patient se chhupao, record mehfooz
+          batch.update(
+              FirebaseFirestore.instance
+                  .collection('payments')
+                  .doc(p['paymentId']),
+              {
+                'patientHidden': true,
+                'patientHiddenAt': FieldValue.serverTimestamp(),
+              });
           count++;
         }
       }

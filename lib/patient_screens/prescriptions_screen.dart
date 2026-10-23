@@ -46,6 +46,10 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
       for (final doc in prescSnap.docs) {
         final data = doc.data();
 
+        // Patient ki chhupai hui prescription list mein na aaye
+        // (record mehfooz — doctor ki history ke liye).
+        if (data['patientHidden'] == true) continue;
+
         // Schema rule: sirf Completed appointment ki prescription visible
         final apptDoc = await FirebaseFirestore.instance
             .collection('appointments')
@@ -105,26 +109,18 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
     }
   }
 
-  // Deletes the prescription doc plus its medicines — same
-  // "no confirmation, permanent batch delete" pattern used on
-  // Refunds / Lab Staff Completed / Billing Paid bills.
+  // SOFT delete — prescription aur medicines database se mitaye NAHI
+  // jaate. Sirf prescription par patientHidden: true lagta hai, taake
+  // patient ki list se hat jaye lekin medical record mehfooz rahe.
   Future<void> _deletePrescription(String prescriptionId) async {
     try {
-      final batch = FirebaseFirestore.instance.batch();
-
-      final medsSnap = await FirebaseFirestore.instance
-          .collection('prescription_medicines')
-          .where('prescriptionId', isEqualTo: prescriptionId)
-          .get();
-      for (final med in medsSnap.docs) {
-        batch.delete(med.reference);
-      }
-
-      batch.delete(FirebaseFirestore.instance
+      await FirebaseFirestore.instance
           .collection('prescriptions')
-          .doc(prescriptionId));
-
-      await batch.commit();
+          .doc(prescriptionId)
+          .update({
+        'patientHidden': true,
+        'patientHiddenAt': FieldValue.serverTimestamp(),
+      });
 
       setState(() {
         _prescriptions
@@ -143,17 +139,15 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
       for (final presc in _prescriptions) {
         final prescriptionId = presc['prescriptionId'] as String;
 
-        final medsSnap = await FirebaseFirestore.instance
-            .collection('prescription_medicines')
-            .where('prescriptionId', isEqualTo: prescriptionId)
-            .get();
-        for (final med in medsSnap.docs) {
-          batch.delete(med.reference);
-        }
-
-        batch.delete(FirebaseFirestore.instance
-            .collection('prescriptions')
-            .doc(prescriptionId));
+        // SOFT delete — sirf patient se chhupao, record mehfooz
+        batch.update(
+            FirebaseFirestore.instance
+                .collection('prescriptions')
+                .doc(prescriptionId),
+            {
+              'patientHidden': true,
+              'patientHiddenAt': FieldValue.serverTimestamp(),
+            });
       }
 
       await batch.commit();
