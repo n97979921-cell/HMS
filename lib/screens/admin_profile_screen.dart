@@ -112,8 +112,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
-      backgroundColor:
-          isError ? const Color(0xFF9A2E16) : AppColors.header,
+      backgroundColor: isError ? const Color(0xFF9A2E16) : AppColors.header,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     ));
@@ -663,6 +662,10 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                   if (v!.isEmpty) return 'New password is required';
                   if (v.length < 6) {
                     return 'Password must be at least 6 characters';
+                  }
+                  // Naya password purane (current) jaisa nahi ho sakta
+                  if (v == _currentPasswordController.text) {
+                    return 'New password cannot be the same as your current password';
                   }
                   return null;
                 },

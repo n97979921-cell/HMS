@@ -518,6 +518,10 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
               }, (v) {
                 if (v!.isEmpty) return 'Required';
                 if (v.length < 6) return 'Minimum 6 characters';
+                // Naya password purane (current) jaisa nahi ho sakta
+                if (v == _currentController.text) {
+                  return 'New password cannot be the same as your current password';
+                }
                 return null;
               }),
               const SizedBox(height: 12),

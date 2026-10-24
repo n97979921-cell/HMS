@@ -775,6 +775,10 @@ class _ChangePasswordSheetState extends State<_ChangePasswordSheet> {
                   if (v.length < 6) {
                     return 'Password must be at least 6 characters';
                   }
+                  // Naya password purane (current) jaisa nahi ho sakta
+                  if (v == _currentPasswordController.text) {
+                    return 'New password cannot be the same as your current password';
+                  }
                   return null;
                 },
               ),
